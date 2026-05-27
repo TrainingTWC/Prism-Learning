@@ -1,9 +1,10 @@
+import { authTables } from '@convex-dev/auth/server';
 import { defineSchema, defineTable } from 'convex/server';
 import { v } from 'convex/values';
 
-// Skeleton schema. Phase 1 fleshes out auth/workspaces;
-// Phase 3 adds modules/lessons/blocks; Phase 4 adds assets.
 export default defineSchema({
+  ...authTables,
+
   workspaces: defineTable({
     name: v.string(),
     ownerId: v.id('users'),
@@ -18,6 +19,13 @@ export default defineSchema({
     .index('by_workspace', ['workspaceId'])
     .index('by_user', ['userId']),
 
-  // `users` is provided by @convex-dev/auth; declared here only for typing reference.
-  // Real users table comes from auth tables — do not duplicate.
+  pendingInvites: defineTable({
+    workspaceId: v.id('workspaces'),
+    email: v.string(),
+    invitedBy: v.id('users'),
+    createdAt: v.number(),
+    expiresAt: v.number(),
+  })
+    .index('by_workspace', ['workspaceId'])
+    .index('by_email', ['email']),
 });
