@@ -19,27 +19,41 @@ import { AccordionBlockRenderer } from './AccordionBlockRenderer';
 export function Module({ blocks, theme, resolveAsset }: ModuleProps) {
   return (
     <div className="prism-module" style={tokensToCss(theme)}>
-      {blocks.map((block) => {
+      {blocks.map((block, index) => {
+        const style = { ['--prism-stagger-index' as string]: index } as React.CSSProperties;
+        let rendered: React.ReactNode;
         switch (block.type) {
           case 'rich-text':
-            return <RichTextBlock key={block.id} block={block} />;
+            rendered = <RichTextBlock block={block} />;
+            break;
           case 'image':
-            return <ImageBlockRenderer key={block.id} block={block} resolveAsset={resolveAsset} />;
+            rendered = <ImageBlockRenderer block={block} resolveAsset={resolveAsset} />;
+            break;
           case 'video':
-            return <VideoBlockRenderer key={block.id} block={block} resolveAsset={resolveAsset} />;
+            rendered = <VideoBlockRenderer block={block} resolveAsset={resolveAsset} />;
+            break;
           case 'lottie':
-            return <LottieBlockRenderer key={block.id} block={block} resolveAsset={resolveAsset} />;
+            rendered = <LottieBlockRenderer block={block} resolveAsset={resolveAsset} />;
+            break;
           case 'mcq':
-            return <MCQBlockRenderer key={block.id} block={block} />;
+            rendered = <MCQBlockRenderer block={block} />;
+            break;
           case 'true-false':
-            return <TrueFalseBlockRenderer key={block.id} block={block} />;
+            rendered = <TrueFalseBlockRenderer block={block} />;
+            break;
           case 'accordion':
-            return <AccordionBlockRenderer key={block.id} block={block} />;
+            rendered = <AccordionBlockRenderer block={block} />;
+            break;
           default: {
             const _exhaustive: never = block;
             return null;
           }
         }
+        return (
+          <div key={block.id} className="prism-block-reveal" style={style}>
+            {rendered}
+          </div>
+        );
       })}
     </div>
   );

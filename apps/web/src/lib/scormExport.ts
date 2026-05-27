@@ -219,55 +219,78 @@ function buildCss(theme: ExportTheme): string {
   --prism-accent: ${theme.accent};
   --prism-font-heading: "${theme.headingFont}", sans-serif;
   --prism-font-body: "${theme.bodyFont}", sans-serif;
+  --prism-motion-fast: 120ms;
+  --prism-motion-base: 220ms;
+  --prism-motion-slow: 360ms;
+  --prism-ease-standard: cubic-bezier(.2,0,0,1);
+  --prism-ease-emphasized: cubic-bezier(.2,.8,.2,1);
+  --prism-stagger-step: 55ms;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-body{font-family:var(--prism-font-body);background:#f8fafc;color:#334155;padding:0}
-.prism-lesson{max-width:720px;margin:0 auto;padding:2rem 1.5rem}
-h1{font-family:var(--prism-font-heading);font-size:1.75rem;font-weight:700;color:var(--prism-primary);margin-bottom:1.5rem}
-.prism-rt{line-height:1.7;margin-bottom:1.5rem}
+body{font-family:var(--prism-font-body);background:#eef2f7;color:#334155;padding:0;-webkit-font-smoothing:antialiased}
+.prism-shell{min-height:100vh;display:flex;justify-content:center;padding:1rem;background:linear-gradient(180deg,#f8fafc,#e2e8f0)}
+.prism-phone{width:100%;max-width:430px;min-height:100vh;background:#fff;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 80px rgba(15,23,42,.12)}
+.prism-top{position:sticky;top:0;z-index:2;background:rgba(255,255,255,.96);backdrop-filter:blur(12px);border-bottom:1px solid #e2e8f0;padding:1rem 1.25rem}
+.prism-kicker{font-size:.72rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.prism-title-row{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;margin-top:.25rem}
+h1{font-family:var(--prism-font-heading);font-size:1.25rem;line-height:1.25;font-weight:800;color:var(--prism-primary);max-width:17rem}
+.prism-count{flex-shrink:0;border-radius:999px;background:#f1f5f9;padding:.25rem .6rem;font-size:.75rem;font-weight:700;color:#475569}
+.prism-progress{height:.5rem;border-radius:999px;background:#f1f5f9;overflow:hidden;margin-top:1rem}
+.prism-progress span{display:block;height:100%;border-radius:999px;background:var(--prism-primary);transition:width var(--prism-motion-slow) var(--prism-ease-emphasized)}
+.prism-lesson{flex:1;padding:1.5rem 1.25rem;background:#f8fafc;overflow:auto}
+.prism-block{animation:prism-block-reveal var(--prism-motion-slow) var(--prism-ease-emphasized) both;animation-delay:calc(var(--i,0) * var(--prism-stagger-step))}
+@keyframes prism-block-reveal{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes prism-feedback-enter{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+@keyframes prism-marker-pop{0%{opacity:0;transform:scale(.65)}100%{opacity:1;transform:scale(1)}}
+.prism-rt{line-height:1.7;margin-bottom:1.5rem;font-size:.95rem;color:#475569}
 .prism-rt h1,.prism-rt h2,.prism-rt h3{font-family:var(--prism-font-heading);color:var(--prism-primary);margin:1.25rem 0 0.5rem}
 .prism-rt p{margin-bottom:0.75rem}
 .prism-rt ul,.prism-rt ol{margin-left:1.5rem;margin-bottom:0.75rem}
 .prism-img{margin:1.5rem 0;text-align:center}
-.prism-img img{max-width:100%;border-radius:8px}
+.prism-img img{max-width:100%;border-radius:16px;background:#f1f5f9;box-shadow:0 18px 45px rgba(15,23,42,.08)}
 .prism-img figcaption{margin-top:.5rem;font-size:.85rem;color:#64748b}
 .prism-video{margin:1.5rem 0}
-.prism-video-wrap{position:relative;padding-top:56.25%;border-radius:8px;overflow:hidden}
+.prism-video-wrap{position:relative;padding-top:56.25%;border-radius:16px;overflow:hidden;background:#f1f5f9;box-shadow:0 18px 45px rgba(15,23,42,.08)}
 .prism-video-wrap iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
-.prism-video video{max-width:100%;border-radius:8px}
-.prism-mcq{background:#f1f5f9;border-radius:12px;padding:1.5rem;margin:1.5rem 0}
-.prism-q{font-weight:600;margin-bottom:1rem}
+.prism-video video{max-width:100%;border-radius:16px;background:#f1f5f9;box-shadow:0 18px 45px rgba(15,23,42,.08)}
+.prism-mcq{background:#f1f5f9;border:1px solid #e2e8f0;border-radius:18px;padding:1.25rem;margin:1.5rem 0;box-shadow:0 1px 2px rgba(15,23,42,.04)}
+.prism-q{font-weight:700;margin-bottom:1rem;line-height:1.5;color:#1e293b}
 .prism-opts{list-style:none}
 .prism-opts li{margin-bottom:0.5rem}
-.prism-opt{display:flex;align-items:center;gap:.75rem;width:100%;padding:.625rem .875rem;background:#fff;border:1.5px solid #e2e8f0;border-radius:8px;cursor:pointer;font-size:.875rem;text-align:left;transition:.15s}
+.prism-opt{display:flex;align-items:flex-start;gap:.75rem;width:100%;min-height:3rem;padding:.75rem .875rem;background:#fff;border:2px solid #e2e8f0;border-radius:12px;cursor:pointer;font-size:.875rem;line-height:1.5;text-align:left;box-shadow:0 1px 2px rgba(15,23,42,.04);transition:transform var(--prism-motion-fast) var(--prism-ease-standard),border-color var(--prism-motion-base),background-color var(--prism-motion-base),color var(--prism-motion-base)}
+.prism-opt:active,.prism-submit:active,.prism-tf-btns button:active,.prism-nav a:active{transform:scale(.98)}
 .prism-opt:hover{border-color:#94a3b8}
 .prism-opt.selected{border-color:var(--prism-primary);background:#eef2ff}
 .prism-opt.correct{border-color:#10b981;background:#ecfdf5;color:#065f46}
 .prism-opt.wrong{border-color:#ef4444;background:#fef2f2;color:#991b1b}
-.prism-opt-marker{width:1.25rem;height:1.25rem;border-radius:50%;border:2px solid currentColor;display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;flex-shrink:0}
+.prism-opt-marker{width:1.25rem;height:1.25rem;margin-top:.1rem;border-radius:50%;border:2px solid currentColor;display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;flex-shrink:0}
+.prism-opt-marker:not(:empty){animation:prism-marker-pop var(--prism-motion-base) var(--prism-ease-emphasized) both}
 .prism-actions{margin-top:1rem;display:flex;align-items:center;gap:.75rem}
-.prism-submit{background:var(--prism-primary);color:#fff;border:0;border-radius:8px;padding:.5rem 1rem;font-size:.875rem;font-weight:500;cursor:pointer}
+.prism-submit{min-height:2.75rem;background:var(--prism-primary);color:#fff;border:0;border-radius:12px;padding:.55rem 1rem;font-size:.875rem;font-weight:700;cursor:pointer;transition:transform var(--prism-motion-fast),opacity var(--prism-motion-base)}
 .prism-submit:disabled{opacity:.4;cursor:not-allowed}
 .prism-retry{background:none;border:0;color:var(--prism-primary);font-size:.875rem;cursor:pointer;text-decoration:underline}
-.prism-result{font-size:.875rem;font-weight:500}
+.prism-result{font-size:.875rem;font-weight:600;animation:prism-feedback-enter var(--prism-motion-base) var(--prism-ease-emphasized) both}
 .prism-result.ok{color:#059669}
 .prism-result.bad{color:#dc2626}
-.prism-tf{background:#f1f5f9;border-radius:12px;padding:1.5rem;margin:1.5rem 0}
-.prism-tf-btns{display:flex;gap:.75rem;margin-top:1rem}
-.prism-tf-btns button{flex:1;padding:.75rem;border-radius:8px;border:1.5px solid #e2e8f0;background:#fff;font-size:.875rem;font-weight:600;cursor:pointer;transition:.15s}
+.prism-tf{background:#f1f5f9;border:1px solid #e2e8f0;border-radius:18px;padding:1.25rem;margin:1.5rem 0;box-shadow:0 1px 2px rgba(15,23,42,.04)}
+.prism-tf-btns{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-top:1rem}
+.prism-tf-btns button{min-height:3rem;padding:.75rem;border-radius:12px;border:2px solid #e2e8f0;background:#fff;font-size:.875rem;font-weight:700;cursor:pointer;transition:transform var(--prism-motion-fast),border-color var(--prism-motion-base),background-color var(--prism-motion-base),color var(--prism-motion-base);box-shadow:0 1px 2px rgba(15,23,42,.04)}
 .prism-tf-btns button:hover{border-color:#94a3b8}
 .prism-tf-btns button.selected-ok{border-color:#10b981;background:#ecfdf5;color:#065f46}
 .prism-tf-btns button.selected-bad{border-color:#ef4444;background:#fef2f2;color:#991b1b}
-.prism-acc{border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;margin:1.5rem 0}
+.prism-acc{border:1px solid #e2e8f0;border-radius:18px;overflow:hidden;margin:1.5rem 0;background:#fff;box-shadow:0 1px 2px rgba(15,23,42,.04)}
 .prism-acc-item{border-bottom:1px solid #e2e8f0;background:#fff}
 .prism-acc-item:last-child{border-bottom:0}
-.prism-acc-btn{display:flex;justify-content:space-between;align-items:center;width:100%;padding:.875rem 1.25rem;font-size:.875rem;font-weight:500;border:0;background:none;cursor:pointer;text-align:left}
+.prism-acc-btn{display:flex;justify-content:space-between;align-items:center;width:100%;min-height:3rem;padding:.875rem 1.25rem;font-size:.875rem;line-height:1.5;font-weight:700;border:0;background:none;cursor:pointer;text-align:left;transition:background-color var(--prism-motion-base)}
 .prism-acc-btn:hover{background:#f8fafc}
-.prism-acc-arrow{font-size:.65rem;transition:.15s;margin-left:.5rem}
-.prism-acc-body{padding:.75rem 1.25rem 1rem;font-size:.875rem;line-height:1.6;color:#475569;border-top:1px solid #f1f5f9}
-.prism-nav{display:flex;justify-content:space-between;margin-top:2.5rem;padding-top:1.5rem;border-top:1px solid #e2e8f0}
-.prism-nav a{display:inline-flex;align-items:center;gap:.375rem;padding:.5rem 1rem;border:1px solid #e2e8f0;border-radius:8px;text-decoration:none;font-size:.875rem;color:#475569;background:#fff}
+.prism-acc-arrow{font-size:.65rem;transition:transform var(--prism-motion-base) var(--prism-ease-standard);margin-left:.5rem}
+.prism-acc-body{padding:.75rem 1.25rem 1rem;font-size:.875rem;line-height:1.6;color:#475569;border-top:1px solid #f1f5f9;animation:prism-feedback-enter var(--prism-motion-base) var(--prism-ease-emphasized) both}
+.prism-nav{position:sticky;bottom:0;display:flex;justify-content:space-between;gap:.75rem;padding:1rem 1.25rem calc(1rem + env(safe-area-inset-bottom));border-top:1px solid #e2e8f0;background:#fff}
+.prism-nav a{display:inline-flex;align-items:center;justify-content:center;gap:.375rem;min-height:2.75rem;padding:.55rem 1rem;border:1px solid #e2e8f0;border-radius:12px;text-decoration:none;font-size:.875rem;font-weight:700;color:#475569;background:#fff;transition:transform var(--prism-motion-fast),background-color var(--prism-motion-base),border-color var(--prism-motion-base)}
 .prism-nav a:hover{background:#f8fafc}
+@media (min-width:700px){.prism-shell{padding:2rem}.prism-phone{min-height:min(844px,calc(100vh - 4rem));border:10px solid #0f172a;border-radius:32px;max-width:390px}.prism-lesson{padding:1.5rem 1.25rem}}
+@media (max-width:379px){.prism-tf-btns{grid-template-columns:1fr}.prism-actions{align-items:flex-start;flex-direction:column}}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}.prism-block{animation:none}}
 `;
 }
 
@@ -381,7 +404,9 @@ function buildLessonPage(
       ? `<a href="lesson_${lessonIdx + 1}.html">Next →</a>`
       : '<span></span>';
 
-  const blocksHtml = lesson.blocks.map((b) => renderBlock(b, assetMap)).join('\n');
+  const blocksHtml = lesson.blocks
+    .map((b, i) => `<div class="prism-block" style="--i:${i}">${renderBlock(b, assetMap)}</div>`)
+    .join('\n');
 
   // Load scorm-again via inline API bootstrap
   return `<!DOCTYPE html>
@@ -393,10 +418,21 @@ function buildLessonPage(
 <link rel="stylesheet" href="styles.css"/>
 </head>
 <body>
-<div class="prism-lesson">
-  <h1>${escapeHtml(lesson.title)}</h1>
-  ${blocksHtml}
-  ${total > 1 ? `<nav class="prism-nav">${prevLink}${nextLink}</nav>` : ''}
+<div class="prism-shell">
+  <main class="prism-phone">
+    <header class="prism-top">
+      <p class="prism-kicker">${escapeHtml(mod.title)}</p>
+      <div class="prism-title-row">
+        <h1>${escapeHtml(lesson.title)}</h1>
+        <span class="prism-count">${lessonIdx + 1}/${total}</span>
+      </div>
+      <div class="prism-progress"><span style="width:${Math.round(((lessonIdx + 1) / total) * 100)}%"></span></div>
+    </header>
+    <section class="prism-lesson">
+      ${blocksHtml}
+    </section>
+    ${total > 1 ? `<nav class="prism-nav">${prevLink}${nextLink}</nav>` : ''}
+  </main>
 </div>
 <script src="assets/scorm12.min.js"></script>
 <script>

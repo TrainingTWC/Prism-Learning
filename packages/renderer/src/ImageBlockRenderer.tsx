@@ -24,7 +24,7 @@ export function ImageBlockRenderer({ block, resolveAsset }: Props) {
       <img
         src={src}
         alt={payload.altText ?? ''}
-        className="mx-auto max-w-full rounded-lg"
+        className="mx-auto aspect-auto max-w-full rounded-2xl bg-slate-100 object-cover"
       />
       {payload.caption && (
         <figcaption className="mt-2 text-center text-sm text-slate-500">

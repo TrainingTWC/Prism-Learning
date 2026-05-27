@@ -23,7 +23,7 @@ export function VideoBlockRenderer({ block, resolveAsset }: Props) {
   return (
     <figure className="prism-video my-6">
       {payload.srcType === 'embed' ? (
-        <div className="relative overflow-hidden rounded-lg" style={{ paddingTop: '56.25%' }}>
+        <div className="relative overflow-hidden rounded-2xl bg-slate-100" style={{ paddingTop: '56.25%' }}>
           <iframe
             src={resolvedSrc}
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -35,7 +35,7 @@ export function VideoBlockRenderer({ block, resolveAsset }: Props) {
         <video
           src={resolvedSrc}
           controls
-          className="mx-auto max-w-full rounded-lg"
+          className="mx-auto max-w-full rounded-2xl bg-slate-100"
         />
       )}
       {payload.caption && (

@@ -29,12 +29,12 @@ export function TrueFalseBlockRenderer({ block }: Props) {
   const feedback = answer === true ? trueFeedback : falseFeedback;
 
   return (
-    <div className="prism-true-false my-6 rounded-xl border border-slate-200 bg-slate-50 p-6">
-      <p className="mb-5 font-semibold text-slate-800">{statement}</p>
-      <div className="flex gap-3">
+    <div className="prism-true-false my-6 rounded-2xl border border-slate-200 bg-slate-50/90 p-5 shadow-sm sm:p-6">
+      <p className="mb-5 text-base font-semibold leading-6 text-slate-800">{statement}</p>
+      <div className="grid grid-cols-1 gap-3 min-[380px]:grid-cols-2">
         {[true, false].map((val) => {
           const label = val ? 'True' : 'False';
-          let cls = 'flex-1 rounded-lg border-2 py-3 text-sm font-semibold transition';
+          let cls = 'prism-pressable min-h-12 rounded-xl border-2 py-3 text-sm font-semibold shadow-sm';
           let style: React.CSSProperties = {};
           if (answer === null) {
             cls += ' border-slate-200 bg-white text-slate-700 hover:border-slate-300 cursor-pointer';
@@ -63,7 +63,7 @@ export function TrueFalseBlockRenderer({ block }: Props) {
       </div>
       {answer !== null && (
         <div
-          className="mt-4 text-sm font-medium"
+          className="prism-feedback-enter mt-4 rounded-xl bg-white/75 px-4 py-3 text-sm font-medium shadow-sm"
           style={{ color: isRight ? 'var(--prism-correct, #16a34a)' : 'var(--prism-incorrect, #dc2626)' }}
         >
           {isRight ? '✓ Correct! ' : '✗ Not quite. '}

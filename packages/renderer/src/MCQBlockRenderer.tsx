@@ -66,8 +66,8 @@ export function MCQBlockRenderer({ block }: Props) {
   const allCorrect = submitted && [...selected].every(isCorrect) && options.filter((o) => o.isCorrect).every((o) => selected.has(o.id));
 
   return (
-    <div className="prism-mcq my-6 rounded-xl border border-slate-200 bg-slate-50 p-6">
-      <p className="mb-4 font-semibold text-slate-800">{question}</p>
+    <div className="prism-mcq my-6 rounded-2xl border border-slate-200 bg-slate-50/90 p-5 shadow-sm sm:p-6">
+      <p className="mb-4 text-base font-semibold leading-6 text-slate-800">{question}</p>
       <div className="space-y-2">
         {options.map((opt) => {
           const isSelected = selected.has(opt.id);
@@ -75,7 +75,7 @@ export function MCQBlockRenderer({ block }: Props) {
           const correct = opt.isCorrect;
 
           let optClass =
-            'flex cursor-pointer items-start gap-3 rounded-lg border-2 p-3 text-sm transition';
+            'prism-pressable flex min-h-12 cursor-pointer items-start gap-3 rounded-xl border-2 p-3 text-sm leading-6 shadow-sm';
           let optStyle: React.CSSProperties = {};
           if (submitted) {
             if (isSelected && correct) { optStyle = correctStyle; }
@@ -98,7 +98,7 @@ export function MCQBlockRenderer({ block }: Props) {
                 <span
                   className={`mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border-2 text-xs font-bold ${
                     isSelected ? 'border-current' : 'border-slate-300'
-                  }`}
+                  } ${isSelected ? 'prism-marker-pop' : ''}`}
                 >
                   {isSelected ? (correct ? '✓' : '✗') : ''}
                 </span>
@@ -106,7 +106,7 @@ export function MCQBlockRenderer({ block }: Props) {
               </button>
               {showResult && showFeedback && opt.feedback && (
                 <p
-                  className="mt-1 ml-8 text-xs"
+                  className="prism-feedback-enter mt-2 ml-8 rounded-lg bg-white/70 px-3 py-2 text-xs leading-5 shadow-sm"
                   style={{ color: correct ? 'var(--prism-correct, #16a34a)' : 'var(--prism-incorrect, #dc2626)' }}
                 >
                   {opt.feedback}
@@ -130,7 +130,7 @@ export function MCQBlockRenderer({ block }: Props) {
         ) : (
           <>
             <span
-              className="text-sm font-medium"
+              className="prism-feedback-enter text-sm font-medium"
               style={{ color: allCorrect ? 'var(--prism-correct, #16a34a)' : 'var(--prism-incorrect, #dc2626)' }}
             >
               {allCorrect ? '✓ Correct!' : '✗ Not quite.'}

@@ -36,7 +36,7 @@ export function LottieBlockRenderer({ block, resolveAsset }: Props) {
   const src = resolveAsset(payload.storageId);
 
   if (!Component) {
-    return <div className="my-6 flex h-40 items-center justify-center text-sm text-slate-400">Loading animation…</div>;
+    return <div className="my-6 flex h-44 items-center justify-center rounded-2xl bg-slate-50 text-sm text-slate-400">Loading animation...</div>;
   }
 
   return (
@@ -45,7 +45,7 @@ export function LottieBlockRenderer({ block, resolveAsset }: Props) {
         src={src}
         loop={payload.loop ?? true}
         autoplay={payload.autoplay ?? true}
-        className="mx-auto max-w-sm"
+        className="mx-auto max-w-sm rounded-2xl"
       />
     </div>
   );

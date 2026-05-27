@@ -5,7 +5,17 @@ import type { Id } from '~convex/_generated/dataModel';
 import { useState, useCallback } from 'react';
 import { Module } from '@prism/renderer';
 import type { Block, Theme } from '@prism/renderer';
-import { ChevronLeft, ChevronRight, Eye, Loader2 } from 'lucide-react';
+import {
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  Eye,
+  Loader2,
+  Monitor,
+  RotateCcw,
+  Smartphone,
+  Tablet,
+} from 'lucide-react';
 
 const DEFAULT_THEME: Theme = {
   primary: '#4f46e5',
@@ -14,7 +24,14 @@ const DEFAULT_THEME: Theme = {
   bodyFont: 'Inter',
 };
 
-/** Map Convex block type strings → renderer type literals */
+type ViewMode = 'phone' | 'tablet' | 'desktop';
+
+const VIEW_MODES: Array<{ id: ViewMode; label: string; icon: typeof Smartphone }> = [
+  { id: 'phone', label: 'Phone', icon: Smartphone },
+  { id: 'tablet', label: 'Tablet', icon: Tablet },
+  { id: 'desktop', label: 'Desktop', icon: Monitor },
+];
+
 function mapBlockType(type: string): Block['type'] | null {
   const map: Record<string, Block['type']> = {
     richText: 'rich-text',
@@ -26,6 +43,12 @@ function mapBlockType(type: string): Block['type'] | null {
     accordion: 'accordion',
   };
   return map[type] ?? null;
+}
+
+function viewportClass(mode: ViewMode): string {
+  if (mode === 'phone') return 'max-w-[390px] rounded-[2rem] border-[10px] border-slate-900 shadow-2xl';
+  if (mode === 'tablet') return 'max-w-[760px] rounded-[1.75rem] border-[10px] border-slate-900 shadow-2xl';
+  return 'max-w-5xl rounded-3xl border border-slate-200 shadow-xl';
 }
 
 export function PreviewPage() {
@@ -40,15 +63,15 @@ export function PreviewPage() {
   const convex = useConvex();
 
   const [lessonIdx, setLessonIdx] = useState(0);
-  // Cache resolved asset URLs: storageId → URL
+  const [viewMode, setViewMode] = useState<ViewMode>('phone');
+  const [showSummary, setShowSummary] = useState(false);
   const [assetCache, setAssetCache] = useState<Record<string, string>>({});
 
   const resolveAsset = useCallback(
     (assetId: string): string => {
       if (assetCache[assetId]) return assetCache[assetId];
-      // Kick off async resolution — return placeholder while loading
       void convex.query(api.files.getFileUrl, { storageId: assetId }).then((url) => {
-        if (url) setAssetCache((c) => ({ ...c, [assetId]: url }));
+        if (url) setAssetCache((cache) => ({ ...cache, [assetId]: url }));
       });
       return '';
     },
@@ -75,25 +98,37 @@ export function PreviewPage() {
   const lesson = lessons[lessonIdx];
   const allBlocks = content.blocks ?? [];
   const blocks: Block[] = allBlocks
-    .filter((b) => b.lessonId === lesson?._id)
-    .map((b) => {
-      const type = mapBlockType(b.type);
+    .filter((block) => block.lessonId === lesson?._id)
+    .map((block) => {
+      const type = mapBlockType(block.type);
       if (!type) return null;
-      return { id: b._id, type, content: b.content ?? '' } as Block;
+      return { id: block._id, type, content: block.content ?? '' } as Block;
     })
-    .filter((b): b is Block => b !== null);
+    .filter((block): block is Block => block !== null);
 
   const theme: Theme = workspace?.theme ?? DEFAULT_THEME;
+  const lessonCount = lessons.length;
+  const progressPct = lessonCount > 0 ? Math.round(((lessonIdx + 1) / lessonCount) * 100) : 0;
+  const quizCount = allBlocks.filter((block) => block.type === 'mcq' || block.type === 'trueFalse').length;
+
+  const goToLesson = (nextIdx: number) => {
+    setShowSummary(false);
+    setLessonIdx(Math.max(0, Math.min(nextIdx, lessonCount - 1)));
+  };
+
+  const handleContinue = () => {
+    if (lessonIdx >= lessonCount - 1) setShowSummary(true);
+    else goToLesson(lessonIdx + 1);
+  };
 
   return (
-    <div className="flex min-h-screen flex-col bg-slate-50">
-      {/* Top bar */}
-      <header className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3">
+    <div className="flex min-h-screen flex-col bg-slate-100">
+      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 py-3">
         <div className="flex items-center gap-3">
           <Link
             to="/w/$workspaceId/m/$moduleId"
             params={{ workspaceId, moduleId }}
-            className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700"
+            className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
           >
             <ChevronLeft className="size-4" />
             Back to editor
@@ -104,81 +139,125 @@ export function PreviewPage() {
             Learner Preview
           </div>
         </div>
-        <div className="text-sm text-slate-500">
-          {content.module.title}
+
+        <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 p-1">
+          {VIEW_MODES.map((mode) => {
+            const Icon = mode.icon;
+            return (
+              <button
+                key={mode.id}
+                type="button"
+                onClick={() => setViewMode(mode.id)}
+                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+                  viewMode === mode.id
+                    ? 'bg-white text-indigo-700 shadow-sm'
+                    : 'text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                <Icon className="size-3.5" />
+                {mode.label}
+              </button>
+            );
+          })}
         </div>
       </header>
 
-      <div className="flex flex-1">
-        {/* Lesson sidebar */}
-        <aside className="hidden w-52 shrink-0 border-r border-slate-200 bg-white p-3 md:block">
-          <p className="mb-2 px-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
-            Lessons
-          </p>
-          <nav className="space-y-0.5">
-            {lessons.map((l, i) => (
-              <button
-                key={l._id}
-                type="button"
-                onClick={() => setLessonIdx(i)}
-                className={`w-full rounded-md px-3 py-2 text-left text-sm transition ${
-                  i === lessonIdx
-                    ? 'bg-indigo-50 font-medium text-indigo-700'
-                    : 'text-slate-600 hover:bg-slate-50'
-                }`}
-              >
-                {l.title}
-              </button>
-            ))}
-          </nav>
-        </aside>
+      <main className="flex flex-1 justify-center overflow-auto px-3 py-6 sm:px-6">
+        <section className={`w-full overflow-hidden bg-white ${viewportClass(viewMode)}`}>
+          <div className="flex h-[min(844px,calc(100vh-8.5rem))] min-h-[680px] flex-col bg-white">
+            <div className="border-b border-slate-200 bg-white/95 px-5 py-4 backdrop-blur">
+              <div className="flex items-start justify-between gap-4">
+                <div className="min-w-0">
+                  <p className="truncate text-xs font-semibold uppercase tracking-wide text-slate-400">
+                    {content.module.title}
+                  </p>
+                  <h1
+                    className="mt-1 line-clamp-2 text-lg font-bold leading-6"
+                    style={{ color: theme.headingTextColor ?? theme.primary, fontFamily: theme.headingFont }}
+                  >
+                    {showSummary ? 'Course complete' : (lesson?.title ?? 'Preview')}
+                  </h1>
+                </div>
+                <div className="shrink-0 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
+                  {showSummary ? 'Done' : `${lessonIdx + 1}/${Math.max(lessonCount, 1)}`}
+                </div>
+              </div>
+              <div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-100">
+                <div
+                  className="h-full rounded-full transition-all duration-500"
+                  style={{ width: `${showSummary ? 100 : progressPct}%`, backgroundColor: theme.primary }}
+                />
+              </div>
+            </div>
 
-        {/* Content */}
-        <main className="flex flex-1 flex-col">
-          <div className="mx-auto w-full max-w-2xl flex-1 px-6 py-8">
-            {lesson ? (
-              <>
-                <h1
-                  className="mb-6 text-2xl font-bold"
-                  style={{ color: theme.primary, fontFamily: theme.headingFont }}
-                >
-                  {lesson.title}
-                </h1>
-                <Module blocks={blocks} theme={theme} resolveAsset={resolveAsset} />
-              </>
-            ) : (
-              <p className="text-slate-400">No lessons in this module yet.</p>
-            )}
-          </div>
+            <div className="flex-1 overflow-y-auto bg-slate-50/70 px-5 py-6">
+              {showSummary ? (
+                <div className="prism-feedback-enter flex min-h-full flex-col items-center justify-center text-center">
+                  <div className="flex size-20 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 shadow-sm">
+                    <CheckCircle2 className="size-10" />
+                  </div>
+                  <h2 className="mt-5 text-2xl font-bold text-slate-900">Nicely done</h2>
+                  <p className="mt-2 max-w-xs text-sm leading-6 text-slate-600">
+                    You reached the end of this module. Review any lesson or restart the preview from the beginning.
+                  </p>
+                  <div className="mt-5 grid w-full max-w-xs grid-cols-2 gap-3 rounded-2xl bg-white p-3 text-left shadow-sm">
+                    <div>
+                      <p className="text-xs text-slate-400">Lessons</p>
+                      <p className="text-lg font-bold text-slate-900">{lessonCount}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-slate-400">Interactions</p>
+                      <p className="text-lg font-bold text-slate-900">{quizCount}</p>
+                    </div>
+                  </div>
+                </div>
+              ) : lesson ? (
+                <div key={lesson._id} className="animate-[prism-block-reveal_260ms_cubic-bezier(.2,.8,.2,1)_both]">
+                  <Module blocks={blocks} theme={theme} resolveAsset={resolveAsset} />
+                </div>
+              ) : (
+                <p className="text-slate-400">No lessons in this module yet.</p>
+              )}
+            </div>
 
-          {/* Prev / Next */}
-          {lessons.length > 1 && (
-            <footer className="border-t border-slate-200 bg-white px-6 py-4">
-              <div className="mx-auto flex max-w-2xl items-center justify-between">
+            <footer className="border-t border-slate-200 bg-white px-5 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-4">
+              <div className="flex items-center justify-between gap-3">
                 <button
                   type="button"
-                  disabled={lessonIdx === 0}
-                  onClick={() => setLessonIdx((i) => i - 1)}
-                  className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50 disabled:opacity-40"
+                  disabled={lessonIdx === 0 && !showSummary}
+                  onClick={() => (showSummary ? setShowSummary(false) : goToLesson(lessonIdx - 1))}
+                  className="flex min-h-11 items-center gap-1.5 rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50 disabled:opacity-40"
                 >
                   <ChevronLeft className="size-4" /> Previous
                 </button>
-                <span className="text-xs text-slate-400">
-                  {lessonIdx + 1} / {lessons.length}
-                </span>
-                <button
-                  type="button"
-                  disabled={lessonIdx === lessons.length - 1}
-                  onClick={() => setLessonIdx((i) => i + 1)}
-                  className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50 disabled:opacity-40"
-                >
-                  Next <ChevronRight className="size-4" />
-                </button>
+                {showSummary ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLessonIdx(0);
+                      setShowSummary(false);
+                    }}
+                    className="flex min-h-11 items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold text-white shadow-sm transition active:scale-[.98]"
+                    style={{ backgroundColor: theme.primary }}
+                  >
+                    <RotateCcw className="size-4" /> Restart
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={lessonCount === 0}
+                    onClick={handleContinue}
+                    className="flex min-h-11 items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold text-white shadow-sm transition active:scale-[.98] disabled:opacity-40"
+                    style={{ backgroundColor: theme.primary }}
+                  >
+                    {lessonIdx >= lessonCount - 1 ? 'Finish' : 'Continue'} <ChevronRight className="size-4" />
+                  </button>
+                )}
               </div>
             </footer>
-          )}
-        </main>
-      </div>
+          </div>
+        </section>
+      </main>
     </div>
   );
 }

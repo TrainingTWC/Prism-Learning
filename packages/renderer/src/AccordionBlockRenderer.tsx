@@ -30,13 +30,13 @@ export function AccordionBlockRenderer({ block }: Props) {
     });
 
   return (
-    <div className="prism-accordion my-6 divide-y divide-slate-200 rounded-xl border border-slate-200 overflow-hidden">
+    <div className="prism-accordion my-6 divide-y divide-slate-200 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
       {sections.map((s) => (
         <div key={s.id} className="bg-white">
           <button
             type="button"
             onClick={() => toggle(s.id)}
-            className="flex w-full items-center justify-between px-5 py-4 text-left text-sm font-medium text-slate-800 hover:bg-slate-50"
+            className="prism-pressable flex min-h-12 w-full items-center justify-between px-5 py-4 text-left text-sm font-semibold leading-6 text-slate-800 hover:bg-slate-50"
           >
             {s.title}
             <svg
@@ -50,11 +50,13 @@ export function AccordionBlockRenderer({ block }: Props) {
               <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
             </svg>
           </button>
-          {open.has(s.id) && (
-            <div className="border-t border-slate-100 px-5 py-4 text-sm leading-relaxed text-slate-600">
-              {s.content}
+          <div className="prism-accordion-panel" data-open={open.has(s.id)}>
+            <div>
+              <div className="border-t border-slate-100 px-5 py-4 text-sm leading-relaxed text-slate-600">
+                {s.content}
+              </div>
             </div>
-          )}
+          </div>
         </div>
       ))}
     </div>

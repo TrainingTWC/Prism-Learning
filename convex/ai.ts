@@ -86,7 +86,7 @@ export const createModuleFromAI = internalMutation({
 function buildSystemPrompt(type: 'microLearning' | 'course'): string {
   const isMicro = type === 'microLearning';
   const lessonRange = isMicro ? '1 to 3' : '3 to 7';
-  const blockRange = isMicro ? '2 to 4' : '4 to 8';
+  const blockRange = isMicro ? '3 to 6' : '4 to 8';
 
   return `You are an expert instructional designer. Generate a complete e-learning module as a single JSON object — no markdown, no prose, only valid JSON.
 
@@ -108,6 +108,11 @@ Output schema:
 Rules:
 - Create ${lessonRange} lessons for a ${isMicro ? 'micro-learning (5–10 min)' : 'full course (20–40 min)'} module.
 - Each lesson has ${blockRange} blocks.
+- Design for a premium mobile phone learning experience: short screens, tight pacing, clear progression, and no dense textbook sections.
+- richText blocks must be phone-sized chunks: 1 to 3 short paragraphs, or a heading plus 3 to 5 concise bullets. Avoid long paragraphs.
+- Each lesson should include a setup, one concrete example or scenario, one interaction, and a short takeaway.
+- Quiz questions should check the learning objective with realistic scenarios, not trivia.
+- Use accordion blocks for misconceptions, optional details, or step-by-step reveals.
 - richText content: well-formed HTML using only <p>, <h2>, <h3>, <ul>, <ol>, <li>, <strong>, <em>. No <script>, no inline styles.
 - mcq content: a JSON-encoded string: {"question":"...","options":[{"id":"1","text":"...","isCorrect":true,"feedback":"..."},{"id":"2","text":"...","isCorrect":false,"feedback":"..."},{"id":"3","text":"...","isCorrect":false,"feedback":"..."}],"multiSelect":false,"showFeedback":true}. Exactly one option must have isCorrect:true.
 - trueFalse content: a JSON-encoded string: {"statement":"...","correctAnswer":true,"trueFeedback":"...","falseFeedback":"..."}.
@@ -120,9 +125,9 @@ Rules:
 // ── Public action ──────────────────────────────────────────────────────────
 
 /**
- * Generate a full learning module using Gemma 4 via Google AI Studio.
- * Requires GEMINI_API_KEY environment variable set in the Convex dashboard.
- * Optionally override the model with GEMINI_MODEL (default: gemma-4-9b-it).
+ * Generate a full learning module using an open-weight model hosted by Groq.
+ * Requires GROQ_API_KEY environment variable set in the Convex dashboard.
+ * Optionally override the model with GROQ_MODEL (default: llama-3.3-70b-versatile).
  */
 export const generateModule = action({
   args: {
