@@ -4,6 +4,7 @@ import { Link, useParams } from '@tanstack/react-router';
 import { api } from '~convex/_generated/api';
 import type { Id } from '~convex/_generated/dataModel';
 import { ChevronLeft, Check, Loader2 } from 'lucide-react';
+import { FontPicker } from '../components/FontPicker';
 
 // ── Default theme ──────────────────────────────────────────────────────────
 
@@ -14,16 +15,13 @@ const DEFAULT_THEME = {
   bodyFont: 'Inter',
 };
 
-const PRESET_PALETTES = [
-  { name: 'Indigo & Emerald', primary: '#4f46e5', accent: '#10b981' },
+const PRESET_PALETTES = [  { name: 'Indigo & Emerald', primary: '#4f46e5', accent: '#10b981' },
   { name: 'Blue & Amber',     primary: '#2563eb', accent: '#f59e0b' },
   { name: 'Rose & Violet',    primary: '#e11d48', accent: '#7c3aed' },
   { name: 'Teal & Orange',    primary: '#0d9488', accent: '#ea580c' },
   { name: 'Slate & Cyan',     primary: '#475569', accent: '#0891b2' },
   { name: 'Custom',           primary: '',        accent: '' },
 ];
-
-const FONT_OPTIONS = ['Inter', 'Roboto', 'Georgia', 'Playfair Display', 'Merriweather'];
 
 // ── Component ──────────────────────────────────────────────────────────────
 
@@ -205,34 +203,8 @@ export function ThemeEditorPage() {
           <section>
             <h2 className="mb-3 text-sm font-semibold text-slate-700">Typography</h2>
             <div className="grid grid-cols-2 gap-4">
-              <label className="space-y-1.5">
-                <span className="text-xs font-medium text-slate-600">Heading font</span>
-                <select
-                  value={headingFont}
-                  onChange={(e) => setHeadingFont(e.target.value)}
-                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none focus:border-indigo-400"
-                >
-                  {FONT_OPTIONS.map((f) => (
-                    <option key={f} value={f}>
-                      {f}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="space-y-1.5">
-                <span className="text-xs font-medium text-slate-600">Body font</span>
-                <select
-                  value={bodyFont}
-                  onChange={(e) => setBodyFont(e.target.value)}
-                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none focus:border-indigo-400"
-                >
-                  {FONT_OPTIONS.map((f) => (
-                    <option key={f} value={f}>
-                      {f}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <FontPicker label="Heading font" value={headingFont} onChange={setHeadingFont} />
+              <FontPicker label="Body font" value={bodyFont} onChange={setBodyFont} />
             </div>
           </section>
 
