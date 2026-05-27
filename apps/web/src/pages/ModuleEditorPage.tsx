@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useQuery, useMutation } from 'convex/react';
 import { Link, useParams } from '@tanstack/react-router';
 import { api } from '~convex/_generated/api';
@@ -29,8 +29,16 @@ import {
   Copy,
   MoreHorizontal,
   Users,
+  Type,
+  ImageIcon,
+  Video,
+  Zap,
+  ChevronDown,
 } from 'lucide-react';
 import { RichTextBlockEditor } from '../components/RichTextBlockEditor';
+import { ImageBlockEditor } from '../components/ImageBlockEditor';
+import { VideoBlockEditor } from '../components/VideoBlockEditor';
+import { LottieBlockEditor } from '../components/LottieBlockEditor';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -42,16 +50,25 @@ type Lesson = {
   moduleId: Id<'modules'>;
 };
 
+type BlockType = 'richText' | 'image' | 'video' | 'lottie';
+
 type Block = {
   _id: Id<'blocks'>;
   lessonId: Id<'lessons'>;
   moduleId: Id<'modules'>;
-  type: 'richText';
+  type: BlockType;
   order: number;
   content?: string;
   updatedAt: number;
   lastEditedBy?: Id<'users'>;
 };
+
+const BLOCK_TYPES: { type: BlockType; label: string; icon: React.ReactNode }[] = [
+  { type: 'richText', label: 'Rich text', icon: <Type className="size-3.5" /> },
+  { type: 'image',    label: 'Image',     icon: <ImageIcon className="size-3.5" /> },
+  { type: 'video',    label: 'Video',     icon: <Video className="size-3.5" /> },
+  { type: 'lottie',   label: 'Animation', icon: <Zap className="size-3.5" /> },
+];
 
 // ── Main Page ──────────────────────────────────────────────────────────────
 
@@ -85,6 +102,7 @@ export function ModuleEditorPage() {
   const [renamingModule, setRenamingModule] = useState(false);
   const [renameModuleValue, setRenameModuleValue] = useState('');
   const [blockMenuId, setBlockMenuId] = useState<string | null>(null);
+  const [addBlockMenuOpen, setAddBlockMenuOpen] = useState(false);
 
   // Ping presence every 10s
   const pingRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -152,13 +170,14 @@ export function ModuleEditorPage() {
     setActiveLessonId(id as Id<'lessons'>);
   }
 
-  async function handleAddBlock() {
+  async function handleAddBlock(type: BlockType = 'richText') {
     if (!activeLessonId) return;
+    setAddBlockMenuOpen(false);
     const lastBlock = blocksForLesson[blocksForLesson.length - 1];
     await addBlock({
       lessonId: activeLessonId,
       moduleId: modId,
-      type: 'richText',
+      type,
       afterOrder: lastBlock?.order,
     });
   }
@@ -376,14 +395,41 @@ export function ModuleEditorPage() {
                 </SortableContext>
               </DndContext>
 
-              {/* Add block button */}
-              <button
-                type="button"
-                onClick={() => void handleAddBlock()}
-                className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-200 py-4 text-sm text-slate-400 hover:border-indigo-300 hover:text-indigo-500 transition-colors"
-              >
-                <Plus className="size-4" /> Add block
-              </button>
+              {/* Add block button + type picker */}
+              <div className="relative">
+                <div className="flex items-stretch rounded-xl border-2 border-dashed border-slate-200 overflow-hidden hover:border-indigo-300 transition-colors">
+                  <button
+                    type="button"
+                    onClick={() => void handleAddBlock('richText')}
+                    className="flex flex-1 items-center justify-center gap-2 py-4 text-sm text-slate-400 hover:text-indigo-500 transition-colors"
+                  >
+                    <Plus className="size-4" /> Add block
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAddBlockMenuOpen((o) => !o)}
+                    className="flex items-center px-3 text-slate-300 hover:text-indigo-500 border-l-2 border-dashed border-slate-200 transition-colors"
+                    title="Choose block type"
+                  >
+                    <ChevronDown className="size-4" />
+                  </button>
+                </div>
+                {addBlockMenuOpen && (
+                  <div className="absolute bottom-full left-0 mb-1 w-48 rounded-xl border border-slate-200 bg-white shadow-lg py-1 z-20">
+                    {BLOCK_TYPES.map(({ type, label, icon }) => (
+                      <button
+                        key={type}
+                        type="button"
+                        onClick={() => void handleAddBlock(type)}
+                        className="flex w-full items-center gap-2.5 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                      >
+                        <span className="text-slate-400">{icon}</span>
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </main>
@@ -543,6 +589,27 @@ function SortableBlock({
           <RichTextBlockEditor
             blockId={block._id}
             initialContent={block.content ?? '<p></p>'}
+            onSave={onSave}
+          />
+        )}
+        {block.type === 'image' && (
+          <ImageBlockEditor
+            blockId={block._id}
+            initialContent={block.content}
+            onSave={onSave}
+          />
+        )}
+        {block.type === 'video' && (
+          <VideoBlockEditor
+            blockId={block._id}
+            initialContent={block.content}
+            onSave={onSave}
+          />
+        )}
+        {block.type === 'lottie' && (
+          <LottieBlockEditor
+            blockId={block._id}
+            initialContent={block.content}
             onSave={onSave}
           />
         )}

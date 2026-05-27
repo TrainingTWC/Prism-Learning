@@ -10,6 +10,7 @@
 
 import type * as auth from "../auth.js";
 import type * as blocks from "../blocks.js";
+import type * as files from "../files.js";
 import type * as http from "../http.js";
 import type * as lessons from "../lessons.js";
 import type * as members from "../members.js";
@@ -26,6 +27,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   blocks: typeof blocks;
+  files: typeof files;
   http: typeof http;
   lessons: typeof lessons;
   members: typeof members;

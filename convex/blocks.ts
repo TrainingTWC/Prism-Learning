@@ -43,7 +43,12 @@ export const add = mutation({
   args: {
     lessonId: v.id('lessons'),
     moduleId: v.id('modules'),
-    type: v.union(v.literal('richText')),
+    type: v.union(
+      v.literal('richText'),
+      v.literal('image'),
+      v.literal('video'),
+      v.literal('lottie'),
+    ),
     afterOrder: v.optional(v.number()),
   },
   handler: async (ctx, { lessonId, moduleId, type, afterOrder }) => {

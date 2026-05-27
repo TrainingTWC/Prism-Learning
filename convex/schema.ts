@@ -58,10 +58,18 @@ export default defineSchema({
     moduleId: v.id('modules'),
     type: v.union(
       v.literal('richText'),
-      // Phase 5 will widen this union
+      v.literal('image'),
+      v.literal('video'),
+      v.literal('lottie'),
     ),
     order: v.number(),
-    /** Rich-text HTML string (for type === 'richText') */
+    /**
+     * Serialized block payload (JSON string for media blocks, HTML for richText):
+     *  richText  → HTML string
+     *  image     → { storageId, altText, caption }
+     *  video     → { src: string, srcType: 'embed'|'storage', caption }
+     *  lottie    → { storageId, loop: boolean, autoplay: boolean }
+     */
     content: v.optional(v.string()),
     updatedAt: v.number(),
     lastEditedBy: v.optional(v.id('users')),
