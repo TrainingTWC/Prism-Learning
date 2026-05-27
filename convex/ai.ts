@@ -143,11 +143,11 @@ export const generateModule = action({
     });
     if (!membership) throw new Error('Forbidden');
 
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) throw new Error('AI not configured — set GEMINI_API_KEY in the Convex dashboard');
+    const apiKey = process.env.GROQ_API_KEY;
+    if (!apiKey) throw new Error('AI not configured — set GROQ_API_KEY in the Convex dashboard');
 
-    const model = process.env.GEMINI_MODEL ?? 'gemma-4-9b-it';
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+    const model = process.env.GROQ_MODEL ?? 'gemma2-9b-it';
+    const apiUrl = 'https://api.groq.com/openai/v1/chat/completions';
 
     const systemPrompt = buildSystemPrompt(type);
     const userPrompt = `Create a ${type === 'microLearning' ? 'micro-learning' : 'full course'} module with these details:
@@ -160,15 +160,19 @@ Output only the JSON structure. Begin now.`;
 
     const res = await fetch(apiUrl, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
       body: JSON.stringify({
-        systemInstruction: { parts: [{ text: systemPrompt }] },
-        contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
-        generationConfig: {
-          temperature: 0.7,
-          maxOutputTokens: 8192,
-          responseMimeType: 'application/json',
-        },
+        model,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
+        temperature: 0.7,
+        max_tokens: 8192,
+        response_format: { type: 'json_object' },
       }),
     });
 
@@ -178,16 +182,16 @@ Output only the JSON structure. Begin now.`;
     }
 
     const data = (await res.json()) as {
-      candidates?: Array<{
-        content?: { parts?: Array<{ text?: string }> };
-        finishReason?: string;
+      choices?: Array<{
+        message?: { content?: string };
+        finish_reason?: string;
       }>;
       error?: { message: string };
     };
 
     if (data.error) throw new Error(`AI error: ${data.error.message}`);
 
-    const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    const rawText = data.choices?.[0]?.message?.content;
     if (!rawText) throw new Error('AI returned an empty response');
 
     // Parse generated structure

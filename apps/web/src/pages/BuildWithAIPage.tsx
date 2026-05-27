@@ -103,7 +103,7 @@ export function BuildWithAIPage() {
           </div>
 
           <p className="mt-6 text-xs text-slate-400">
-            Gemma 4 is generating content — this usually takes 15–30 seconds.
+            Gemma 2 is generating content — this usually takes 15–30 seconds.
           </p>
         </div>
       </div>
@@ -135,11 +135,11 @@ export function BuildWithAIPage() {
         <div className="mb-8">
           <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-indigo-50 px-3 py-1.5 text-xs font-medium text-indigo-600">
             <Sparkles className="size-3" />
-            Powered by Gemma 4
+            Powered by Gemma 2 via Groq
           </div>
           <h1 className="text-2xl font-bold text-slate-900">Generate a learning module</h1>
           <p className="mt-1.5 text-sm text-slate-500">
-            Describe what you want to teach and Gemma 4 will generate the full lesson
+            Describe what you want to teach and Gemma 2 will generate the full lesson
             structure, explanations, and interactive questions for you.
           </p>
         </div>
