@@ -19,6 +19,7 @@ type UploadedSourceFile = {
 const GENERATING_MESSAGES = [
   'Thinking about your content…',
   'Structuring lessons…',
+  'Creating lesson visuals…',
   'Writing explanations…',
   'Adding interactive questions…',
   'Polishing the module…',
@@ -212,7 +213,8 @@ export function BuildWithAIPage() {
           <h1 className="text-2xl font-bold text-slate-900">Generate a learning module</h1>
           <p className="mt-1.5 text-sm text-slate-500">
             Describe what you want to teach or upload a source document. Llama 3.3 will
-            generate the lesson structure, explanations, and interactive questions for you.
+            generate a full mobile-ready module with lesson visuals, explanations, and
+            interactive questions for you.
           </p>
         </div>
 

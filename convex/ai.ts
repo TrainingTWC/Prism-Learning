@@ -26,6 +26,13 @@ type ExtractedSource = {
   note?: string;
 };
 
+type VisualBrief = {
+  title?: string;
+  altText?: string;
+  caption?: string;
+  description?: string;
+};
+
 // ── Internal helpers ───────────────────────────────────────────────────────
 
 /** Verify workspace membership from within an action. */
@@ -109,7 +116,7 @@ export const createModuleFromAI = internalMutation({
 function buildSystemPrompt(type: 'microLearning' | 'course'): string {
   const isMicro = type === 'microLearning';
   const lessonRange = isMicro ? '1 to 3' : '3 to 7';
-  const blockRange = isMicro ? '3 to 6' : '4 to 8';
+  const blockRange = isMicro ? '5 to 8' : '6 to 10';
 
   return `You are an expert instructional designer. Generate a complete e-learning module as a single JSON object — no markdown, no prose, only valid JSON.
 
@@ -118,6 +125,12 @@ Output schema:
   "lessons": [
     {
       "title": "string",
+      "visual": {
+        "title": "short visual title",
+        "altText": "specific accessible alt text",
+        "caption": "short caption",
+        "description": "specific image brief for a clean premium instructional illustration"
+      },
       "blocks": [
         { "type": "richText",  "content": "HTML string" },
         { "type": "mcq",       "content": "JSON-encoded string" },
@@ -131,9 +144,11 @@ Output schema:
 Rules:
 - Create ${lessonRange} lessons for a ${isMicro ? 'micro-learning (5–10 min)' : 'full course (20–40 min)'} module.
 - Each lesson has ${blockRange} blocks.
+- Each lesson MUST include a visual brief. The app will turn visual briefs into generated course images, so make each brief concrete, instructional, and tied to the lesson concept.
+- Visual briefs should describe simple premium editorial illustrations, diagrams, step cards, or process visuals. Do not request photoreal people, logos, copyrighted characters, or dense text inside the image.
 - Design for a premium mobile phone learning experience: short screens, tight pacing, clear progression, and no dense textbook sections.
 - richText blocks must be phone-sized chunks: 1 to 3 short paragraphs, or a heading plus 3 to 5 concise bullets. Avoid long paragraphs.
-- Each lesson should include a setup, one concrete example or scenario, one interaction, and a short takeaway.
+- Each lesson should include a setup, one generated visual, one concrete example or scenario, one interaction, one reveal/accordion where helpful, and a short takeaway.
 - Quiz questions should check the learning objective with realistic scenarios, not trivia.
 - Use accordion blocks for misconceptions, optional details, or step-by-step reveals.
 - richText content: well-formed HTML using only <p>, <h2>, <h3>, <ul>, <ol>, <li>, <strong>, <em>. No <script>, no inline styles.
@@ -161,6 +176,117 @@ function cleanExtractedText(value: string): string {
     .replace(/\n{3,}/g, '\n\n')
     .trim()
     .slice(0, 18000);
+}
+
+function escapeSvg(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function hashString(value: string): number {
+  let hash = 0;
+  for (let i = 0; i < value.length; i++) hash = ((hash << 5) - hash + value.charCodeAt(i)) | 0;
+  return Math.abs(hash);
+}
+
+function wrapSvgLines(value: string, maxChars: number, maxLines: number): string[] {
+  const words = value.replace(/\s+/g, ' ').trim().split(' ').filter(Boolean);
+  const lines: string[] = [];
+  let current = '';
+  for (const word of words) {
+    const next = current ? `${current} ${word}` : word;
+    if (next.length > maxChars && current) {
+      lines.push(current);
+      current = word;
+      if (lines.length >= maxLines) break;
+    } else {
+      current = next;
+    }
+  }
+  if (current && lines.length < maxLines) lines.push(current);
+  return lines;
+}
+
+function buildGeneratedVisualSvg(moduleName: string, lessonTitle: string, visual: VisualBrief): string {
+  const palettes = [
+    ['#4f46e5', '#10b981', '#f8fafc'],
+    ['#0f766e', '#f59e0b', '#f8fafc'],
+    ['#2563eb', '#ec4899', '#f8fafc'],
+    ['#7c3aed', '#14b8a6', '#f8fafc'],
+    ['#dc2626', '#2563eb', '#fff7ed'],
+  ];
+  const palette = palettes[hashString(`${moduleName}:${lessonTitle}`) % palettes.length]!;
+  const [primary, accent, background] = palette;
+  const title = visual.title || lessonTitle;
+  const caption = visual.caption || visual.description || `Visual summary for ${lessonTitle}`;
+  const titleLines = wrapSvgLines(title, 24, 2);
+  const captionLines = wrapSvgLines(caption, 44, 3);
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 675" role="img" aria-labelledby="title desc">
+  <title id="title">${escapeSvg(visual.altText || title)}</title>
+  <desc id="desc">${escapeSvg(visual.description || caption)}</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="${background}"/>
+      <stop offset="1" stop-color="#e2e8f0"/>
+    </linearGradient>
+    <linearGradient id="card" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="${primary}"/>
+      <stop offset="1" stop-color="${accent}"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="18" stdDeviation="18" flood-color="#0f172a" flood-opacity="0.16"/>
+    </filter>
+  </defs>
+  <rect width="1200" height="675" rx="44" fill="url(#bg)"/>
+  <circle cx="1040" cy="130" r="150" fill="${accent}" opacity="0.16"/>
+  <circle cx="145" cy="565" r="170" fill="${primary}" opacity="0.13"/>
+  <g filter="url(#shadow)">
+    <rect x="96" y="82" width="1008" height="511" rx="38" fill="#fff"/>
+  </g>
+  <rect x="144" y="134" width="276" height="356" rx="30" fill="url(#card)"/>
+  <path d="M196 390c60-92 104-138 156-138 52 0 82 56 122 138" fill="none" stroke="#fff" stroke-width="22" stroke-linecap="round" opacity="0.86"/>
+  <circle cx="260" cy="218" r="46" fill="#fff" opacity="0.9"/>
+  <rect x="506" y="164" width="440" height="20" rx="10" fill="${primary}" opacity="0.18"/>
+  <rect x="506" y="218" width="520" height="24" rx="12" fill="${primary}" opacity="0.9"/>
+  <rect x="506" y="268" width="422" height="18" rx="9" fill="#94a3b8" opacity="0.45"/>
+  <rect x="506" y="309" width="485" height="18" rx="9" fill="#94a3b8" opacity="0.36"/>
+  <g transform="translate(506 374)">
+    <rect width="122" height="86" rx="18" fill="${primary}" opacity="0.12"/>
+    <rect x="158" width="122" height="86" rx="18" fill="${accent}" opacity="0.16"/>
+    <rect x="316" width="122" height="86" rx="18" fill="${primary}" opacity="0.12"/>
+    <path d="M52 43h18m-9-9v18" stroke="${primary}" stroke-width="8" stroke-linecap="round"/>
+    <path d="M205 43l20 20 35-42" stroke="${accent}" stroke-width="8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="377" cy="43" r="22" fill="none" stroke="${primary}" stroke-width="8"/>
+  </g>
+  <text x="144" y="548" font-family="Inter, Arial, sans-serif" font-size="26" font-weight="700" fill="#334155">${escapeSvg(moduleName.slice(0, 64))}</text>
+  <text x="506" y="126" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="800" letter-spacing="3" fill="${primary}">LESSON VISUAL</text>
+  ${titleLines.map((line, index) => `<text x="506" y="${222 + index * 46}" font-family="Inter, Arial, sans-serif" font-size="38" font-weight="800" fill="#0f172a">${escapeSvg(line)}</text>`).join('')}
+  ${captionLines.map((line, index) => `<text x="506" y="${520 + index * 30}" font-family="Inter, Arial, sans-serif" font-size="22" fill="#64748b">${escapeSvg(line)}</text>`).join('')}
+</svg>`;
+}
+
+async function generatedVisualBlock(ctx: ActionCtx, moduleName: string, lessonTitle: string, visual?: VisualBrief): Promise<{ type: string; content: string }> {
+  const fallback: VisualBrief = {
+    title: lessonTitle,
+    altText: `Instructional illustration for ${lessonTitle}`,
+    caption: `Visual overview: ${lessonTitle}`,
+    description: `A clean instructional visual summarizing ${lessonTitle}.`,
+  };
+  const finalVisual = visual ?? fallback;
+  const svg = buildGeneratedVisualSvg(moduleName, lessonTitle, finalVisual);
+  const storageId = await ctx.storage.store(new Blob([svg], { type: 'image/svg+xml' }));
+  return {
+    type: 'image',
+    content: JSON.stringify({
+      storageId,
+      altText: finalVisual.altText || `Instructional illustration for ${lessonTitle}`,
+      caption: finalVisual.caption || finalVisual.title || lessonTitle,
+    }),
+  };
 }
 
 function extractTextFromPlainBytes(bytes: ArrayBuffer): string {
@@ -388,6 +514,7 @@ Output only the JSON structure. Begin now.`;
     let generated: {
       lessons: Array<{
         title: string;
+        visual?: VisualBrief;
         blocks: Array<{ type: string; content: string }>;
       }>;
     };
@@ -403,12 +530,19 @@ Output only the JSON structure. Begin now.`;
     }
 
     // Sanitise and cap lengths to avoid schema violations
-    const lessons = generated.lessons.slice(0, 10).map((l) => ({
-      title: String(l?.title ?? 'Lesson').slice(0, 200),
-      blocks: (Array.isArray(l?.blocks) ? l.blocks : []).slice(0, 20).map((b) => ({
+    const lessons = await Promise.all(generated.lessons.slice(0, 10).map(async (l) => {
+      const title = String(l?.title ?? 'Lesson').slice(0, 200);
+      const blocks = (Array.isArray(l?.blocks) ? l.blocks : []).slice(0, 24).map((b) => ({
         type: String(b?.type ?? 'richText'),
         content: String(b?.content ?? ''),
-      })),
+      }));
+      const visualBlock = await generatedVisualBlock(ctx, name.trim() || 'AI-Generated Module', title, l?.visual);
+      const insertAt = Math.min(1, blocks.length);
+      blocks.splice(insertAt, 0, visualBlock);
+      return {
+        title,
+        blocks,
+      };
     }));
 
     const assetBlocks = sourceAssetBlocks(source?.assets ?? []);
