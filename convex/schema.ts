@@ -61,6 +61,9 @@ export default defineSchema({
       v.literal('image'),
       v.literal('video'),
       v.literal('lottie'),
+      v.literal('mcq'),
+      v.literal('trueFalse'),
+      v.literal('accordion'),
     ),
     order: v.number(),
     /**

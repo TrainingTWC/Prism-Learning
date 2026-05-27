@@ -34,11 +34,17 @@ import {
   Video,
   Zap,
   ChevronDown,
+  CheckCircle2,
+  ToggleLeft,
+  AlignJustify,
 } from 'lucide-react';
 import { RichTextBlockEditor } from '../components/RichTextBlockEditor';
 import { ImageBlockEditor } from '../components/ImageBlockEditor';
 import { VideoBlockEditor } from '../components/VideoBlockEditor';
 import { LottieBlockEditor } from '../components/LottieBlockEditor';
+import { MCQBlockEditor } from '../components/MCQBlockEditor';
+import { TrueFalseBlockEditor } from '../components/TrueFalseBlockEditor';
+import { AccordionBlockEditor } from '../components/AccordionBlockEditor';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -50,7 +56,7 @@ type Lesson = {
   moduleId: Id<'modules'>;
 };
 
-type BlockType = 'richText' | 'image' | 'video' | 'lottie';
+type BlockType = 'richText' | 'image' | 'video' | 'lottie' | 'mcq' | 'trueFalse' | 'accordion';
 
 type Block = {
   _id: Id<'blocks'>;
@@ -64,10 +70,13 @@ type Block = {
 };
 
 const BLOCK_TYPES: { type: BlockType; label: string; icon: React.ReactNode }[] = [
-  { type: 'richText', label: 'Rich text', icon: <Type className="size-3.5" /> },
-  { type: 'image',    label: 'Image',     icon: <ImageIcon className="size-3.5" /> },
-  { type: 'video',    label: 'Video',     icon: <Video className="size-3.5" /> },
-  { type: 'lottie',   label: 'Animation', icon: <Zap className="size-3.5" /> },
+  { type: 'richText',  label: 'Rich text',       icon: <Type className="size-3.5" /> },
+  { type: 'image',     label: 'Image',            icon: <ImageIcon className="size-3.5" /> },
+  { type: 'video',     label: 'Video',            icon: <Video className="size-3.5" /> },
+  { type: 'lottie',    label: 'Animation',        icon: <Zap className="size-3.5" /> },
+  { type: 'mcq',       label: 'Multiple choice',  icon: <CheckCircle2 className="size-3.5" /> },
+  { type: 'trueFalse', label: 'True / False',     icon: <ToggleLeft className="size-3.5" /> },
+  { type: 'accordion', label: 'Accordion',        icon: <AlignJustify className="size-3.5" /> },
 ];
 
 // ── Main Page ──────────────────────────────────────────────────────────────
@@ -608,6 +617,27 @@ function SortableBlock({
         )}
         {block.type === 'lottie' && (
           <LottieBlockEditor
+            blockId={block._id}
+            initialContent={block.content}
+            onSave={onSave}
+          />
+        )}
+        {block.type === 'mcq' && (
+          <MCQBlockEditor
+            blockId={block._id}
+            initialContent={block.content}
+            onSave={onSave}
+          />
+        )}
+        {block.type === 'trueFalse' && (
+          <TrueFalseBlockEditor
+            blockId={block._id}
+            initialContent={block.content}
+            onSave={onSave}
+          />
+        )}
+        {block.type === 'accordion' && (
+          <AccordionBlockEditor
             blockId={block._id}
             initialContent={block.content}
             onSave={onSave}
