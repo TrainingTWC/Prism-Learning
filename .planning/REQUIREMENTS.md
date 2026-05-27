@@ -169,7 +169,83 @@
 
 <!-- Filled by roadmapper: maps each REQ-ID to the phase that delivers it. -->
 
-(To be filled when ROADMAP.md is created.)
+| REQ-ID | Phase | Status |
+|--------|-------|--------|
+| AUTH-01 | Phase 1: Foundations & Auth | Pending |
+| AUTH-02 | Phase 1: Foundations & Auth | Pending |
+| AUTH-03 | Phase 1: Foundations & Auth | Pending |
+| AUTH-04 | Phase 1: Foundations & Auth | Pending |
+| AUTH-05 | Phase 1: Foundations & Auth | Pending |
+| AUTH-06 | Phase 1: Foundations & Auth | Pending |
+| AUTH-07 | Phase 1: Foundations & Auth | Pending |
+| MOD-01 | Phase 3: Module/Lesson/Block CRUD + Realtime | Pending |
+| MOD-02 | Phase 3: Module/Lesson/Block CRUD + Realtime | Pending |
+| MOD-03 | Phase 3: Module/Lesson/Block CRUD + Realtime | Pending |
+| MOD-04 | Phase 3: Module/Lesson/Block CRUD + Realtime | Pending |
+| MOD-05 | Phase 3: Module/Lesson/Block CRUD + Realtime | Pending |
+| MOD-06 | Phase 3: Module/Lesson/Block CRUD + Realtime | Pending |
+| LES-01 | Phase 3: Module/Lesson/Block CRUD + Realtime | Pending |
+| LES-02 | Phase 3: Module/Lesson/Block CRUD + Realtime | Pending |
+| LES-03 | Phase 3: Module/Lesson/Block CRUD + Realtime | Pending |
+| LES-04 | Phase 3: Module/Lesson/Block CRUD + Realtime | Pending |
+| BLK-01 | Phase 3: Module/Lesson/Block CRUD + Realtime | Pending |
+| BLK-02 | Phase 3: Module/Lesson/Block CRUD + Realtime | Pending |
+| BLK-03 | Phase 3: Module/Lesson/Block CRUD + Realtime | Pending |
+| BLK-04 | Phase 3: Module/Lesson/Block CRUD + Realtime | Pending |
+| BLK-05 | Phase 3: Module/Lesson/Block CRUD + Realtime | Pending |
+| BLK-06 | Phase 3: Module/Lesson/Block CRUD + Realtime | Pending |
+| BLK-RT-01 | Phase 3: Module/Lesson/Block CRUD + Realtime | Pending |
+| BLK-RT-02 | Phase 3: Module/Lesson/Block CRUD + Realtime | Pending |
+| BLK-RT-03 | Phase 3: Module/Lesson/Block CRUD + Realtime | Pending |
+| BLK-IMG-01 | Phase 5: Block Type Expansion | Pending |
+| BLK-IMG-02 | Phase 5: Block Type Expansion | Pending |
+| BLK-IMG-03 | Phase 5: Block Type Expansion | Pending |
+| BLK-IMG-04 | Phase 4: Asset Upload Pipeline | Pending |
+| BLK-VID-01 | Phase 5: Block Type Expansion | Pending |
+| BLK-VID-02 | Phase 5: Block Type Expansion | Pending |
+| BLK-VID-03 | Phase 5: Block Type Expansion | Pending |
+| BLK-MCQ-01 | Phase 5: Block Type Expansion | Pending |
+| BLK-MCQ-02 | Phase 5: Block Type Expansion | Pending |
+| BLK-MCQ-03 | Phase 5: Block Type Expansion | Pending |
+| BLK-MCQ-04 | Phase 5: Block Type Expansion | Pending |
+| BLK-TF-01 | Phase 5: Block Type Expansion | Pending |
+| BLK-TF-02 | Phase 5: Block Type Expansion | Pending |
+| BLK-TF-03 | Phase 5: Block Type Expansion | Pending |
+| BLK-ACC-01 | Phase 5: Block Type Expansion | Pending |
+| BLK-ACC-02 | Phase 5: Block Type Expansion | Pending |
+| BLK-ACC-03 | Phase 5: Block Type Expansion | Pending |
+| BLK-LOT-01 | Phase 5: Block Type Expansion | Pending |
+| BLK-LOT-02 | Phase 5: Block Type Expansion | Pending |
+| BLK-LOT-03 | Phase 8: SCORM Export & Hardening | Pending |
+| COL-01 | Phase 3: Module/Lesson/Block CRUD + Realtime | Pending |
+| COL-02 | Phase 3: Module/Lesson/Block CRUD + Realtime | Pending |
+| COL-03 | Phase 3: Module/Lesson/Block CRUD + Realtime | Pending |
+| COL-04 | Phase 3: Module/Lesson/Block CRUD + Realtime | Pending |
+| THM-01 | Phase 6: Theming | Pending |
+| THM-02 | Phase 6: Theming | Pending |
+| THM-03 | Phase 6: Theming | Pending |
+| THM-04 | Phase 6: Theming | Pending |
+| THM-05 | Phase 6: Theming | Pending |
+| THM-06 | Phase 6: Theming | Pending |
+| PRV-01 | Phase 7: Learner Preview | Pending |
+| PRV-02 | Phase 7: Learner Preview | Pending |
+| PRV-03 | Phase 7: Learner Preview | Pending |
+| SCO-01 | Phase 8: SCORM Export & Hardening | Pending |
+| SCO-02 | Phase 8: SCORM Export & Hardening | Pending |
+| SCO-03 | Phase 8: SCORM Export & Hardening | Pending |
+| SCO-04 | Phase 8: SCORM Export & Hardening | Pending |
+| SCO-05 | Phase 8: SCORM Export & Hardening | Pending |
+| SCO-06 | Phase 8: SCORM Export & Hardening | Pending |
+| SCO-07 | Phase 8: SCORM Export & Hardening | Pending |
+| SCO-08 | Phase 8: SCORM Export & Hardening | Pending |
+| A11Y-01 | Phase 5: Block Type Expansion | Pending |
+| A11Y-02 | Phase 5: Block Type Expansion | Pending |
+| A11Y-03 | Phase 5: Block Type Expansion | Pending |
+| A11Y-04 | Phase 6: Theming | Pending |
+| RSP-01 | Phase 8: SCORM Export & Hardening | Pending |
+| RSP-02 | Phase 1: Foundations & Auth | Pending |
+
+**Coverage:** 73 / 73 v1 requirements mapped to exactly one phase. No orphans.
 
 ---
 
