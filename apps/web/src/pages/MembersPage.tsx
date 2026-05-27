@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation } from 'convex/react';
 import { Link, useParams } from '@tanstack/react-router';
 import { api } from '~convex/_generated/api';
-import type { MemberDoc, PendingInviteDoc } from '~convex/_generated/api';
+import type { Id } from '~convex/_generated/dataModel';
 import {
   ChevronLeft,
   Loader2,
@@ -15,10 +15,11 @@ import {
 
 export function MembersPage() {
   const { workspaceId } = useParams({ from: '/protected/w/$workspaceId/members' });
+  const wsId = workspaceId as Id<'workspaces'>;
 
-  const workspace = useQuery(api.workspaces.getById, { workspaceId });
-  const members = useQuery(api.members.list, { workspaceId });
-  const pendingInvites = useQuery(api.members.listPendingInvites, { workspaceId });
+  const workspace = useQuery(api.workspaces.getById, { workspaceId: wsId });
+  const members = useQuery(api.members.list, { workspaceId: wsId });
+  const pendingInvites = useQuery(api.members.listPendingInvites, { workspaceId: wsId });
 
   const inviteMutation = useMutation(api.members.invite);
   const removeMutation = useMutation(api.members.remove);
@@ -42,7 +43,7 @@ export function MembersPage() {
     setInviteLink(null);
 
     try {
-      const inviteId = await inviteMutation({ workspaceId, email });
+      const inviteId = await inviteMutation({ workspaceId: wsId, email });
       const link = `${window.location.origin}/sign-in?inviteId=${inviteId}&email=${encodeURIComponent(email)}`;
       setInviteLink(link);
       setInviteEmail('');
@@ -56,7 +57,7 @@ export function MembersPage() {
   async function handleRemove(userId: string) {
     setRemovingId(userId);
     try {
-      await removeMutation({ workspaceId, userId });
+      await removeMutation({ workspaceId: wsId, userId: userId as Id<'users'> });
     } finally {
       setRemovingId(null);
     }
@@ -169,7 +170,7 @@ export function MembersPage() {
             </h2>
           </div>
           <ul className="divide-y divide-slate-100">
-            {members.map((m: MemberDoc) => (
+            {members.map((m) => (
               <li key={m._id} className="flex items-center justify-between px-5 py-3.5">
                 <div>
                   <p className="text-sm font-medium text-slate-800">
@@ -220,7 +221,7 @@ export function MembersPage() {
               </h2>
             </div>
             <ul className="divide-y divide-slate-100">
-              {pendingInvites.map((inv: PendingInviteDoc) => (
+              {pendingInvites.map((inv) => (
                 <li key={inv._id} className="px-5 py-3.5">
                   <p className="text-sm text-slate-700">{inv.email}</p>
                   <p className="mt-0.5 text-xs text-slate-400">

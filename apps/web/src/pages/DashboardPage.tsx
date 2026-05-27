@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useQuery, useMutation, useConvexAuth } from 'convex/react';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { api } from '~convex/_generated/api';
-import type { WorkspaceDoc } from '~convex/_generated/api';
 import { Plus, Loader2, Sparkles, LogOut, ChevronRight, Users } from 'lucide-react';
 import { useAuthActions } from '@convex-dev/auth/react';
 
@@ -150,7 +149,7 @@ export function DashboardPage() {
         {/* Workspace list */}
         {workspaces && workspaces.length > 0 && (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {workspaces.map((ws: WorkspaceDoc) => (
+            {workspaces.map((ws) => (
               <Link
                 key={ws._id}
                 to="/w/$workspaceId"

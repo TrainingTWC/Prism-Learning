@@ -16,9 +16,10 @@ export const listMine = query({
 
     const workspaces = await Promise.all(memberships.map((m) => ctx.db.get(m.workspaceId)));
 
-    return workspaces
-      .map((ws, i) => (ws ? { ...ws, role: memberships[i]!.role } : null))
-      .filter(Boolean);
+    const results = workspaces.map((ws, i) =>
+      ws ? { ...ws, role: memberships[i]!.role } : null,
+    );
+    return results.filter((ws): ws is NonNullable<typeof ws> => ws !== null);
   },
 });
 

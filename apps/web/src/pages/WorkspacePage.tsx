@@ -1,11 +1,13 @@
 import { useQuery } from 'convex/react';
 import { Link, useParams } from '@tanstack/react-router';
 import { api } from '~convex/_generated/api';
+import type { Id } from '~convex/_generated/dataModel';
 import { ChevronLeft, Users, Layers, Loader2 } from 'lucide-react';
 
 export function WorkspacePage() {
   const { workspaceId } = useParams({ from: '/protected/w/$workspaceId' });
-  const workspace = useQuery(api.workspaces.getById, { workspaceId });
+  const wsId = workspaceId as Id<'workspaces'>;
+  const workspace = useQuery(api.workspaces.getById, { workspaceId: wsId });
 
   if (workspace === undefined) {
     return (

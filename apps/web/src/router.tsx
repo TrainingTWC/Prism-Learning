@@ -10,6 +10,7 @@ import { SignInPage } from './pages/SignInPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { WorkspacePage } from './pages/WorkspacePage';
 import { MembersPage } from './pages/MembersPage';
+import { RendererDemoPage } from './pages/RendererDemoPage';
 
 // Root — wraps everything in the mobile guard
 const rootRoute = createRootRoute({
@@ -55,8 +56,16 @@ const membersRoute = createRoute({
   component: MembersPage,
 });
 
+// Public dev-only renderer demo (Phase 2 purity proof)
+const rendererDemoRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/renderer-demo',
+  component: RendererDemoPage,
+});
+
 const routeTree = rootRoute.addChildren([
   signInRoute,
+  rendererDemoRoute,
   protectedRoute.addChildren([dashboardRoute, workspaceRoute, membersRoute]),
 ]);
 
