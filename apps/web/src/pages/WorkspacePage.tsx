@@ -53,12 +53,20 @@ export function WorkspacePage() {
         </div>
 
         <nav className="p-2">
-          <NavItem to={`/w/${workspaceId}`} icon={<Layers className="size-4" />} label="Modules" />
-          <NavItem
-            to={`/w/${workspaceId}/members`}
-            icon={<Users className="size-4" />}
-            label="Members"
-          />
+          <Link
+            to="/w/$workspaceId/modules"
+            params={{ workspaceId }}
+            className="flex items-center gap-2.5 rounded-md px-3 py-2 text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-800"
+          >
+            <Layers className="size-4" /> Modules
+          </Link>
+          <Link
+            to="/w/$workspaceId/members"
+            params={{ workspaceId }}
+            className="flex items-center gap-2.5 rounded-md px-3 py-2 text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-800"
+          >
+            <Users className="size-4" /> Members
+          </Link>
         </nav>
       </aside>
 
@@ -83,42 +91,21 @@ export function WorkspacePage() {
             <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-xl bg-indigo-50">
               <Layers className="size-7 text-indigo-400" strokeWidth={1.5} />
             </div>
-            <h2 className="mb-2 text-lg font-semibold">Modules coming soon</h2>
+            <h2 className="mb-2 text-lg font-semibold">Ready to build</h2>
             <p className="text-sm leading-relaxed text-slate-500">
-              Block-based module authoring will be available in Phase 3. For now, you can manage
-              workspace members.
+              Create and manage learning modules for this workspace.
             </p>
             <Link
-              to="/w/$workspaceId/members"
+              to="/w/$workspaceId/modules"
               params={{ workspaceId }}
-              className="mt-5 inline-flex items-center gap-2 text-sm text-indigo-600 hover:underline"
+              className="mt-5 inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
             >
-              <Users className="size-4" />
-              Manage members
+              <Layers className="size-4" />
+              View modules
             </Link>
           </div>
         </div>
       </main>
     </div>
-  );
-}
-
-function NavItem({
-  to,
-  icon,
-  label,
-}: {
-  to: string;
-  icon: React.ReactNode;
-  label: string;
-}) {
-  return (
-    <a
-      href={to}
-      className="flex items-center gap-2.5 rounded-md px-3 py-2 text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-800"
-    >
-      {icon}
-      {label}
-    </a>
   );
 }

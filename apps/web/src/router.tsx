@@ -11,6 +11,8 @@ import { DashboardPage } from './pages/DashboardPage';
 import { WorkspacePage } from './pages/WorkspacePage';
 import { MembersPage } from './pages/MembersPage';
 import { RendererDemoPage } from './pages/RendererDemoPage';
+import { ModuleListPage } from './pages/ModuleListPage';
+import { ModuleEditorPage } from './pages/ModuleEditorPage';
 
 // Root — wraps everything in the mobile guard
 const rootRoute = createRootRoute({
@@ -56,6 +58,20 @@ const membersRoute = createRoute({
   component: MembersPage,
 });
 
+// Module list for a workspace
+const moduleListRoute = createRoute({
+  getParentRoute: () => protectedRoute,
+  path: '/w/$workspaceId/modules',
+  component: ModuleListPage,
+});
+
+// Module editor
+const moduleEditorRoute = createRoute({
+  getParentRoute: () => protectedRoute,
+  path: '/w/$workspaceId/m/$moduleId',
+  component: ModuleEditorPage,
+});
+
 // Public dev-only renderer demo (Phase 2 purity proof)
 const rendererDemoRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -66,7 +82,7 @@ const rendererDemoRoute = createRoute({
 const routeTree = rootRoute.addChildren([
   signInRoute,
   rendererDemoRoute,
-  protectedRoute.addChildren([dashboardRoute, workspaceRoute, membersRoute]),
+  protectedRoute.addChildren([dashboardRoute, workspaceRoute, membersRoute, moduleListRoute, moduleEditorRoute]),
 ]);
 
 export const router = createRouter({ routeTree });

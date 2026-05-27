@@ -28,4 +28,56 @@ export default defineSchema({
   })
     .index('by_workspace', ['workspaceId'])
     .index('by_email', ['email']),
+
+  // ── Phase 3: authoring data model ──────────────────────────────────────
+
+  modules: defineTable({
+    workspaceId: v.id('workspaces'),
+    title: v.string(),
+    status: v.union(v.literal('draft'), v.literal('published')),
+    /** Soft-delete: present means deleted */
+    deletedAt: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    lastEditedBy: v.id('users'),
+  })
+    .index('by_workspace', ['workspaceId'])
+    .index('by_workspace_updated', ['workspaceId', 'updatedAt']),
+
+  lessons: defineTable({
+    moduleId: v.id('modules'),
+    title: v.string(),
+    /** Float order for gapless reorder without renumbering siblings */
+    order: v.number(),
+    createdAt: v.number(),
+  }).index('by_module', ['moduleId']),
+
+  blocks: defineTable({
+    lessonId: v.id('lessons'),
+    /** Denormalized for single-subscription aggregate query */
+    moduleId: v.id('modules'),
+    type: v.union(
+      v.literal('richText'),
+      // Phase 5 will widen this union
+    ),
+    order: v.number(),
+    /** Rich-text HTML string (for type === 'richText') */
+    content: v.optional(v.string()),
+    updatedAt: v.number(),
+    lastEditedBy: v.optional(v.id('users')),
+  })
+    .index('by_lesson', ['lessonId'])
+    .index('by_module', ['moduleId']),
+
+  /** Ephemeral — upserted on every keystroke, TTL-reaped */
+  presence: defineTable({
+    userId: v.id('users'),
+    moduleId: v.id('modules'),
+    lastSeen: v.number(),
+    displayName: v.string(),
+    /** Which lesson the cursor is in */
+    activeLessonId: v.optional(v.id('lessons')),
+  })
+    .index('by_module', ['moduleId'])
+    .index('by_user_module', ['userId', 'moduleId']),
 });

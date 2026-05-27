@@ -18,3 +18,24 @@ body {
   @apply bg-white text-slate-900 antialiased;
   font-family: var(--font-sans);
 }
+
+/* Tiptap editor placeholder */
+.tiptap p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: #94a3b8;
+  pointer-events: none;
+  height: 0;
+}
+
+/* Tiptap prose styles */
+.tiptap h1 { @apply text-2xl font-bold text-slate-900 mb-3 mt-6 first:mt-0; }
+.tiptap h2 { @apply text-xl font-bold text-slate-800 mb-2 mt-5 first:mt-0; }
+.tiptap h3 { @apply text-lg font-semibold text-slate-800 mb-2 mt-4 first:mt-0; }
+.tiptap p  { @apply leading-relaxed text-slate-700 mb-3 last:mb-0; }
+.tiptap ul { @apply list-disc pl-5 mb-3 space-y-1 text-slate-700; }
+.tiptap ol { @apply list-decimal pl-5 mb-3 space-y-1 text-slate-700; }
+.tiptap a  { @apply text-indigo-600 underline hover:text-indigo-800; }
+.tiptap strong { @apply font-semibold; }
+.tiptap em { @apply italic; }
+.tiptap u  { @apply underline; }

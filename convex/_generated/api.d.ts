@@ -9,8 +9,12 @@
  */
 
 import type * as auth from "../auth.js";
+import type * as blocks from "../blocks.js";
 import type * as http from "../http.js";
+import type * as lessons from "../lessons.js";
 import type * as members from "../members.js";
+import type * as modules from "../modules.js";
+import type * as presence from "../presence.js";
 import type * as workspaces from "../workspaces.js";
 
 import type {
@@ -21,8 +25,12 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
+  blocks: typeof blocks;
   http: typeof http;
+  lessons: typeof lessons;
   members: typeof members;
+  modules: typeof modules;
+  presence: typeof presence;
   workspaces: typeof workspaces;
 }>;
 
