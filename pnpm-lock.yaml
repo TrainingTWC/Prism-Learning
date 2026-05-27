@@ -11,6 +11,9 @@ importers:
       '@convex-dev/auth':
         specifier: ^0.0.92
         version: 0.0.92(@auth/core@0.37.4)(convex@1.39.1(react@19.2.6))(react@19.2.6)
+      jszip:
+        specifier: ^3.10.1
+        version: 3.10.1
       resend:
         specifier: ^6.12.4
         version: 6.12.4

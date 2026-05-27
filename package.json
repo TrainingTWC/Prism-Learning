@@ -32,6 +32,7 @@
   },
   "dependencies": {
     "@convex-dev/auth": "^0.0.92",
+    "jszip": "^3.10.1",
     "resend": "^6.12.4"
   }
 }

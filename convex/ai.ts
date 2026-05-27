@@ -1,7 +1,30 @@
 import { v } from 'convex/values';
 import { action, internalMutation, internalQuery } from './_generated/server';
+import type { ActionCtx } from './_generated/server';
+import type { Id } from './_generated/dataModel';
 import { getAuthUserId } from '@convex-dev/auth/server';
 import { internal } from './_generated/api';
+import JSZip from 'jszip';
+
+type SourceFile = {
+  storageId: string;
+  name: string;
+  type: string;
+  size: number;
+};
+
+type SourceAsset = {
+  storageId: string;
+  type: 'image' | 'video';
+  mimeType: string;
+  name: string;
+};
+
+type ExtractedSource = {
+  text: string;
+  assets: SourceAsset[];
+  note?: string;
+};
 
 // ── Internal helpers ───────────────────────────────────────────────────────
 
@@ -122,6 +145,159 @@ Rules:
 - Keep all content educational, accurate, and engaging.`;
 }
 
+function decodeXmlEntities(value: string): string {
+  return value
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'");
+}
+
+function cleanExtractedText(value: string): string {
+  return value
+    .replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]+/g, ' ')
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+    .slice(0, 18000);
+}
+
+function extractTextFromPlainBytes(bytes: ArrayBuffer): string {
+  return cleanExtractedText(new TextDecoder('utf-8', { fatal: false }).decode(bytes));
+}
+
+function extractTextFromPdfBytes(bytes: ArrayBuffer): string {
+  const raw = new TextDecoder('latin1', { fatal: false }).decode(bytes);
+  const chunks: string[] = [];
+  const textObjectRegex = /\(([^()\\]*(?:\\.[^()\\]*)*)\)\s*Tj/g;
+  const arrayTextRegex = /\[((?:\s*\([^()\\]*(?:\\.[^()\\]*)*\)\s*)+)\]\s*TJ/g;
+
+  for (const match of raw.matchAll(textObjectRegex)) {
+    if (match[1]) chunks.push(match[1].replace(/\\([()\\])/g, '$1'));
+  }
+  for (const match of raw.matchAll(arrayTextRegex)) {
+    const arrayText = match[1] ?? '';
+    for (const part of arrayText.matchAll(/\(([^()\\]*(?:\\.[^()\\]*)*)\)/g)) {
+      if (part[1]) chunks.push(part[1].replace(/\\([()\\])/g, '$1'));
+    }
+  }
+
+  return cleanExtractedText(chunks.join(' '));
+}
+
+function mimeFromDocxMediaName(name: string): string | null {
+  const lower = name.toLowerCase();
+  if (lower.endsWith('.png')) return 'image/png';
+  if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) return 'image/jpeg';
+  if (lower.endsWith('.gif')) return 'image/gif';
+  if (lower.endsWith('.webp')) return 'image/webp';
+  if (lower.endsWith('.mp4')) return 'video/mp4';
+  if (lower.endsWith('.webm')) return 'video/webm';
+  return null;
+}
+
+async function extractDocxSource(ctx: ActionCtx, bytes: ArrayBuffer): Promise<ExtractedSource> {
+  const zip = await JSZip.loadAsync(bytes);
+  const documentXml = await zip.file('word/document.xml')?.async('string');
+  const text = documentXml
+    ? cleanExtractedText(
+        decodeXmlEntities(
+          documentXml
+            .replace(/<w:tab\/>/g, ' ')
+            .replace(/<w:br\/>/g, '\n')
+            .replace(/<\/w:p>/g, '\n')
+            .replace(/<[^>]+>/g, ''),
+        ),
+      )
+    : '';
+
+  const assets: SourceAsset[] = [];
+  const mediaFiles = Object.values(zip.files)
+    .filter((file) => !file.dir && file.name.startsWith('word/media/'))
+    .slice(0, 6);
+
+  for (const mediaFile of mediaFiles) {
+    const mimeType = mimeFromDocxMediaName(mediaFile.name);
+    if (!mimeType) continue;
+    const mediaBytes = await mediaFile.async('arraybuffer');
+    const blob = new Blob([mediaBytes], { type: mimeType });
+    const storageId = await ctx.storage.store(blob);
+    assets.push({
+      storageId,
+      type: mimeType.startsWith('video/') ? 'video' : 'image',
+      mimeType,
+      name: mediaFile.name.split('/').pop() ?? 'embedded-media',
+    });
+  }
+
+  return { text, assets };
+}
+
+async function extractSourceFile(ctx: ActionCtx, sourceFile?: SourceFile): Promise<ExtractedSource | null> {
+  if (!sourceFile) return null;
+  const blob = await ctx.storage.get(sourceFile.storageId as Id<'_storage'>);
+  if (!blob) throw new Error('Uploaded source file is unavailable. Please upload it again.');
+
+  const bytes = await blob.arrayBuffer();
+  const mimeType = sourceFile.type.toLowerCase();
+  const name = sourceFile.name.toLowerCase();
+
+  if (mimeType.startsWith('image/')) {
+    return {
+      text: '',
+      assets: [{ storageId: sourceFile.storageId, type: 'image', mimeType: sourceFile.type, name: sourceFile.name }],
+      note: 'The uploaded image was attached as a visual asset. Add descriptive context in the objective if the image content is important.',
+    };
+  }
+  if (mimeType.startsWith('video/')) {
+    return {
+      text: '',
+      assets: [{ storageId: sourceFile.storageId, type: 'video', mimeType: sourceFile.type, name: sourceFile.name }],
+      note: 'The uploaded video was attached as a media asset. Add descriptive context in the objective if the video content is important.',
+    };
+  }
+  if (mimeType.includes('wordprocessingml') || name.endsWith('.docx')) {
+    return await extractDocxSource(ctx, bytes);
+  }
+  if (mimeType === 'application/pdf' || name.endsWith('.pdf')) {
+    const text = extractTextFromPdfBytes(bytes);
+    return {
+      text,
+      assets: [],
+      note: text
+        ? 'PDF text was extracted best-effort. Embedded PDF media is not extracted in this version.'
+        : 'PDF text could not be extracted. Scanned/image-only PDFs need OCR support in a later pass.',
+    };
+  }
+  if (
+    mimeType.startsWith('text/') ||
+    name.endsWith('.txt') ||
+    name.endsWith('.md') ||
+    name.endsWith('.csv') ||
+    name.endsWith('.json')
+  ) {
+    return { text: extractTextFromPlainBytes(bytes), assets: [] };
+  }
+
+  throw new Error('Unsupported source file. Upload PDF, DOCX, TXT, Markdown, image, or video.');
+}
+
+function sourceAssetBlocks(assets: SourceAsset[]): Array<{ type: string; content: string }> {
+  return assets.slice(0, 4).map((asset) => {
+    if (asset.type === 'video') {
+      return {
+        type: 'video',
+        content: JSON.stringify({ srcType: 'storage', src: asset.storageId, caption: `Source video: ${asset.name}` }),
+      };
+    }
+    return {
+      type: 'image',
+      content: JSON.stringify({ storageId: asset.storageId, altText: `Source image from ${asset.name}`, caption: `Source image: ${asset.name}` }),
+    };
+  });
+}
+
 // ── Public action ──────────────────────────────────────────────────────────
 
 /**
@@ -136,8 +312,14 @@ export const generateModule = action({
     objective: v.string(),
     type: v.union(v.literal('microLearning'), v.literal('course')),
     description: v.string(),
+    sourceFile: v.optional(v.object({
+      storageId: v.string(),
+      name: v.string(),
+      type: v.string(),
+      size: v.number(),
+    })),
   },
-  handler: async (ctx, { workspaceId, name, objective, type, description }): Promise<string> => {
+  handler: async (ctx, { workspaceId, name, objective, type, description, sourceFile }): Promise<string> => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error('Unauthenticated');
 
@@ -153,13 +335,16 @@ export const generateModule = action({
 
     const model = process.env.GROQ_MODEL ?? 'llama-3.3-70b-versatile';
     const apiUrl = 'https://api.groq.com/openai/v1/chat/completions';
+    const source = await extractSourceFile(ctx, sourceFile);
+    const sourceText = source?.text ? `\n\nSource document excerpts:\n${source.text}` : '';
+    const sourceNote = source?.note ? `\n\nSource handling note: ${source.note}` : '';
 
     const systemPrompt = buildSystemPrompt(type);
     const userPrompt = `Create a ${type === 'microLearning' ? 'micro-learning' : 'full course'} module with these details:
 
 Module name: ${name}
 Learning objective: ${objective}
-Description: ${description}
+  Description: ${description || 'Use the uploaded source file as the primary source material.'}${sourceText}${sourceNote}
 
 Output only the JSON structure. Begin now.`;
 
@@ -225,6 +410,11 @@ Output only the JSON structure. Begin now.`;
         content: String(b?.content ?? ''),
       })),
     }));
+
+    const assetBlocks = sourceAssetBlocks(source?.assets ?? []);
+    if (assetBlocks.length > 0) {
+      lessons[0]?.blocks.splice(1, 0, ...assetBlocks);
+    }
 
     const moduleId = await ctx.runMutation(internal.ai.createModuleFromAI, {
       workspaceId,
