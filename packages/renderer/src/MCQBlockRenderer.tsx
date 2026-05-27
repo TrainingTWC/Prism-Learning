@@ -19,6 +19,17 @@ interface Props {
   block: MCQBlock;
 }
 
+const correctStyle: React.CSSProperties = {
+  borderColor: 'var(--prism-correct, #16a34a)',
+  backgroundColor: 'color-mix(in srgb, var(--prism-correct, #16a34a) 10%, white)',
+  color: 'color-mix(in srgb, var(--prism-correct, #16a34a) 70%, #0f172a)',
+};
+const incorrectStyle: React.CSSProperties = {
+  borderColor: 'var(--prism-incorrect, #dc2626)',
+  backgroundColor: 'color-mix(in srgb, var(--prism-incorrect, #dc2626) 10%, white)',
+  color: 'color-mix(in srgb, var(--prism-incorrect, #dc2626) 70%, #0f172a)',
+};
+
 export function MCQBlockRenderer({ block }: Props) {
   let payload: MCQPayload = {};
   try { payload = JSON.parse(block.content) as MCQPayload; } catch { /* empty */ }
@@ -64,11 +75,12 @@ export function MCQBlockRenderer({ block }: Props) {
           const correct = opt.isCorrect;
 
           let optClass =
-            'flex cursor-pointer items-start gap-3 rounded-lg border p-3 text-sm transition';
+            'flex cursor-pointer items-start gap-3 rounded-lg border-2 p-3 text-sm transition';
+          let optStyle: React.CSSProperties = {};
           if (submitted) {
-            if (isSelected && correct)  optClass += ' border-emerald-400 bg-emerald-50 text-emerald-800';
-            else if (isSelected)        optClass += ' border-red-400 bg-red-50 text-red-800';
-            else                        optClass += ' border-slate-200 bg-white text-slate-500';
+            if (isSelected && correct) { optStyle = correctStyle; }
+            else if (isSelected)       { optStyle = incorrectStyle; }
+            else { optClass += ' border-slate-200 bg-white text-slate-500'; }
           } else {
             optClass += isSelected
               ? ' border-indigo-400 bg-indigo-50 text-indigo-800'
@@ -80,6 +92,7 @@ export function MCQBlockRenderer({ block }: Props) {
               <button
                 type="button"
                 onClick={() => toggle(opt.id)}
+                style={optStyle}
                 className={optClass + ' w-full text-left'}
               >
                 <span
@@ -93,7 +106,8 @@ export function MCQBlockRenderer({ block }: Props) {
               </button>
               {showResult && showFeedback && opt.feedback && (
                 <p
-                  className={`mt-1 ml-8 text-xs ${correct ? 'text-emerald-600' : 'text-red-600'}`}
+                  className="mt-1 ml-8 text-xs"
+                  style={{ color: correct ? 'var(--prism-correct, #16a34a)' : 'var(--prism-incorrect, #dc2626)' }}
                 >
                   {opt.feedback}
                 </p>
@@ -116,7 +130,8 @@ export function MCQBlockRenderer({ block }: Props) {
         ) : (
           <>
             <span
-              className={`text-sm font-medium ${allCorrect ? 'text-emerald-600' : 'text-red-600'}`}
+              className="text-sm font-medium"
+              style={{ color: allCorrect ? 'var(--prism-correct, #16a34a)' : 'var(--prism-incorrect, #dc2626)' }}
             >
               {allCorrect ? '✓ Correct!' : '✗ Not quite.'}
             </span>

@@ -35,12 +35,16 @@ export function TrueFalseBlockRenderer({ block }: Props) {
         {[true, false].map((val) => {
           const label = val ? 'True' : 'False';
           let cls = 'flex-1 rounded-lg border-2 py-3 text-sm font-semibold transition';
+          let style: React.CSSProperties = {};
           if (answer === null) {
             cls += ' border-slate-200 bg-white text-slate-700 hover:border-slate-300 cursor-pointer';
           } else if (answer === val) {
             cls += isRight
-              ? ' border-emerald-400 bg-emerald-50 text-emerald-700'
-              : ' border-red-400 bg-red-50 text-red-700';
+              ? ' border-2'
+              : ' border-2';
+            style = isRight
+              ? { borderColor: 'var(--prism-correct, #16a34a)', backgroundColor: 'color-mix(in srgb, var(--prism-correct, #16a34a) 10%, white)', color: 'color-mix(in srgb, var(--prism-correct, #16a34a) 70%, #0f172a)' }
+              : { borderColor: 'var(--prism-incorrect, #dc2626)', backgroundColor: 'color-mix(in srgb, var(--prism-incorrect, #dc2626) 10%, white)', color: 'color-mix(in srgb, var(--prism-incorrect, #dc2626) 70%, #0f172a)' };
           } else {
             cls += ' border-slate-200 bg-white text-slate-400 opacity-60';
           }
@@ -49,6 +53,7 @@ export function TrueFalseBlockRenderer({ block }: Props) {
               key={label}
               type="button"
               onClick={() => handleAnswer(val)}
+              style={style}
               className={cls}
             >
               {label}
@@ -57,7 +62,10 @@ export function TrueFalseBlockRenderer({ block }: Props) {
         })}
       </div>
       {answer !== null && (
-        <div className={`mt-4 text-sm ${isRight ? 'text-emerald-600' : 'text-red-600'}`}>
+        <div
+          className="mt-4 text-sm font-medium"
+          style={{ color: isRight ? 'var(--prism-correct, #16a34a)' : 'var(--prism-incorrect, #dc2626)' }}
+        >
           {isRight ? '✓ Correct! ' : '✗ Not quite. '}
           {feedback}
         </div>

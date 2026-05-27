@@ -1,10 +1,25 @@
 export type ResolveAsset = (assetId: string) => string;
 
 export interface Theme {
+  // Brand
   primary: string;
   accent: string;
+  // Feedback colors
+  correct?: string;
+  incorrect?: string;
+  // Content text colors
+  headingTextColor?: string;
+  bodyTextColor?: string;
+  // Typography
   headingFont: string;
   bodyFont: string;
+  headingSize?: string;   // 'sm' | 'md' | 'lg' | 'xl'
+  headingWeight?: string; // '400' | '500' | '600' | '700' | '800'
+  bodySize?: string;      // 'sm' | 'md' | 'lg'
+  lineHeight?: string;    // 'tight' | 'normal' | 'relaxed' | 'loose'
+  // Shape
+  borderRadius?: string;  // 'none' | 'sm' | 'md' | 'lg' | 'xl' | 'full'
+  buttonStyle?: string;   // 'filled' | 'outline' | 'soft'
 }
 
 export type Block =
