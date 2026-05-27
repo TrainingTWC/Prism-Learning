@@ -1,3 +1,4 @@
+import DOMPurify from 'dompurify';
 import type { RichTextBlock as RichTextBlockType } from './types';
 
 interface Props {
@@ -6,16 +7,26 @@ interface Props {
 
 /**
  * Read-only rich-text renderer.
- * Authoring uses Tiptap; on save, Tiptap's JSON is rendered to trusted HTML
- * (server-side, via @tiptap/html) and stored on the block. This component
- * just injects that HTML — no editing, no I/O.
+ * Content is sanitized through DOMPurify before being injected to prevent XSS.
  */
 export function RichTextBlock({ block }: Props) {
+  const clean = DOMPurify.sanitize(block.content, {
+    ALLOWED_TAGS: [
+      'p', 'br', 'strong', 'em', 'u', 's', 'a',
+      'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+      'ul', 'ol', 'li', 'blockquote', 'pre', 'code',
+      'span', 'div', 'figure', 'figcaption', 'img',
+      'table', 'thead', 'tbody', 'tr', 'th', 'td',
+    ],
+    ALLOWED_ATTR: ['href', 'target', 'rel', 'class', 'src', 'alt', 'width', 'height'],
+    ALLOW_DATA_ATTR: false,
+    FORCE_BODY: false,
+  });
   return (
     <div
       className="prism-rich-text"
-      // eslint-disable-next-line react/no-danger -- content is server-sanitized Tiptap HTML
-      dangerouslySetInnerHTML={{ __html: block.content }}
+      // eslint-disable-next-line react/no-danger -- content is DOMPurify-sanitized
+      dangerouslySetInnerHTML={{ __html: clean }}
     />
   );
 }

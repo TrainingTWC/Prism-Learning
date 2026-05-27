@@ -77,6 +77,12 @@ export const reorder = mutation({
     if (!first) throw new Error('Not found');
     await requireModuleMember(ctx, first.moduleId);
 
+    // Verify all lessons belong to the same module (prevents cross-module injection)
+    const all = await Promise.all(lessonIds.map((id) => ctx.db.get(id)));
+    if (all.some((l) => !l || l.moduleId !== first.moduleId)) {
+      throw new Error('Forbidden');
+    }
+
     await Promise.all(
       lessonIds.map((id, index) =>
         ctx.db.patch(id, { order: (index + 1) * 1000 }),

@@ -55,7 +55,7 @@ export const add = mutation({
     afterOrder: v.optional(v.number()),
   },
   handler: async (ctx, { lessonId, moduleId, type, afterOrder }) => {
-    const { userId } = await requireLessonMember(ctx, lessonId);
+    const { userId, lesson } = await requireLessonMember(ctx, lessonId);
 
     const existing = await ctx.db
       .query('blocks')
@@ -74,10 +74,13 @@ export const add = mutation({
       order = next ? (afterOrder + next.order) / 2 : afterOrder + 1000;
     }
 
+    // Verify the caller-supplied moduleId matches the lesson's actual module
+    if (lesson.moduleId !== moduleId) throw new Error('Forbidden');
+
     const now = Date.now();
     return await ctx.db.insert('blocks', {
       lessonId,
-      moduleId,
+      moduleId: lesson.moduleId,
       type,
       order,
       content: type === 'richText' ? '<p></p>' : undefined,
@@ -91,11 +94,10 @@ export const add = mutation({
 export const updateContent = mutation({
   args: { blockId: v.id('blocks'), content: v.string() },
   handler: async (ctx, { blockId, content }) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error('Unauthenticated');
-
     const block = await ctx.db.get(blockId);
     if (!block) throw new Error('Not found');
+
+    const { userId } = await requireLessonMember(ctx, block.lessonId);
 
     await ctx.db.patch(blockId, {
       content,
@@ -110,6 +112,18 @@ export const reorder = mutation({
   args: { blockIds: v.array(v.id('blocks')) },
   handler: async (ctx, { blockIds }) => {
     if (blockIds.length === 0) return;
+
+    // Load first block to get lessonId, then verify membership
+    const first = await ctx.db.get(blockIds[0]!);
+    if (!first) throw new Error('Not found');
+    await requireLessonMember(ctx, first.lessonId);
+
+    // Verify all blocks belong to the same lesson
+    const all = await Promise.all(blockIds.map((id) => ctx.db.get(id)));
+    if (all.some((b) => !b || !('lessonId' in b) || b.lessonId !== first.lessonId)) {
+      throw new Error('Forbidden');
+    }
+
     await Promise.all(
       blockIds.map((id, index) =>
         ctx.db.patch(id, { order: (index + 1) * 1000 }),
@@ -122,11 +136,10 @@ export const reorder = mutation({
 export const duplicate = mutation({
   args: { blockId: v.id('blocks') },
   handler: async (ctx, { blockId }) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error('Unauthenticated');
-
     const block = await ctx.db.get(blockId);
     if (!block) throw new Error('Not found');
+
+    const { userId } = await requireLessonMember(ctx, block.lessonId);
 
     const siblings = await ctx.db
       .query('blocks')
@@ -160,6 +173,7 @@ export const remove = mutation({
   handler: async (ctx, { blockId }) => {
     const block = await ctx.db.get(blockId);
     if (!block) throw new Error('Not found');
+    await requireLessonMember(ctx, block.lessonId);
     await ctx.db.delete(blockId);
   },
 });

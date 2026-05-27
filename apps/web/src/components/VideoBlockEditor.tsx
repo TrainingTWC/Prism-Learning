@@ -22,24 +22,26 @@ function parsePayload(content?: string): VideoPayload | null {
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────
+/** Only accept YouTube and Vimeo embed URLs — return null for anything else. */
 function getEmbedUrl(raw: string): string | null {
   try {
     const u = new URL(raw);
     // YouTube
-    const yt = u.searchParams.get('v') ?? u.pathname.replace(/^\/embed\/|^\//, '');
     if (u.hostname.includes('youtube.com') || u.hostname.includes('youtu.be')) {
       const id = u.hostname.includes('youtu.be')
         ? u.pathname.slice(1)
         : (u.searchParams.get('v') ?? '');
-      if (id) return `https://www.youtube.com/embed/${id}?rel=0`;
+      if (!/^[a-zA-Z0-9_-]{11}$/.test(id)) return null;
+      return `https://www.youtube.com/embed/${id}?rel=0`;
     }
     // Vimeo
-    if (u.hostname.includes('vimeo.com')) {
-      const id = u.pathname.split('/').filter(Boolean)[0];
-      if (id) return `https://player.vimeo.com/video/${id}`;
+    if (u.hostname === 'vimeo.com' || u.hostname === 'player.vimeo.com') {
+      const id = u.pathname.split('/').filter(Boolean)[0] ?? '';
+      if (!/^\d+$/.test(id)) return null;
+      return `https://player.vimeo.com/video/${id}`;
     }
-    // Already an embed URL or other
-    return raw;
+    // All other URLs are rejected — do not embed arbitrary content
+    return null;
   } catch {
     return null;
   }

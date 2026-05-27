@@ -12,6 +12,16 @@ export const ping = mutation({
     const userId = await getAuthUserId(ctx);
     if (!userId) return;
 
+    // Verify the caller is a member of the module's workspace
+    const mod = await ctx.db.get(moduleId);
+    if (!mod) return;
+    const membership = await ctx.db
+      .query('memberships')
+      .withIndex('by_workspace', (q) => q.eq('workspaceId', mod.workspaceId))
+      .filter((q) => q.eq(q.field('userId'), userId))
+      .first();
+    if (!membership) return;
+
     // Get display name from user record
     const user = await ctx.db.get(userId);
     const displayName =
@@ -48,6 +58,19 @@ export const ping = mutation({
 export const list = query({
   args: { moduleId: v.id('modules') },
   handler: async (ctx, { moduleId }) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return [];
+
+    // Verify caller is a workspace member
+    const mod = await ctx.db.get(moduleId);
+    if (!mod) return [];
+    const membership = await ctx.db
+      .query('memberships')
+      .withIndex('by_workspace', (q) => q.eq('workspaceId', mod.workspaceId))
+      .filter((q) => q.eq(q.field('userId'), userId))
+      .first();
+    if (!membership) return [];
+
     const cutoff = Date.now() - 30_000;
     const all = await ctx.db
       .query('presence')

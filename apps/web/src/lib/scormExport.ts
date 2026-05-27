@@ -8,6 +8,7 @@
  *  4. Reports quiz completion / pass-fail back to LMS
  */
 import JSZip from 'jszip';
+import DOMPurify from 'dompurify';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -59,8 +60,21 @@ function escapeHtml(s: string) {
 function renderBlock(block: ExportBlock, assetMap: Record<string, string>): string {
   const c = block.content ?? '';
   switch (block.type) {
-    case 'richText':
-      return `<div class="prism-rt">${c}</div>`;
+    case 'richText': {
+      const safe = DOMPurify.sanitize(c, {
+        ALLOWED_TAGS: [
+          'p', 'br', 'strong', 'em', 'u', 's', 'a',
+          'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+          'ul', 'ol', 'li', 'blockquote', 'pre', 'code',
+          'span', 'div', 'figure', 'figcaption', 'img',
+          'table', 'thead', 'tbody', 'tr', 'th', 'td',
+        ],
+        ALLOWED_ATTR: ['href', 'target', 'rel', 'class', 'src', 'alt', 'width', 'height'],
+        ALLOW_DATA_ATTR: false,
+        FORCE_BODY: false,
+      });
+      return `<div class="prism-rt">${safe}</div>`;
+    }
 
     case 'image': {
       let p: Record<string, string> = {};
@@ -79,6 +93,14 @@ function renderBlock(block: ExportBlock, assetMap: Record<string, string>): stri
       const src = p.srcType === 'storage' ? (assetMap[p.src ?? ''] ?? p.src ?? '') : (p.src ?? '');
       if (!src) return '';
       if (p.srcType === 'embed') {
+        // Only allow whitelisted embed domains (YouTube and Vimeo)
+        const allowedEmbedHosts = ['www.youtube.com', 'player.vimeo.com'];
+        let isAllowed = false;
+        try {
+          const embedHost = new URL(src).hostname;
+          isAllowed = allowedEmbedHosts.includes(embedHost);
+        } catch { /* invalid URL */ }
+        if (!isAllowed) return '';
         return `<figure class="prism-video">
   <div class="prism-video-wrap"><iframe src="${escapeHtml(src)}" allowfullscreen></iframe></div>
   ${p.caption ? `<figcaption>${escapeHtml(p.caption)}</figcaption>` : ''}
@@ -422,7 +444,14 @@ export async function buildScormPackage(
       try {
         const url = await resolveAssetUrl(id);
         if (!url) return;
-        const res = await fetch(url);
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10_000);
+        let res: Response;
+        try {
+          res = await fetch(url, { signal: controller.signal });
+        } finally {
+          clearTimeout(timeoutId);
+        }
         if (!res.ok) return;
         const blob = await res.blob();
         const ext = blob.type.split('/')[1] ?? 'bin';

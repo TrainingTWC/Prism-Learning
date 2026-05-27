@@ -63,13 +63,10 @@ export const invite = mutation({
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error('Unauthenticated');
 
-    // Verify caller is a workspace member
-    const myMembership = await ctx.db
-      .query('memberships')
-      .withIndex('by_workspace', (q) => q.eq('workspaceId', workspaceId))
-      .filter((q) => q.eq(q.field('userId'), userId))
-      .first();
-    if (!myMembership) throw new Error('Forbidden');
+    // Only the workspace owner may invite members
+    const ws = await ctx.db.get(workspaceId);
+    if (!ws) throw new Error('Not found');
+    if (ws.ownerId !== userId) throw new Error('Forbidden');
 
     const normalizedEmail = email.toLowerCase().trim();
 
