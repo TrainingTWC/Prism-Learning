@@ -2,7 +2,7 @@ import { useQuery } from 'convex/react';
 import { Link, useParams } from '@tanstack/react-router';
 import { api } from '~convex/_generated/api';
 import type { Id } from '~convex/_generated/dataModel';
-import { ChevronLeft, Users, Layers, Loader2 } from 'lucide-react';
+import { ChevronLeft, Users, Layers, Loader2, Palette } from 'lucide-react';
 
 export function WorkspacePage() {
   const { workspaceId } = useParams({ from: '/protected/w/$workspaceId' });
@@ -66,6 +66,13 @@ export function WorkspacePage() {
             className="flex items-center gap-2.5 rounded-md px-3 py-2 text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-800"
           >
             <Users className="size-4" /> Members
+          </Link>
+          <Link
+            to="/w/$workspaceId/theme"
+            params={{ workspaceId }}
+            className="flex items-center gap-2.5 rounded-md px-3 py-2 text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-800"
+          >
+            <Palette className="size-4" /> Theme
           </Link>
         </nav>
       </aside>

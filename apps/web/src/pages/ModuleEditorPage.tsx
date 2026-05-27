@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useQuery, useMutation } from 'convex/react';
+import { useQuery, useMutation, useConvex } from 'convex/react';
 import { Link, useParams } from '@tanstack/react-router';
 import { api } from '~convex/_generated/api';
 import type { Id } from '~convex/_generated/dataModel';
+import { buildScormPackage, downloadBlob } from '../lib/scormExport';
+import type { ExportTheme } from '../lib/scormExport';
 import {
   DndContext,
   closestCenter,
@@ -37,6 +39,8 @@ import {
   CheckCircle2,
   ToggleLeft,
   AlignJustify,
+  Eye,
+  Download,
 } from 'lucide-react';
 import { RichTextBlockEditor } from '../components/RichTextBlockEditor';
 import { ImageBlockEditor } from '../components/ImageBlockEditor';
@@ -90,6 +94,8 @@ export function ModuleEditorPage() {
 
   const content = useQuery(api.modules.getWithContent, { moduleId: modId });
   const presence = useQuery(api.presence.list, { moduleId: modId });
+  const workspace = useQuery(api.workspaces.getById, { workspaceId: wsId });
+  const convex = useConvex();
 
   const addLesson = useMutation(api.lessons.add);
   const removeLesson = useMutation(api.lessons.remove);
@@ -112,6 +118,40 @@ export function ModuleEditorPage() {
   const [renameModuleValue, setRenameModuleValue] = useState('');
   const [blockMenuId, setBlockMenuId] = useState<string | null>(null);
   const [addBlockMenuOpen, setAddBlockMenuOpen] = useState(false);
+  const [exporting, setExporting] = useState(false);
+
+  const handleExportScorm = useCallback(async () => {
+    if (!content) return;
+    setExporting(true);
+    try {
+      const theme: ExportTheme = workspace?.theme ?? {
+        primary: '#4f46e5', accent: '#10b981', headingFont: 'Inter', bodyFont: 'Inter',
+      };
+      const blob = await buildScormPackage(
+        {
+          id: modId,
+          title: content.module.title,
+          lessons: content.lessons.map((l) => ({
+            id: l._id,
+            title: l.title,
+            blocks: (content.blocks as Block[])
+              .filter((b) => b.lessonId === l._id)
+              .sort((a, b) => a.order - b.order)
+              .map((b) => ({ id: b._id, type: b.type, content: b.content })),
+          })),
+        },
+        theme,
+        async (storageId) => {
+          const url = await convex.query(api.files.getFileUrl, { storageId });
+          return url ?? '';
+        },
+      );
+      const slug = content.module.title.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+      downloadBlob(blob, `${slug}_scorm12.zip`);
+    } finally {
+      setExporting(false);
+    }
+  }, [content, workspace, modId, convex]);
 
   // Ping presence every 10s
   const pingRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -282,6 +322,23 @@ export function ModuleEditorPage() {
           >
             {mod.status}
           </span>
+          <Link
+            to="/w/$workspaceId/m/$moduleId/preview"
+            params={{ workspaceId, moduleId }}
+            className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-800"
+          >
+            <Eye className="size-3.5" />
+            Preview
+          </Link>
+          <button
+            type="button"
+            onClick={() => void handleExportScorm()}
+            disabled={exporting}
+            className="flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-700 disabled:opacity-60"
+          >
+            {exporting ? <Loader2 className="size-3.5 animate-spin" /> : <Download className="size-3.5" />}
+            {exporting ? 'Building…' : 'Export SCORM'}
+          </button>
         </div>
       </header>
 

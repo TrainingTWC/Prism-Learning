@@ -9,6 +9,13 @@ export default defineSchema({
     name: v.string(),
     ownerId: v.id('users'),
     createdAt: v.number(),
+    /** Phase 6 theming — optional so existing rows stay valid */
+    theme: v.optional(v.object({
+      primary: v.string(),
+      accent: v.string(),
+      headingFont: v.string(),
+      bodyFont: v.string(),
+    })),
   }),
 
   memberships: defineTable({

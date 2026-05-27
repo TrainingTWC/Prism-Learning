@@ -79,3 +79,29 @@ export const rename = mutation({
     await ctx.db.patch(workspaceId, { name: name.trim() });
   },
 });
+
+/** Save theme for a workspace (any member). */
+export const upsertTheme = mutation({
+  args: {
+    workspaceId: v.id('workspaces'),
+    theme: v.object({
+      primary: v.string(),
+      accent: v.string(),
+      headingFont: v.string(),
+      bodyFont: v.string(),
+    }),
+  },
+  handler: async (ctx, { workspaceId, theme }) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error('Unauthenticated');
+
+    const membership = await ctx.db
+      .query('memberships')
+      .withIndex('by_workspace', (q) => q.eq('workspaceId', workspaceId))
+      .filter((q) => q.eq(q.field('userId'), userId))
+      .first();
+    if (!membership) throw new Error('Not a member');
+
+    await ctx.db.patch(workspaceId, { theme });
+  },
+});
