@@ -15,6 +15,7 @@ import { ModuleListPage } from './pages/ModuleListPage';
 import { ModuleEditorPage } from './pages/ModuleEditorPage';
 import { ThemeEditorPage } from './pages/ThemeEditorPage';
 import { PreviewPage } from './pages/PreviewPage';
+import { BuildWithAIPage } from './pages/BuildWithAIPage';
 
 // Root — wraps everything in the mobile guard
 const rootRoute = createRootRoute({
@@ -81,6 +82,13 @@ const themeEditorRoute = createRoute({
   component: ThemeEditorPage,
 });
 
+// Build with AI
+const buildWithAIRoute = createRoute({
+  getParentRoute: () => protectedRoute,
+  path: '/w/$workspaceId/build-with-ai',
+  component: BuildWithAIPage,
+});
+
 // Learner preview
 const previewRoute = createRoute({
   getParentRoute: () => protectedRoute,
@@ -98,7 +106,7 @@ const rendererDemoRoute = createRoute({
 const routeTree = rootRoute.addChildren([
   signInRoute,
   rendererDemoRoute,
-  protectedRoute.addChildren([dashboardRoute, workspaceRoute, membersRoute, moduleListRoute, moduleEditorRoute, themeEditorRoute, previewRoute]),
+  protectedRoute.addChildren([dashboardRoute, workspaceRoute, membersRoute, moduleListRoute, moduleEditorRoute, themeEditorRoute, buildWithAIRoute, previewRoute]),
 ]);
 
 export const router = createRouter({ routeTree });

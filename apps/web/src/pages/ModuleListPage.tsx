@@ -12,6 +12,7 @@ import {
   Pencil,
   Copy,
   Trash2,
+  Sparkles,
 } from 'lucide-react';
 
 export function ModuleListPage() {
@@ -86,14 +87,24 @@ export function ModuleListPage() {
               <h1 className="text-lg font-semibold text-slate-800">Modules</h1>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={() => setCreating(true)}
-            className="flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700"
-          >
-            <Plus className="size-4" />
-            New module
-          </button>
+          <div className="flex items-center gap-2">
+            <Link
+              to="/w/$workspaceId/build-with-ai"
+              params={{ workspaceId }}
+              className="flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm font-medium text-indigo-600 hover:bg-indigo-100 transition"
+            >
+              <Sparkles className="size-4" />
+              Build with AI
+            </Link>
+            <button
+              type="button"
+              onClick={() => setCreating(true)}
+              className="flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+            >
+              <Plus className="size-4" />
+              New module
+            </button>
+          </div>
         </div>
       </header>
 
