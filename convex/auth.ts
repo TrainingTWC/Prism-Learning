@@ -1,5 +1,5 @@
 import { convexAuth } from '@convex-dev/auth/server';
-import Email from '@convex-dev/auth/providers/Email';
+import { Email } from '@convex-dev/auth/providers/Email';
 import { Resend } from 'resend';
 
 /**
@@ -26,6 +26,13 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
         const magicLink = `${siteUrl}/sign-in?code=${token}`;
         const from =
           process.env.AUTH_EMAIL_FROM ?? 'Prism Learning <noreply@example.com>';
+
+        // Dev mode: if no Resend key, log the magic link to the Convex function
+        // logs so you can sign in without an email provider.
+        if (!process.env.AUTH_RESEND_KEY) {
+          console.log(`[DEV] Magic link for ${email}:\n${magicLink}`);
+          return;
+        }
 
         const resend = new Resend(process.env.AUTH_RESEND_KEY);
         const { error } = await resend.emails.send({

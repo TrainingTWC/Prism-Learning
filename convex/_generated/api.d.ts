@@ -1,60 +1,55 @@
+/* eslint-disable */
 /**
- * Generated API stubs — replaced by `npx convex dev`.
+ * Generated `api` utility.
+ *
+ * THIS CODE IS AUTOMATICALLY GENERATED.
+ *
+ * To regenerate, run `npx convex dev`.
+ * @module
  */
-import type { FunctionReference } from 'convex/server';
-export type WorkspaceDoc = {
-    _id: string;
-    _creationTime: number;
-    name: string;
-    ownerId: string;
-    createdAt: number;
-    role: 'owner' | 'editor';
-};
-export type MemberDoc = {
-    _id: string;
-    userId: string;
-    role: 'owner' | 'editor';
-    email: string | null;
-    name: string | null;
-};
-export type PendingInviteDoc = {
-    _id: string;
-    workspaceId: string;
-    email: string;
-    invitedBy: string;
-    createdAt: number;
-    expiresAt: number;
-};
-export declare const api: {
-    workspaces: {
-        listMine: FunctionReference<'query', 'public', Record<string, never>, WorkspaceDoc[]>;
-        getById: FunctionReference<'query', 'public', {
-            workspaceId: string;
-        }, WorkspaceDoc | null>;
-        create: FunctionReference<'mutation', 'public', {
-            name: string;
-        }, string>;
-        rename: FunctionReference<'mutation', 'public', {
-            workspaceId: string;
-            name: string;
-        }, void>;
-    };
-    members: {
-        list: FunctionReference<'query', 'public', {
-            workspaceId: string;
-        }, MemberDoc[]>;
-        listPendingInvites: FunctionReference<'query', 'public', {
-            workspaceId: string;
-        }, PendingInviteDoc[]>;
-        invite: FunctionReference<'mutation', 'public', {
-            workspaceId: string;
-            email: string;
-        }, string>;
-        remove: FunctionReference<'mutation', 'public', {
-            workspaceId: string;
-            userId: string;
-        }, void>;
-        acceptPendingInvites: FunctionReference<'mutation', 'public', Record<string, never>, void>;
-    };
-};
-export declare const internal: typeof api;
+
+import type * as auth from "../auth.js";
+import type * as http from "../http.js";
+import type * as members from "../members.js";
+import type * as workspaces from "../workspaces.js";
+
+import type {
+  ApiFromModules,
+  FilterApi,
+  FunctionReference,
+} from "convex/server";
+
+declare const fullApi: ApiFromModules<{
+  auth: typeof auth;
+  http: typeof http;
+  members: typeof members;
+  workspaces: typeof workspaces;
+}>;
+
+/**
+ * A utility for referencing Convex functions in your app's public API.
+ *
+ * Usage:
+ * ```js
+ * const myFunctionReference = api.myModule.myFunction;
+ * ```
+ */
+export declare const api: FilterApi<
+  typeof fullApi,
+  FunctionReference<any, "public">
+>;
+
+/**
+ * A utility for referencing Convex functions in your app's internal API.
+ *
+ * Usage:
+ * ```js
+ * const myFunctionReference = internal.myModule.myFunction;
+ * ```
+ */
+export declare const internal: FilterApi<
+  typeof fullApi,
+  FunctionReference<any, "internal">
+>;
+
+export declare const components: {};
