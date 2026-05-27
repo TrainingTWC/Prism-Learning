@@ -146,7 +146,7 @@ export const generateModule = action({
     const apiKey = process.env.GROQ_API_KEY;
     if (!apiKey) throw new Error('AI not configured — set GROQ_API_KEY in the Convex dashboard');
 
-    const model = process.env.GROQ_MODEL ?? 'gemma2-9b-it';
+    const model = process.env.GROQ_MODEL ?? 'llama-3.3-70b-versatile';
     const apiUrl = 'https://api.groq.com/openai/v1/chat/completions';
 
     const systemPrompt = buildSystemPrompt(type);
