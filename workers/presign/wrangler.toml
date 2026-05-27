@@ -1,0 +1,14 @@
+name = "prism-presign"
+main = "src/index.ts"
+compatibility_date = "2025-01-15"
+compatibility_flags = ["nodejs_compat"]
+
+# Wire R2 bucket binding in Phase 4. Stub for now.
+# [[r2_buckets]]
+# binding = "ASSETS"
+# bucket_name = "prism-assets"
+# preview_bucket_name = "prism-assets-preview"
+
+# Wire Convex JWT verification secret in Phase 1.
+# [vars]
+# CONVEX_DEPLOYMENT_URL = ""
