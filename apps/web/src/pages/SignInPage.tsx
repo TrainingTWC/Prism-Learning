@@ -62,7 +62,7 @@ export function SignInPage() {
       <div className="w-full max-w-md animate-fadeInUp">
         {/* Logo */}
         <div className="mb-8 text-center">
-          <img src="/prism-logo.svg" className="mx-auto mb-5 size-14" alt="Prism Learning" />
+          <img src="/prism-logo.png" className="mx-auto mb-5 size-14" alt="Prism Learning" />
           <p className="text-overline mb-2">AI-native SCORM authoring</p>
           <h1 className="text-4xl font-extrabold uppercase tracking-tight text-[var(--obsidian-50)]">
             Prism <span className="text-gradient-ember">Learning</span>

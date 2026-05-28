@@ -58,7 +58,7 @@ export function PrismWorkspaceShell({
       <aside className="prism-sidebar">
         <div className="border-b border-[var(--sidebar-border)] px-5 py-5">
           <Link to="/" className="mb-5 flex items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)] transition hover:opacity-80">
-            <img src="/prism-logo.svg" className="size-8 shrink-0" alt="Prism Learning" />
+            <img src="/prism-logo.png" className="size-8 shrink-0" alt="Prism Learning" />
             <span className="prism-sidebar-label">Prism Learning</span>
           </Link>
           <p className="prism-sidebar-label truncate text-lg font-bold tracking-tight text-[var(--text-primary)]">{resolvedWorkspaceName}</p>
