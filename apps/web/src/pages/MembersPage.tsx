@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useQuery, useMutation } from 'convex/react';
+import { useQuery, useMutation, useAction } from 'convex/react';
 import { Link, useParams } from '@tanstack/react-router';
 import { api } from '~convex/_generated/api';
 import type { Id } from '~convex/_generated/dataModel';
@@ -8,10 +8,21 @@ import {
   UserPlus,
   Trash2,
   Clock,
-  Copy,
+  Mail,
   Check,
+  X,
+  RefreshCw,
+  Users,
+  ShieldCheck,
 } from 'lucide-react';
 import { PrismWorkspaceShell } from '../components/PrismWorkspaceShell';
+
+function getInitials(str: string) {
+  const parts = str.trim().split(/\s+/).filter(Boolean);
+  return parts.length >= 2
+    ? ((parts[0]?.[0] ?? '') + (parts[parts.length - 1]?.[0] ?? '')).toUpperCase()
+    : str.slice(0, 2).toUpperCase();
+}
 
 export function MembersPage() {
   const { workspaceId } = useParams({ from: '/protected/w/$workspaceId/members' });
@@ -21,15 +32,16 @@ export function MembersPage() {
   const members = useQuery(api.members.list, { workspaceId: wsId });
   const pendingInvites = useQuery(api.members.listPendingInvites, { workspaceId: wsId });
 
-  const inviteMutation = useMutation(api.members.invite);
+  const inviteAction = useAction(api.members.invite);
   const removeMutation = useMutation(api.members.remove);
+  const revokeMutation = useMutation(api.members.revokeInvite);
 
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviting, setInviting] = useState(false);
   const [inviteError, setInviteError] = useState<string | null>(null);
-  const [inviteLink, setInviteLink] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
+  const [invitedEmail, setInvitedEmail] = useState<string | null>(null);
   const [removingId, setRemovingId] = useState<string | null>(null);
+  const [revokingId, setRevokingId] = useState<string | null>(null);
 
   const isOwner = workspace?.role === 'owner';
 
@@ -40,15 +52,14 @@ export function MembersPage() {
 
     setInviting(true);
     setInviteError(null);
-    setInviteLink(null);
+    setInvitedEmail(null);
 
     try {
-      const inviteId = await inviteMutation({ workspaceId: wsId, email });
-      const link = `${window.location.origin}/sign-in?inviteId=${inviteId}&email=${encodeURIComponent(email)}`;
-      setInviteLink(link);
+      await inviteAction({ workspaceId: wsId, email });
+      setInvitedEmail(email);
       setInviteEmail('');
     } catch (err) {
-      setInviteError(err instanceof Error ? err.message : 'Failed to create invite');
+      setInviteError(err instanceof Error ? err.message : 'Failed to send invite');
     } finally {
       setInviting(false);
     }
@@ -63,26 +74,41 @@ export function MembersPage() {
     }
   }
 
-  async function copyLink() {
-    if (!inviteLink) return;
-    await navigator.clipboard.writeText(inviteLink);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  async function handleRevoke(inviteId: string) {
+    setRevokingId(inviteId);
+    try {
+      await revokeMutation({ inviteId: inviteId as Id<'pendingInvites'> });
+    } finally {
+      setRevokingId(null);
+    }
+  }
+
+  async function handleResend(email: string) {
+    setInviting(true);
+    setInviteError(null);
+    try {
+      await inviteAction({ workspaceId: wsId, email });
+      setInvitedEmail(email);
+    } catch (err) {
+      setInviteError(err instanceof Error ? err.message : 'Failed to resend invite');
+    } finally {
+      setInviting(false);
+    }
   }
 
   if (workspace === undefined || members === undefined) {
     return (
       <div className="prism-brand-screen flex min-h-screen items-center justify-center">
-        <Loader2 className="size-6 animate-spin text-indigo-500" />
+        <Loader2 className="size-6 animate-spin text-[var(--ember-400)]" />
       </div>
     );
   }
 
   if (workspace === null) {
     return (
-      <div className="prism-brand-screen flex min-h-screen flex-col items-center justify-center gap-4 text-slate-500">
+      <div className="prism-brand-screen flex min-h-screen flex-col items-center justify-center gap-4 text-[var(--text-muted)]">
         <p>Workspace not found.</p>
-        <Link to="/" className="text-sm text-indigo-600 hover:underline">
+        <Link to="/" className="text-sm text-[var(--ember-400)] hover:underline">
           Back to workspaces
         </Link>
       </div>
@@ -99,14 +125,18 @@ export function MembersPage() {
       title="Members"
       subtitle="Invite collaborators, review active members, and manage pending access for this workspace."
     >
-      <div className="max-w-4xl">
+      <div className="max-w-3xl space-y-6">
+
         {/* Invite form — owner only */}
         {isOwner && (
-          <section className="widget mb-8 p-6">
-            <h2 className="mb-4 flex items-center gap-2 text-sm font-bold text-[var(--text-primary)]">
-              <UserPlus className="size-4" />
-              Invite a member
+          <section className="widget p-6">
+            <h2 className="mb-1 flex items-center gap-2 text-sm font-bold text-[var(--text-primary)]">
+              <UserPlus className="size-4 text-[var(--ember-400)]" />
+              Invite a collaborator
             </h2>
+            <p className="mb-5 text-xs text-[var(--text-muted)]">
+              They'll receive an email invite. Once they sign in, they'll be added as an editor.
+            </p>
 
             <form onSubmit={(e) => void handleInvite(e)} className="flex gap-3">
               <input
@@ -122,103 +152,141 @@ export function MembersPage() {
                 disabled={inviting || !inviteEmail.trim()}
                 className="prism-action-primary flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-bold disabled:opacity-50"
               >
-                {inviting && <Loader2 className="size-4 animate-spin" />}
-                Invite
+                {inviting ? <Loader2 className="size-4 animate-spin" /> : <Mail className="size-4" />}
+                {inviting ? 'Sending…' : 'Send invite'}
               </button>
             </form>
 
             {inviteError && (
-              <p className="mt-3 text-sm text-[var(--semantic-danger)]">{inviteError}</p>
+              <div className="mt-3 flex items-center gap-2 rounded-lg bg-[rgba(239,68,68,0.08)] px-3.5 py-2.5 text-sm text-[var(--semantic-danger)]">
+                <X className="size-4 shrink-0" />
+                {inviteError}
+              </div>
             )}
 
-            {inviteLink && (
-              <div className="mt-4 rounded-lg border border-[rgba(16,179,125,0.2)] bg-[rgba(13,140,99,0.08)] p-3.5">
-                <p className="mb-2 text-xs font-bold uppercase tracking-[0.12em] text-[var(--ember-400)]">
-                  Share this invite link with them:
-                </p>
-                <div className="flex items-center gap-2">
-                  <code className="flex-1 overflow-x-auto rounded bg-[var(--input-bg)] px-2.5 py-1.5 text-xs text-[var(--text-secondary)]">
-                    {inviteLink}
-                  </code>
-                  <button
-                    type="button"
-                    onClick={() => void copyLink()}
-                    className="prism-action-primary flex items-center gap-1 rounded-md px-3 py-1.5 text-xs font-bold"
-                  >
-                    {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
-                    {copied ? 'Copied!' : 'Copy'}
-                  </button>
-                </div>
+            {invitedEmail && (
+              <div className="mt-3 flex items-center gap-2 rounded-lg border border-[rgba(16,179,125,0.2)] bg-[rgba(13,140,99,0.08)] px-3.5 py-2.5 text-sm text-[var(--ember-400)]">
+                <Check className="size-4 shrink-0" />
+                Invite sent to <span className="font-semibold">{invitedEmail}</span>. They'll receive an email with a sign-in link.
               </div>
             )}
           </section>
         )}
 
         {/* Active members */}
-        <section className="glass mb-6 shadow-sm">
-          <div className="border-b border-[var(--border-subtle)] px-5 py-3">
-            <h2 className="text-sm font-bold text-[var(--text-primary)]">
-              Active members ({members.length})
+        <section className="widget overflow-hidden">
+          <div className="flex items-center justify-between border-b border-[var(--border-subtle)] px-5 py-4">
+            <h2 className="flex items-center gap-2 text-sm font-bold text-[var(--text-primary)]">
+              <Users className="size-4 text-[var(--ember-400)]" />
+              Active members
+              <span className="ml-1 rounded-full bg-[var(--card-bg-hover)] px-2 py-0.5 text-xs font-medium text-[var(--text-muted)]">
+                {members.length}
+              </span>
             </h2>
           </div>
           <ul className="divide-y divide-[var(--border-subtle)]">
-            {members.map((m) => (
-              <li key={m._id} className="flex items-center justify-between px-5 py-3.5">
-                <div>
-                  <p className="text-sm font-semibold text-[var(--text-primary)]">
-                    {m.name ?? m.email ?? 'Unknown'}
-                  </p>
-                  {m.name && m.email && (
-                    <p className="text-xs text-[var(--text-tertiary)]">{m.email}</p>
-                  )}
-                </div>
-                <div className="flex items-center gap-3">
-                  <span
-                    className={`badge-pill ${
-                      m.role === 'owner'
-                        ? 'bg-[rgba(13,140,99,0.1)] text-[var(--ember-400)]'
-                        : 'bg-white/[0.04] text-[var(--text-tertiary)]'
-                    }`}
-                  >
-                    {m.role}
-                  </span>
-                  {isOwner && m.role !== 'owner' && (
-                    <button
-                      type="button"
-                      onClick={() => void handleRemove(m.userId)}
-                      disabled={removingId === m.userId}
-                      className="rounded p-1 text-[var(--text-muted)] hover:text-[var(--semantic-danger)] disabled:opacity-50"
-                      title="Remove member"
-                    >
-                      {removingId === m.userId ? (
-                        <Loader2 className="size-4 animate-spin" />
-                      ) : (
-                        <Trash2 className="size-4" />
+            {members.map((m) => {
+              const label = m.name ?? m.email ?? 'Unknown';
+              return (
+                <li key={m._id} className="flex items-center justify-between gap-4 px-5 py-3.5">
+                  <div className="flex items-center gap-3">
+                    <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[rgba(13,140,99,0.12)] text-xs font-bold text-[var(--ember-400)]">
+                      {getInitials(label)}
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-[var(--text-primary)]">{label}</p>
+                      {m.name && m.email && (
+                        <p className="text-xs text-[var(--text-muted)]">{m.email}</p>
                       )}
-                    </button>
-                  )}
-                </div>
-              </li>
-            ))}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span
+                      className={`badge-pill ${
+                        m.role === 'owner'
+                          ? 'bg-[rgba(13,140,99,0.1)] text-[var(--ember-400)]'
+                          : 'bg-white/[0.04] text-[var(--text-tertiary)]'
+                      }`}
+                    >
+                      {m.role === 'owner' ? (
+                        <span className="flex items-center gap-1">
+                          <ShieldCheck className="size-3" /> owner
+                        </span>
+                      ) : m.role}
+                    </span>
+                    {isOwner && m.role !== 'owner' && (
+                      <button
+                        type="button"
+                        onClick={() => void handleRemove(m.userId)}
+                        disabled={removingId === m.userId}
+                        className="rounded-lg p-1.5 text-[var(--text-muted)] transition hover:bg-[var(--card-bg-hover)] hover:text-[var(--semantic-danger)] disabled:opacity-50"
+                        title="Remove member"
+                      >
+                        {removingId === m.userId ? (
+                          <Loader2 className="size-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="size-4" />
+                        )}
+                      </button>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         </section>
 
         {/* Pending invites — owner only */}
         {isOwner && pendingInvites && pendingInvites.length > 0 && (
-          <section className="glass shadow-sm">
-            <div className="border-b border-[var(--border-subtle)] px-5 py-3">
+          <section className="widget overflow-hidden">
+            <div className="flex items-center border-b border-[var(--border-subtle)] px-5 py-4">
               <h2 className="flex items-center gap-2 text-sm font-bold text-[var(--text-primary)]">
-                <Clock className="size-4" />
-                Pending invites ({pendingInvites.length})
+                <Clock className="size-4 text-[var(--text-muted)]" />
+                Pending invites
+                <span className="ml-1 rounded-full bg-[var(--card-bg-hover)] px-2 py-0.5 text-xs font-medium text-[var(--text-muted)]">
+                  {pendingInvites.length}
+                </span>
               </h2>
             </div>
             <ul className="divide-y divide-[var(--border-subtle)]">
               {pendingInvites.map((inv) => (
-                <li key={inv._id} className="px-5 py-3.5">
-                  <p className="text-sm text-[var(--text-secondary)]">{inv.email}</p>
-                  <p className="mt-0.5 text-xs text-[var(--text-muted)]">
-                    Expires {new Date(inv.expiresAt).toLocaleDateString()}
-                  </p>
+                <li key={inv._id} className="flex items-center justify-between gap-4 px-5 py-3.5">
+                  <div className="flex items-center gap-3">
+                    <div className="flex size-9 shrink-0 items-center justify-center rounded-full border border-dashed border-[var(--border-subtle)] text-[var(--text-muted)]">
+                      <Mail className="size-4" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-[var(--text-secondary)]">{inv.email}</p>
+                      <p className="text-xs text-[var(--text-muted)]">
+                        Invite expires {new Date(inv.expiresAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => void handleResend(inv.email)}
+                      disabled={inviting}
+                      className="flex items-center gap-1.5 rounded-lg border border-[var(--border-subtle)] px-3 py-1.5 text-xs font-semibold text-[var(--text-secondary)] transition hover:border-[var(--border-default)] hover:text-[var(--text-primary)] disabled:opacity-50"
+                      title="Resend invite email"
+                    >
+                      {inviting ? <Loader2 className="size-3.5 animate-spin" /> : <RefreshCw className="size-3.5" />}
+                      Resend
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void handleRevoke(inv._id)}
+                      disabled={revokingId === inv._id}
+                      className="rounded-lg p-1.5 text-[var(--text-muted)] transition hover:bg-[var(--card-bg-hover)] hover:text-[var(--semantic-danger)] disabled:opacity-50"
+                      title="Revoke invite"
+                    >
+                      {revokingId === inv._id ? (
+                        <Loader2 className="size-4 animate-spin" />
+                      ) : (
+                        <X className="size-4" />
+                      )}
+                    </button>
+                  </div>
                 </li>
               ))}
             </ul>

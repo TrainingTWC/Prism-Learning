@@ -3,12 +3,17 @@ import { useParams, useNavigate } from '@tanstack/react-router';
 import { useAction, useMutation, useQuery } from 'convex/react';
 import { api } from '~convex/_generated/api';
 import type { Id } from '~convex/_generated/dataModel';
-import { Sparkles, Loader2, BookOpen, Zap, FileText, Upload, X } from 'lucide-react';
+import {
+  Sparkles, Loader2, BookOpen, Zap, FileText,
+  Upload, X, ChevronRight, ChevronLeft, ArrowRight,
+  Check, PenLine, FolderOpen,
+} from 'lucide-react';
 import { PrismWorkspaceShell } from '../components/PrismWorkspaceShell';
 
 type ModuleType = 'microLearning' | 'course';
 type Step = 'form' | 'generating' | 'error';
 type SourceMode = 'describe' | 'upload';
+type WizardStep = 1 | 2 | 3;
 
 type UploadedSourceFile = {
   storageId: string;
@@ -25,6 +30,12 @@ const GENERATING_MESSAGES = [
   'Writing explanations…',
   'Adding interactive questions…',
   'Polishing the module…',
+];
+
+const WIZARD_STEPS = [
+  { id: 1, label: 'Basics' },
+  { id: 2, label: 'Source' },
+  { id: 3, label: 'Generate' },
 ];
 
 async function extractPdfText(file: File): Promise<string> {
@@ -71,17 +82,19 @@ export function BuildWithAIPage() {
   const [uploadingSource, setUploadingSource] = useState(false);
   const [dragOverSource, setDragOverSource] = useState(false);
   const [step, setStep] = useState<Step>('form');
+  const [wizardStep, setWizardStep] = useState<WizardStep>(1);
   const [error, setError] = useState('');
   const [statusIdx, setStatusIdx] = useState(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const sourceInputRef = useRef<HTMLInputElement>(null);
 
   const MAX_DESC = 1000;
-  const canSubmit = Boolean(
-    name.trim() &&
-    objective.trim() &&
-    (sourceMode === 'describe' ? description.trim() : sourceFile),
+
+  const step1Complete = Boolean(name.trim() && objective.trim());
+  const step2Complete = Boolean(
+    sourceMode === 'describe' ? description.trim() : sourceFile,
   );
+  const canSubmit = step1Complete && step2Complete;
 
   // Cycle through status messages while generating
   useEffect(() => {
@@ -107,16 +120,20 @@ export function BuildWithAIPage() {
       'text/csv',
       'application/json',
     ];
-    const isAllowed = allowed.includes(file.type) || file.type.startsWith('image/') || file.type.startsWith('video/') || /\.(docx|pdf|txt|md|csv|json)$/i.test(file.name);
+    const isAllowed =
+      allowed.includes(file.type) ||
+      file.type.startsWith('image/') ||
+      file.type.startsWith('video/') ||
+      /\.(docx|pdf|txt|md|csv|json)$/i.test(file.name);
     const maxBytes = 25 * 1024 * 1024;
 
     if (!isAllowed) {
-      setError('Upload PDF, DOCX, TXT, Markdown, CSV, JSON, image, or video files. Legacy .doc files are not supported yet; save as .docx first.');
+      setError('Upload PDF, DOCX, TXT, Markdown, CSV, JSON, image, or video files.');
       setStep('error');
       return;
     }
     if (file.size > maxBytes) {
-      setError('Source files must be 25 MB or smaller for this first version.');
+      setError('Source files must be 25 MB or smaller.');
       setStep('error');
       return;
     }
@@ -126,11 +143,17 @@ export function BuildWithAIPage() {
     setStep('form');
 
     try {
-      const extractedText = file.type === 'application/pdf' || /\.pdf$/i.test(file.name)
-        ? await extractPdfText(file)
-        : undefined;
-      if ((file.type === 'application/pdf' || /\.pdf$/i.test(file.name)) && !extractedText?.trim()) {
-        setError('I could not extract readable text from this PDF. It may be scanned or image-only. Try a text-based PDF or convert it with OCR first.');
+      const extractedText =
+        file.type === 'application/pdf' || /\.pdf$/i.test(file.name)
+          ? await extractPdfText(file)
+          : undefined;
+      if (
+        (file.type === 'application/pdf' || /\.pdf$/i.test(file.name)) &&
+        !extractedText?.trim()
+      ) {
+        setError(
+          'I could not extract readable text from this PDF. It may be scanned or image-only. Try a text-based PDF or convert it with OCR first.',
+        );
         setStep('error');
         return;
       }
@@ -145,7 +168,13 @@ export function BuildWithAIPage() {
       const { storageId } = (await res.json()) as { storageId: string };
 
       if (sourceFile) await deleteFile({ storageId: sourceFile.storageId });
-      setSourceFile({ storageId, name: file.name, type: file.type || 'application/octet-stream', size: file.size, extractedText });
+      setSourceFile({
+        storageId,
+        name: file.name,
+        type: file.type || 'application/octet-stream',
+        size: file.size,
+        extractedText,
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Upload failed. Please try again.');
       setStep('error');
@@ -159,8 +188,7 @@ export function BuildWithAIPage() {
     setSourceFile(null);
   }
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  async function handleSubmit() {
     if (!canSubmit) return;
 
     setStep('generating');
@@ -173,12 +201,15 @@ export function BuildWithAIPage() {
         objective: objective.trim(),
         type,
         description: description.trim(),
-        sourceFile: sourceMode === 'upload' && sourceFile ? {
-          storageId: sourceFile.storageId,
-          name: sourceFile.name,
-          type: sourceFile.type,
-          size: sourceFile.size,
-        } : undefined,
+        sourceFile:
+          sourceMode === 'upload' && sourceFile
+            ? {
+                storageId: sourceFile.storageId,
+                name: sourceFile.name,
+                type: sourceFile.type,
+                size: sourceFile.size,
+              }
+            : undefined,
         sourceText: sourceMode === 'upload' ? sourceFile?.extractedText : undefined,
       });
 
@@ -189,38 +220,41 @@ export function BuildWithAIPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
       setStep('error');
+      setWizardStep(3);
     }
   }
 
-  // ── Generating screen ────────────────────────────────────────────────────
+  // ── Generating screen ─────────────────────────────────────────────
   if (step === 'generating') {
     return (
       <div className="prism-brand-screen flex min-h-screen flex-col items-center justify-center px-6">
         <div className="w-full max-w-xs text-center">
-          {/* Animated icon */}
           <div className="relative mx-auto mb-6 flex h-20 w-20 items-center justify-center">
-            <div className="absolute inset-0 rounded-2xl bg-indigo-100 animate-pulse" />
-            <Sparkles className="relative size-9 text-indigo-600" />
+            <div className="absolute inset-0 rounded-2xl bg-[rgba(13,140,99,0.15)] animate-pulse" />
+            <Sparkles className="relative size-9 text-[var(--ember-400)]" />
           </div>
 
-          <h2 className="text-xl font-bold text-slate-900">Building your module</h2>
-          <p className="mt-2 text-sm text-slate-500 transition-all duration-500">
+          <h2 className="text-xl font-bold text-[var(--text-primary)]">Building your module</h2>
+          <p className="mt-2 text-sm text-[var(--text-secondary)] transition-all duration-500">
             {GENERATING_MESSAGES[statusIdx]}
           </p>
 
-          {/* Progress dots */}
           <div className="mt-8 flex items-center justify-center gap-2">
             {GENERATING_MESSAGES.map((_, i) => (
               <span
                 key={i}
                 className={`block h-1.5 rounded-full transition-all duration-500 ${
-                  i === statusIdx ? 'w-6 bg-indigo-500' : i < statusIdx ? 'w-1.5 bg-indigo-300' : 'w-1.5 bg-slate-200'
+                  i === statusIdx
+                    ? 'w-6 bg-[var(--ember-400)]'
+                    : i < statusIdx
+                    ? 'w-1.5 bg-[var(--ember-300)]'
+                    : 'w-1.5 bg-[var(--border-subtle)]'
                 }`}
               />
             ))}
           </div>
 
-          <p className="mt-6 text-xs text-slate-400">
+          <p className="mt-6 text-xs text-[var(--text-muted)]">
             Llama 3.3 is generating content — this usually takes 15–30 seconds.
           </p>
         </div>
@@ -228,7 +262,7 @@ export function BuildWithAIPage() {
     );
   }
 
-  // ── Form screen ──────────────────────────────────────────────────────────
+  // ── Step wizard ───────────────────────────────────────────────────
   return (
     <PrismWorkspaceShell
       workspaceId={workspaceId}
@@ -237,309 +271,437 @@ export function BuildWithAIPage() {
       active="build"
       overline="AI-native learning builder"
       title="Generate a learning module"
-      subtitle="Describe what you want to teach or upload a source document. Llama 3.3 generates a complete mobile-ready module with visuals, explanations, and interactions."
+      subtitle="Answer a few quick questions and Llama 3.3 will build a complete, themed module."
     >
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
-        <div>
+      <div className="mx-auto max-w-2xl">
+
+        {/* Step progress indicator */}
+        <div className="mb-8 flex items-center gap-0">
+          {WIZARD_STEPS.map((s, idx) => (
+            <div key={s.id} className="flex flex-1 items-center">
+              <button
+                type="button"
+                onClick={() => {
+                  // Only allow navigating to completed steps
+                  if (s.id < wizardStep || (s.id === 2 && step1Complete) || (s.id === 3 && step1Complete && step2Complete)) {
+                    setWizardStep(s.id as WizardStep);
+                  }
+                }}
+                className="flex items-center gap-2 group"
+              >
+                <span
+                  className={`flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-bold transition ${
+                    wizardStep === s.id
+                      ? 'bg-[var(--ember-400)] text-white'
+                      : s.id < wizardStep
+                      ? 'bg-[rgba(13,140,99,0.15)] text-[var(--ember-400)]'
+                      : 'bg-[var(--card-bg-hover)] text-[var(--text-muted)]'
+                  }`}
+                >
+                  {s.id < wizardStep ? <Check className="size-3.5" /> : s.id}
+                </span>
+                <span
+                  className={`text-sm font-medium transition ${
+                    wizardStep === s.id
+                      ? 'text-[var(--text-primary)]'
+                      : s.id < wizardStep
+                      ? 'text-[var(--ember-400)]'
+                      : 'text-[var(--text-muted)]'
+                  }`}
+                >
+                  {s.label}
+                </span>
+              </button>
+              {idx < WIZARD_STEPS.length - 1 && (
+                <div className="mx-3 flex-1 border-t border-dashed border-[var(--border-subtle)]" />
+              )}
+            </div>
+          ))}
+        </div>
 
         {/* Error banner */}
         {step === 'error' && (
           <div className="mb-6 flex items-start gap-3 rounded-xl border border-[rgba(239,68,68,0.25)] bg-[rgba(239,68,68,0.08)] px-4 py-3 text-sm text-[var(--semantic-danger)]">
-            <span className="mt-0.5 shrink-0 text-base">⚠</span>
+            <span className="mt-0.5 shrink-0">⚠️</span>
             <span>{error}</span>
+            <button
+              type="button"
+              onClick={() => setStep('form')}
+              className="ml-auto shrink-0"
+            >
+              <X className="size-4" />
+            </button>
           </div>
         )}
 
-        <form onSubmit={(e) => void handleSubmit(e)} className="widget space-y-6 p-6">
-          {/* Module name */}
-          <div>
-            <label htmlFor="ai-name" className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]">
-              Module name
-            </label>
-            <input
-              id="ai-name"
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Introduction to Cybersecurity"
-              required
-              className="w-full rounded-xl border px-4 py-3 text-sm transition"
-            />
-          </div>
+        {/* ── Step 1: Basics ── */}
+        {wizardStep === 1 && (
+          <div className="widget p-6 space-y-5 animate-fadeInUp">
+            <div>
+              <h2 className="text-base font-bold text-[var(--text-primary)]">What are you teaching?</h2>
+              <p className="mt-1 text-sm text-[var(--text-muted)]">Give your module a name and a clear learning goal.</p>
+            </div>
 
-          {/* Learning objective */}
-          <div>
-            <label htmlFor="ai-objective" className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]">
-              Learning objective
-            </label>
-            <input
-              id="ai-objective"
-              type="text"
-              value={objective}
-              onChange={(e) => setObjective(e.target.value)}
-              placeholder="e.g. Learners will identify phishing emails and avoid common attacks"
-              required
-              className="w-full rounded-xl border px-4 py-3 text-sm transition"
-            />
-          </div>
+            {/* Module name */}
+            <div>
+              <label htmlFor="ai-name" className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]">
+                Module name
+              </label>
+              <input
+                id="ai-name"
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="e.g. Introduction to Cybersecurity"
+                autoFocus
+                className="w-full rounded-xl border px-4 py-3 text-sm transition"
+              />
+            </div>
 
-          {/* Type selector */}
-          <div>
-            <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]">Module type</p>
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={() => setType('microLearning')}
-                className={`group flex flex-col gap-1 rounded-xl border-2 px-4 py-4 text-left transition ${
-                  type === 'microLearning'
-                    ? 'border-[var(--ember-400)] bg-[rgba(13,140,99,0.12)]'
-                    : 'border-[var(--border-primary)] bg-white/[0.02] hover:border-[rgba(16,179,125,0.28)] hover:bg-[var(--card-bg-hover)]'
-                }`}
-              >
-                <div className="flex items-center gap-2">
+            {/* Learning objective */}
+            <div>
+              <label htmlFor="ai-objective" className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]">
+                Learning objective
+              </label>
+              <input
+                id="ai-objective"
+                type="text"
+                value={objective}
+                onChange={(e) => setObjective(e.target.value)}
+                placeholder="e.g. Learners will identify phishing emails and avoid common attacks"
+                className="w-full rounded-xl border px-4 py-3 text-sm transition"
+              />
+              <p className="mt-1.5 text-xs text-[var(--text-muted)]">
+                A clear "learners will…" statement produces better content.
+              </p>
+            </div>
+
+            {/* Module type */}
+            <div>
+              <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]">Module type</p>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setType('microLearning')}
+                  className={`flex flex-col gap-2 rounded-xl border-2 px-4 py-4 text-left transition ${
+                    type === 'microLearning'
+                      ? 'border-[var(--ember-400)] bg-[rgba(13,140,99,0.1)]'
+                      : 'border-[var(--border-primary)] bg-white/[0.02] hover:border-[rgba(16,179,125,0.28)] hover:bg-[var(--card-bg-hover)]'
+                  }`}
+                >
                   <Zap
-                    className={`size-4 ${type === 'microLearning' ? 'text-[var(--ember-400)]' : 'text-[var(--text-muted)]'}`}
+                    className={`size-5 ${type === 'microLearning' ? 'text-[var(--ember-400)]' : 'text-[var(--text-muted)]'}`}
                   />
-                  <span
-                    className={`text-sm font-semibold ${
-                      type === 'microLearning' ? 'text-[var(--ember-400)]' : 'text-[var(--text-primary)]'
-                    }`}
-                  >
-                    Micro-learning
-                  </span>
-                </div>
-                <p
-                  className={`text-xs leading-relaxed ${
-                    type === 'microLearning' ? 'text-[var(--ember-300)]' : 'text-[var(--text-tertiary)]'
+                  <div>
+                    <p className={`text-sm font-semibold ${type === 'microLearning' ? 'text-[var(--ember-400)]' : 'text-[var(--text-primary)]'}`}>
+                      Micro-learning
+                    </p>
+                    <p className={`mt-0.5 text-xs ${type === 'microLearning' ? 'text-[var(--ember-300)]' : 'text-[var(--text-tertiary)]'}`}>
+                      1–3 lessons · 5–10 min
+                    </p>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setType('course')}
+                  className={`flex flex-col gap-2 rounded-xl border-2 px-4 py-4 text-left transition ${
+                    type === 'course'
+                      ? 'border-[var(--ember-400)] bg-[rgba(13,140,99,0.1)]'
+                      : 'border-[var(--border-primary)] bg-white/[0.02] hover:border-[rgba(16,179,125,0.28)] hover:bg-[var(--card-bg-hover)]'
                   }`}
                 >
-                  1–3 lessons · 5–10 min · focused topic
-                </p>
-              </button>
+                  <BookOpen
+                    className={`size-5 ${type === 'course' ? 'text-[var(--ember-400)]' : 'text-[var(--text-muted)]'}`}
+                  />
+                  <div>
+                    <p className={`text-sm font-semibold ${type === 'course' ? 'text-[var(--ember-400)]' : 'text-[var(--text-primary)]'}`}>
+                      Full course
+                    </p>
+                    <p className={`mt-0.5 text-xs ${type === 'course' ? 'text-[var(--ember-300)]' : 'text-[var(--text-tertiary)]'}`}>
+                      3–7 lessons · 20–40 min
+                    </p>
+                  </div>
+                </button>
+              </div>
+            </div>
 
+            <div className="flex justify-end pt-2">
               <button
                 type="button"
-                onClick={() => setType('course')}
-                className={`group flex flex-col gap-1 rounded-xl border-2 px-4 py-4 text-left transition ${
-                  type === 'course'
-                    ? 'border-[var(--ember-400)] bg-[rgba(13,140,99,0.12)]'
-                    : 'border-[var(--border-primary)] bg-white/[0.02] hover:border-[rgba(16,179,125,0.28)] hover:bg-[var(--card-bg-hover)]'
-                }`}
+                disabled={!step1Complete}
+                onClick={() => setWizardStep(2)}
+                className="prism-action-primary flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-bold disabled:opacity-40"
               >
-                <div className="flex items-center gap-2">
-                  <BookOpen
-                    className={`size-4 ${type === 'course' ? 'text-[var(--ember-400)]' : 'text-[var(--text-muted)]'}`}
-                  />
-                  <span
-                    className={`text-sm font-semibold ${
-                      type === 'course' ? 'text-[var(--ember-400)]' : 'text-[var(--text-primary)]'
-                    }`}
-                  >
-                    Course
-                  </span>
-                </div>
-                <p
-                  className={`text-xs leading-relaxed ${
-                    type === 'course' ? 'text-[var(--ember-300)]' : 'text-[var(--text-tertiary)]'
-                  }`}
-                >
-                  3–7 lessons · 20–40 min · comprehensive
-                </p>
+                Next: Source material
+                <ChevronRight className="size-4" />
               </button>
             </div>
           </div>
+        )}
 
-          {/* Source mode */}
-          <div>
-            <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]">Source material</p>
+        {/* ── Step 2: Source ── */}
+        {wizardStep === 2 && (
+          <div className="widget p-6 space-y-5 animate-fadeInUp">
+            <div>
+              <h2 className="text-base font-bold text-[var(--text-primary)]">Where's the source material?</h2>
+              <p className="mt-1 text-sm text-[var(--text-muted)]">Describe the topic yourself, or upload a document for the AI to extract from.</p>
+            </div>
+
+            {/* Mode selector */}
             <div className="grid grid-cols-2 gap-3">
               <button
                 type="button"
                 onClick={() => setSourceMode('describe')}
-                className={`rounded-xl border-2 px-4 py-3 text-left transition ${
+                className={`flex items-start gap-3 rounded-xl border-2 px-4 py-3.5 text-left transition ${
                   sourceMode === 'describe'
-                    ? 'border-[var(--ember-400)] bg-[rgba(13,140,99,0.12)] text-[var(--ember-400)]'
-                    : 'border-[var(--border-primary)] bg-white/[0.02] text-[var(--text-secondary)] hover:border-[rgba(16,179,125,0.28)]'
+                    ? 'border-[var(--ember-400)] bg-[rgba(13,140,99,0.1)]'
+                    : 'border-[var(--border-primary)] bg-white/[0.02] hover:border-[rgba(16,179,125,0.28)] hover:bg-[var(--card-bg-hover)]'
                 }`}
               >
-                <div className="flex items-center gap-2 text-sm font-semibold">
-                  <Sparkles className="size-4" />
-                  Type a brief
+                <PenLine className={`mt-0.5 size-4 shrink-0 ${sourceMode === 'describe' ? 'text-[var(--ember-400)]' : 'text-[var(--text-muted)]'}`} />
+                <div>
+                  <p className={`text-sm font-semibold ${sourceMode === 'describe' ? 'text-[var(--ember-400)]' : 'text-[var(--text-primary)]'}`}>
+                    Write a brief
+                  </p>
+                  <p className={`mt-0.5 text-xs ${sourceMode === 'describe' ? 'text-[var(--ember-300)]' : 'text-[var(--text-tertiary)]'}`}>
+                    Describe in your own words
+                  </p>
                 </div>
-                <p className="mt-1 text-xs opacity-70">Use the 1000-character prompt below</p>
               </button>
               <button
                 type="button"
                 onClick={() => setSourceMode('upload')}
-                className={`rounded-xl border-2 px-4 py-3 text-left transition ${
+                className={`flex items-start gap-3 rounded-xl border-2 px-4 py-3.5 text-left transition ${
                   sourceMode === 'upload'
-                    ? 'border-[var(--ember-400)] bg-[rgba(13,140,99,0.12)] text-[var(--ember-400)]'
-                    : 'border-[var(--border-primary)] bg-white/[0.02] text-[var(--text-secondary)] hover:border-[rgba(16,179,125,0.28)]'
+                    ? 'border-[var(--ember-400)] bg-[rgba(13,140,99,0.1)]'
+                    : 'border-[var(--border-primary)] bg-white/[0.02] hover:border-[rgba(16,179,125,0.28)] hover:bg-[var(--card-bg-hover)]'
                 }`}
               >
-                <div className="flex items-center gap-2 text-sm font-semibold">
-                  <FileText className="size-4" />
-                  Upload source
+                <FolderOpen className={`mt-0.5 size-4 shrink-0 ${sourceMode === 'upload' ? 'text-[var(--ember-400)]' : 'text-[var(--text-muted)]'}`} />
+                <div>
+                  <p className={`text-sm font-semibold ${sourceMode === 'upload' ? 'text-[var(--ember-400)]' : 'text-[var(--text-primary)]'}`}>
+                    Upload a file
+                  </p>
+                  <p className={`mt-0.5 text-xs ${sourceMode === 'upload' ? 'text-[var(--ember-300)]' : 'text-[var(--text-tertiary)]'}`}>
+                    PDF, DOCX, TXT, images…
+                  </p>
                 </div>
-                <p className="mt-1 text-xs opacity-70">PDF, DOCX, text, images, or video</p>
+              </button>
+            </div>
+
+            {/* Description */}
+            {sourceMode === 'describe' && (
+              <div>
+                <div className="mb-1.5 flex items-baseline justify-between">
+                  <label htmlFor="ai-description" className="text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]">
+                    Describe the topic
+                  </label>
+                  <span className={`text-xs tabular-nums ${description.length > MAX_DESC * 0.9 ? 'font-medium text-[var(--semantic-warning)]' : 'text-[var(--text-muted)]'}`}>
+                    {description.length} / {MAX_DESC}
+                  </span>
+                </div>
+                <textarea
+                  id="ai-description"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value.slice(0, MAX_DESC))}
+                  placeholder="Describe the topic, target audience, tone, and specific points to cover. More detail → better output."
+                  rows={7}
+                  autoFocus
+                  className="w-full resize-none rounded-xl border px-4 py-3 text-sm transition"
+                />
+              </div>
+            )}
+
+            {/* Upload */}
+            {sourceMode === 'upload' && (
+              <div>
+                {sourceFile ? (
+                  <div className="flex items-center justify-between gap-3 rounded-xl border border-[rgba(16,179,125,0.24)] bg-[rgba(13,140,99,0.1)] px-4 py-3.5">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <div className="prism-icon-tile flex size-10 shrink-0 items-center justify-center rounded-full">
+                        <FileText className="size-5" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-[var(--text-primary)]">{sourceFile.name}</p>
+                        <p className="text-xs text-[var(--text-tertiary)]">
+                          {(sourceFile.size / 1024 / 1024).toFixed(2)} MB
+                          {sourceFile.extractedText ? ' · text extracted' : ' · ready'}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => void clearSourceFile()}
+                      className="rounded-lg p-1.5 text-[var(--text-muted)] transition hover:bg-[var(--card-bg-hover)] hover:text-[var(--semantic-danger)]"
+                    >
+                      <X className="size-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => !uploadingSource && sourceInputRef.current?.click()}
+                    onKeyDown={(e) => e.key === 'Enter' && sourceInputRef.current?.click()}
+                    onDragOver={(e) => { e.preventDefault(); setDragOverSource(true); }}
+                    onDragLeave={() => setDragOverSource(false)}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      setDragOverSource(false);
+                      const file = e.dataTransfer.files[0];
+                      if (file) void handleSourceFile(file);
+                    }}
+                    className={`flex min-h-44 cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed px-6 text-center transition-colors ${
+                      dragOverSource
+                        ? 'border-[var(--ember-400)] bg-[rgba(13,140,99,0.1)]'
+                        : 'border-[var(--border-primary)] bg-white/[0.02] hover:border-[rgba(16,179,125,0.3)] hover:bg-[rgba(13,140,99,0.06)]'
+                    }`}
+                  >
+                    {uploadingSource ? (
+                      <>
+                        <Loader2 className="size-7 animate-spin text-[var(--ember-400)]" />
+                        <p className="text-sm text-[var(--text-muted)]">Uploading…</p>
+                      </>
+                    ) : (
+                      <>
+                        <div className="prism-icon-tile flex size-12 items-center justify-center rounded-full">
+                          <Upload className="size-5" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-[var(--text-primary)]">
+                            {dragOverSource ? 'Drop file here' : 'Click or drag to upload'}
+                          </p>
+                          <p className="mt-1 text-xs text-[var(--text-tertiary)]">
+                            PDF, DOCX, TXT, MD, CSV, JSON, image, or video · max 25 MB
+                          </p>
+                        </div>
+                      </>
+                    )}
+                    <input
+                      ref={sourceInputRef}
+                      type="file"
+                      accept=".pdf,.docx,.txt,.md,.csv,.json,image/*,video/*"
+                      className="sr-only"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) void handleSourceFile(file);
+                        e.target.value = '';
+                      }}
+                    />
+                  </div>
+                )}
+
+                {/* Optional guidance when a file is uploaded */}
+                {sourceFile && (
+                  <div className="mt-4">
+                    <div className="mb-1.5 flex items-baseline justify-between">
+                      <label htmlFor="ai-guidance" className="text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]">
+                        Additional guidance <span className="font-normal normal-case tracking-normal opacity-60">(optional)</span>
+                      </label>
+                      <span className={`text-xs tabular-nums ${description.length > MAX_DESC * 0.9 ? 'font-medium text-[var(--semantic-warning)]' : 'text-[var(--text-muted)]'}`}>
+                        {description.length} / {MAX_DESC}
+                      </span>
+                    </div>
+                    <textarea
+                      id="ai-guidance"
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value.slice(0, MAX_DESC))}
+                      placeholder="Tell the AI what audience, tone, or emphasis to apply when using this file."
+                      rows={4}
+                      className="w-full resize-none rounded-xl border px-4 py-3 text-sm transition"
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="flex justify-between pt-2">
+              <button
+                type="button"
+                onClick={() => setWizardStep(1)}
+                className="flex items-center gap-1.5 rounded-xl border border-[var(--border-subtle)] px-4 py-2.5 text-sm font-semibold text-[var(--text-secondary)] transition hover:border-[var(--border-default)]"
+              >
+                <ChevronLeft className="size-4" /> Back
+              </button>
+              <button
+                type="button"
+                disabled={!step2Complete}
+                onClick={() => setWizardStep(3)}
+                className="prism-action-primary flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-bold disabled:opacity-40"
+              >
+                Review & generate
+                <ChevronRight className="size-4" />
               </button>
             </div>
           </div>
+        )}
 
-          {/* Description */}
-          <div>
-            <div className="mb-1.5 flex items-baseline justify-between">
-              <label htmlFor="ai-description" className="text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]">
-                {sourceMode === 'upload' ? 'Additional guidance' : 'Description'}
-              </label>
-              <span
-                className={`text-xs tabular-nums transition ${
-                  description.length > MAX_DESC * 0.9
-                    ? 'font-medium text-[var(--semantic-warning)]'
-                    : 'text-[var(--text-muted)]'
-                }`}
+        {/* ── Step 3: Review & Generate ── */}
+        {wizardStep === 3 && (
+          <div className="space-y-4 animate-fadeInUp">
+            {/* Summary card */}
+            <div className="widget divide-y divide-[var(--border-subtle)] overflow-hidden">
+              <div className="px-5 py-4">
+                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]">Ready to generate</p>
+                <p className="mt-1 text-base font-bold text-[var(--text-primary)]">{name}</p>
+              </div>
+
+              <div className="grid grid-cols-2 divide-x divide-[var(--border-subtle)]">
+                <div className="px-5 py-4">
+                  <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]">Objective</p>
+                  <p className="text-sm text-[var(--text-secondary)]">{objective}</p>
+                </div>
+                <div className="px-5 py-4">
+                  <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]">Type</p>
+                  <p className="flex items-center gap-1.5 text-sm text-[var(--text-secondary)]">
+                    {type === 'microLearning' ? <Zap className="size-3.5 text-[var(--ember-400)]" /> : <BookOpen className="size-3.5 text-[var(--ember-400)]" />}
+                    {type === 'microLearning' ? 'Micro-learning' : 'Full course'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="px-5 py-4">
+                <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]">Source material</p>
+                {sourceMode === 'upload' && sourceFile ? (
+                  <p className="flex items-center gap-1.5 text-sm text-[var(--text-secondary)]">
+                    <FileText className="size-3.5 text-[var(--ember-400)]" />
+                    {sourceFile.name}
+                    {sourceFile.extractedText && <span className="text-xs text-[var(--text-muted)]"> text extracted</span>}
+                  </p>
+                ) : (
+                  <p className="line-clamp-2 text-sm text-[var(--text-secondary)]">{description}</p>
+                )}
+              </div>
+            </div>
+
+            {/* Generate button */}
+            <button
+              type="button"
+              disabled={!canSubmit}
+              onClick={() => void handleSubmit()}
+              className="prism-action-primary flex w-full items-center justify-center gap-2.5 rounded-xl py-4 text-base font-bold disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <Sparkles className="size-5" />
+              {step === 'error' ? 'Try again' : 'Generate module'}
+              <ArrowRight className="size-4" />
+            </button>
+
+            <p className="text-center text-xs text-[var(--text-muted)]">
+              Takes 15–30 seconds · Module opens automatically when ready
+            </p>
+
+            <div className="flex justify-start">
+              <button
+                type="button"
+                onClick={() => setWizardStep(2)}
+                className="flex items-center gap-1.5 text-sm text-[var(--text-muted)] transition hover:text-[var(--text-secondary)]"
               >
-                {description.length} / {MAX_DESC}
-              </span>
-            </div>
-            <textarea
-              id="ai-description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value.slice(0, MAX_DESC))}
-              placeholder={
-                sourceMode === 'upload'
-                  ? 'Optional: tell the AI what audience, tone, or emphasis to use with the uploaded source.'
-                  : 'Describe the topic, target audience, tone, and any specific points you want covered. The more detail you provide, the better the output.'
-              }
-              required={sourceMode === 'describe'}
-              rows={6}
-              className="w-full resize-none rounded-xl border px-4 py-3 text-sm transition"
-            />
-          </div>
-
-          {sourceMode === 'upload' && (
-            <div>
-              <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]">
-                Upload document or media
-              </label>
-              {sourceFile ? (
-                <div className="flex items-center justify-between gap-3 rounded-xl border border-[rgba(16,179,125,0.24)] bg-[rgba(13,140,99,0.1)] px-4 py-3">
-                  <div className="flex min-w-0 items-center gap-3">
-                    <div className="prism-icon-tile flex size-10 shrink-0 items-center justify-center rounded-full">
-                      <FileText className="size-5" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-[var(--text-primary)]">{sourceFile.name}</p>
-                      <p className="text-xs text-[var(--text-tertiary)]">
-                        {(sourceFile.size / 1024 / 1024).toFixed(2)} MB · {sourceFile.extractedText ? 'text extracted' : 'ready to use'}
-                      </p>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => void clearSourceFile()}
-                    className="rounded-lg p-1.5 text-[var(--text-muted)] transition hover:bg-[var(--card-bg-hover)] hover:text-[var(--semantic-danger)]"
-                    aria-label="Remove source file"
-                  >
-                    <X className="size-4" />
-                  </button>
-                </div>
-              ) : (
-                <div
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => !uploadingSource && sourceInputRef.current?.click()}
-                  onKeyDown={(e) => e.key === 'Enter' && sourceInputRef.current?.click()}
-                  onDragOver={(e) => { e.preventDefault(); setDragOverSource(true); }}
-                  onDragLeave={() => setDragOverSource(false)}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    setDragOverSource(false);
-                    const file = e.dataTransfer.files[0];
-                    if (file) void handleSourceFile(file);
-                  }}
-                  className={`flex min-h-40 cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed px-6 text-center transition-colors ${
-                    dragOverSource
-                      ? 'border-[var(--ember-400)] bg-[rgba(13,140,99,0.1)]'
-                      : 'border-[var(--border-primary)] bg-white/[0.02] hover:border-[rgba(16,179,125,0.3)] hover:bg-[rgba(13,140,99,0.08)]'
-                  }`}
-                >
-                  {uploadingSource ? (
-                    <Loader2 className="size-6 animate-spin text-[var(--ember-400)]" />
-                  ) : (
-                    <>
-                      <div className="prism-icon-tile flex size-11 items-center justify-center rounded-full">
-                        <Upload className="size-5" />
-                      </div>
-                      <p className="text-sm font-semibold text-[var(--text-primary)]">
-                        {dragOverSource ? 'Drop source file' : 'Click or drag a source file'}
-                      </p>
-                      <p className="max-w-md text-xs leading-5 text-[var(--text-tertiary)]">
-                        PDF, DOCX, TXT, Markdown, CSV, JSON, image, or video up to 25 MB.
-                        DOCX images/videos are imported as module assets when possible.
-                      </p>
-                    </>
-                  )}
-                  <input
-                    ref={sourceInputRef}
-                    type="file"
-                    accept=".pdf,.docx,.txt,.md,.csv,.json,image/*,video/*"
-                    className="sr-only"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) void handleSourceFile(file);
-                      e.target.value = '';
-                    }}
-                  />
-                </div>
-              )}
-              <p className="mt-2 text-xs leading-5 text-[var(--text-muted)]">
-                Scanned PDFs and legacy .doc files may need OCR or conversion to DOCX before the AI can read their text.
-              </p>
-            </div>
-          )}
-
-          {/* Submit */}
-          <button
-            type="submit"
-            disabled={!canSubmit}
-            className="prism-action-primary flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-sm font-bold disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            {step === 'error' ? (
-              <>
-                <Sparkles className="size-4" />
-                Try again
-              </>
-            ) : (
-              <>
-                <Sparkles className="size-4" />
-                Generate module
-              </>
-            )}
-          </button>
-
-          <p className="text-center text-xs text-[var(--text-muted)]">
-            Generation takes 15–30 seconds. The module will open automatically when ready.
-          </p>
-        </form>
-        </div>
-
-        <aside className="space-y-4">
-          <div className="widget p-5">
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--text-muted)]">Input coverage</p>
-            <div className="mt-4 space-y-3 text-xs text-[var(--text-tertiary)]">
-              <div className="flex items-center justify-between"><span>PDF text extraction</span><span className="text-[var(--ember-400)]">Live</span></div>
-              <div className="flex items-center justify-between"><span>DOCX parsing</span><span className="text-[var(--ember-400)]">Live</span></div>
-              <div className="flex items-center justify-between"><span>Generated visuals</span><span className="text-[var(--ember-400)]">SVG</span></div>
-              <div className="flex items-center justify-between"><span>SCORM target</span><span className="text-[var(--obsidian-50)] font-mono-value">1.2</span></div>
+                <ChevronLeft className="size-4" /> Edit source material
+              </button>
             </div>
           </div>
-          <div className="glass p-5">
-            <p className="text-overline mb-3">Generation model</p>
-            <p className="font-mono-value text-2xl font-bold text-[var(--obsidian-50)]">Llama 3.3</p>
-            <p className="mt-3 text-xs leading-6 text-[var(--text-tertiary)]">Source documents are extracted before upload generation so module content is grounded in the provided file instead of only the form prompt.</p>
-          </div>
-        </aside>
+        )}
       </div>
     </PrismWorkspaceShell>
   );
