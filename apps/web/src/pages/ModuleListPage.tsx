@@ -208,7 +208,7 @@ export function ModuleListPage() {
                 <MoreHorizontal className="size-4" />
               </button>
               {openMenuId === mod._id && (
-                <div className="glass absolute right-0 top-8 z-20 w-44 py-1">
+                <div className="glass absolute right-0 top-8 z-50 w-44 py-1">
                   <button
                     type="button"
                     onClick={() => {

@@ -123,7 +123,7 @@ export function PrismWorkspaceShell({
         </div>
       </aside>
 
-      <div className="min-w-0">
+      <div className="prism-shell-right">
         <header className="prism-topbar flex items-center justify-between px-8">
           <div className="flex w-full max-w-xl items-center gap-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--input-bg)] px-3 py-2 text-[var(--text-muted)]">
             <Search className="size-4" />
