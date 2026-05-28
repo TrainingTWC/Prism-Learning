@@ -5,7 +5,6 @@ import { api } from '~convex/_generated/api';
 import type { Id } from '~convex/_generated/dataModel';
 import {
   Plus,
-  ChevronLeft,
   Loader2,
   Layers,
   MoreHorizontal,
@@ -14,6 +13,7 @@ import {
   Trash2,
   Sparkles,
 } from 'lucide-react';
+import { PrismWorkspaceShell } from '../components/PrismWorkspaceShell';
 
 export function ModuleListPage() {
   const { workspaceId } = useParams({ from: '/protected/w/$workspaceId/modules' });
@@ -70,52 +70,43 @@ export function ModuleListPage() {
   }
 
   return (
-    <div className="prism-brand-screen min-h-screen">
-      {/* Header */}
-      <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/90 px-6 py-4 backdrop-blur">
-        <div className="mx-auto flex max-w-4xl items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <Link
-              to="/w/$workspaceId"
-              params={{ workspaceId }}
-              className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
-            >
-              <ChevronLeft className="size-5" />
-            </Link>
-            <div>
-              <p className="prism-kicker">{workspace?.name ?? '—'}</p>
-              <h1 className="text-xl font-semibold text-slate-800">Modules</h1>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Link
-              to="/w/$workspaceId/build-with-ai"
-              params={{ workspaceId }}
-              className="flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm font-medium text-indigo-600 hover:bg-indigo-100 transition"
-            >
-              <Sparkles className="size-4" />
-              Build with AI
-            </Link>
-            <button
-              type="button"
-              onClick={() => setCreating(true)}
-              className="flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700"
-            >
-              <Plus className="size-4" />
-              New module
-            </button>
-          </div>
-        </div>
-      </header>
-
-      <main className="mx-auto max-w-4xl p-6 space-y-3">
+    <PrismWorkspaceShell
+      workspaceId={workspaceId}
+      workspaceName={workspace?.name ?? 'Workspace'}
+      workspaceRole={workspace?.role}
+      active="modules"
+      overline="Module Builder"
+      title="Learning module registry"
+      subtitle="Manage authoring drafts, AI-generated modules, and SCORM-ready learning experiences."
+      actions={(
+        <>
+          <Link
+            to="/w/$workspaceId/build-with-ai"
+            params={{ workspaceId }}
+            className="flex items-center gap-1.5 rounded-lg border border-[rgba(16,179,125,0.22)] bg-[rgba(16,179,125,0.08)] px-3 py-2 text-sm font-bold text-[var(--ember-400)] transition hover:bg-[rgba(16,179,125,0.12)]"
+          >
+            <Sparkles className="size-4" />
+            Build with AI
+          </Link>
+          <button
+            type="button"
+            onClick={() => setCreating(true)}
+            className="prism-action-primary flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-bold"
+          >
+            <Plus className="size-4" />
+            New module
+          </button>
+        </>
+      )}
+    >
+      <div className="space-y-3">
         {/* New module inline form */}
         {creating && (
           <form
             onSubmit={(e) => void handleCreate(e)}
-            className="prism-glass-card flex items-center gap-2 rounded-2xl p-4"
+            className="glass flex items-center gap-2 p-4"
           >
-            <Layers className="size-5 shrink-0 text-indigo-400" />
+            <Layers className="size-5 shrink-0 text-[var(--ember-400)]" />
             <input
               autoFocus
               type="text"
@@ -123,18 +114,18 @@ export function ModuleListPage() {
               onChange={(e) => setNewTitle(e.target.value)}
               onKeyDown={(e) => e.key === 'Escape' && setCreating(false)}
               placeholder="Module title…"
-              className="flex-1 bg-transparent text-sm font-medium text-slate-800 outline-none placeholder:text-slate-400"
+              className="flex-1 bg-transparent text-sm font-semibold text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)]"
             />
             <button
               type="submit"
-              className="rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-700"
+              className="prism-action-primary rounded-md px-3 py-1.5 text-xs font-bold"
             >
               Create
             </button>
             <button
               type="button"
               onClick={() => setCreating(false)}
-              className="rounded-md px-3 py-1.5 text-xs text-slate-500 hover:bg-slate-100"
+              className="rounded-md px-3 py-1.5 text-xs font-semibold text-[var(--text-tertiary)] hover:bg-[var(--card-bg-hover)]"
             >
               Cancel
             </button>
@@ -142,14 +133,14 @@ export function ModuleListPage() {
         )}
 
         {modules.length === 0 && !creating && (
-          <div className="prism-glass-card flex flex-col items-center justify-center rounded-2xl border-2 border-dashed py-20 text-center">
-            <Layers className="mb-4 size-10 text-slate-300" />
-            <p className="font-medium text-slate-500">No modules yet</p>
-            <p className="mt-1 text-sm text-slate-400">Create your first learning module to get started.</p>
+          <div className="glass flex flex-col items-center justify-center border-2 border-dashed py-20 text-center">
+            <div className="prism-icon-tile mb-4 size-12 rounded-xl"><Layers className="size-5" /></div>
+            <p className="font-bold text-[var(--text-primary)]">No modules yet</p>
+            <p className="mt-1 text-sm text-[var(--text-tertiary)]">Create your first learning module to get started.</p>
             <button
               type="button"
               onClick={() => setCreating(true)}
-              className="mt-4 flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+              className="prism-action-primary mt-4 flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-bold"
             >
               <Plus className="size-4" />
               New module
@@ -160,10 +151,10 @@ export function ModuleListPage() {
         {modules.map((mod) => (
           <div
             key={mod._id}
-            className="prism-glass-card group relative flex items-center gap-4 rounded-2xl px-5 py-4 transition-transform hover:-translate-y-0.5"
+            className="widget group relative flex items-center gap-4 px-5 py-4"
             onClick={() => openMenuId && setOpenMenuId(null)}
           >
-            <Layers className="size-5 shrink-0 text-indigo-400" />
+            <div className="prism-icon-tile size-10 shrink-0 rounded-lg"><Layers className="size-4" /></div>
 
             <div className="flex-1 min-w-0">
               {renamingId === mod._id ? (
@@ -180,26 +171,26 @@ export function ModuleListPage() {
                     onChange={(e) => setRenameValue(e.target.value)}
                     onKeyDown={(e) => e.key === 'Escape' && setRenamingId(null)}
                     onBlur={() => void handleRename(mod._id as Id<'modules'>)}
-                    className="w-full rounded border border-indigo-300 px-2 py-0.5 text-sm font-medium text-slate-800 outline-none focus:ring-1 focus:ring-indigo-500"
+                    className="w-full rounded border px-2 py-0.5 text-sm font-semibold outline-none"
                   />
                 </form>
               ) : (
                 <Link
                   to="/w/$workspaceId/m/$moduleId"
                   params={{ workspaceId, moduleId: mod._id }}
-                  className="block truncate text-sm font-medium text-slate-800 hover:text-indigo-600"
+                  className="block truncate text-sm font-bold text-[var(--text-primary)] hover:text-[var(--ember-400)]"
                   onClick={(e) => e.stopPropagation()}
                 >
                   {mod.title}
                 </Link>
               )}
-              <p className="mt-0.5 text-xs text-slate-400">
+              <p className="mt-1 text-xs text-[var(--text-muted)]">
                 Updated {new Date(mod.updatedAt).toLocaleDateString()} ·{' '}
                 <span
-                  className={`inline-block rounded-full px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide ${
+                  className={`badge-pill ${
                     mod.status === 'published'
-                      ? 'bg-emerald-50 text-emerald-700'
-                      : 'bg-amber-50 text-amber-700'
+                      ? 'bg-[rgba(34,197,94,0.08)] text-[var(--semantic-success)]'
+                      : 'bg-[rgba(234,179,8,0.08)] text-[var(--semantic-warning)]'
                   }`}
                 >
                   {mod.status}
@@ -212,12 +203,12 @@ export function ModuleListPage() {
               <button
                 type="button"
                 onClick={() => setOpenMenuId(openMenuId === mod._id ? null : mod._id)}
-                className="rounded-lg p-1.5 text-slate-400 opacity-0 group-hover:opacity-100 hover:bg-slate-100 hover:text-slate-700 transition-opacity"
+                className="rounded-lg p-1.5 text-[var(--text-muted)] opacity-0 transition-opacity hover:bg-[var(--card-bg-hover)] hover:text-[var(--text-primary)] group-hover:opacity-100"
               >
                 <MoreHorizontal className="size-4" />
               </button>
               {openMenuId === mod._id && (
-                <div className="absolute right-0 top-8 z-20 w-44 rounded-lg border border-slate-200 bg-white shadow-lg py-1">
+                <div className="glass absolute right-0 top-8 z-20 w-44 py-1">
                   <button
                     type="button"
                     onClick={() => {
@@ -225,22 +216,22 @@ export function ModuleListPage() {
                       setRenameValue(mod.title);
                       setOpenMenuId(null);
                     }}
-                    className="flex w-full items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                    className="flex w-full items-center gap-2 px-3 py-2 text-sm text-[var(--text-secondary)] hover:bg-[var(--card-bg-hover)] hover:text-[var(--text-primary)]"
                   >
                     <Pencil className="size-3.5" /> Rename
                   </button>
                   <button
                     type="button"
                     onClick={() => void handleDuplicate(mod._id as Id<'modules'>)}
-                    className="flex w-full items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                    className="flex w-full items-center gap-2 px-3 py-2 text-sm text-[var(--text-secondary)] hover:bg-[var(--card-bg-hover)] hover:text-[var(--text-primary)]"
                   >
                     <Copy className="size-3.5" /> Duplicate
                   </button>
-                  <hr className="my-1 border-slate-100" />
+                  <hr className="my-1 border-[var(--border-subtle)]" />
                   <button
                     type="button"
                     onClick={() => void handleDelete(mod._id as Id<'modules'>)}
-                    className="flex w-full items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50"
+                    className="flex w-full items-center gap-2 px-3 py-2 text-sm text-[var(--semantic-danger)] hover:bg-[rgba(239,68,68,0.08)]"
                   >
                     <Trash2 className="size-3.5" /> Delete
                   </button>
@@ -249,7 +240,7 @@ export function ModuleListPage() {
             </div>
           </div>
         ))}
-      </main>
-    </div>
+      </div>
+    </PrismWorkspaceShell>
   );
 }

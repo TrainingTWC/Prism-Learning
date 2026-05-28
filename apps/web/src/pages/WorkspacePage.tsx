@@ -2,7 +2,8 @@ import { useQuery } from 'convex/react';
 import { Link, useParams } from '@tanstack/react-router';
 import { api } from '~convex/_generated/api';
 import type { Id } from '~convex/_generated/dataModel';
-import { ChevronLeft, Users, Layers, Loader2, Palette } from 'lucide-react';
+import { Layers, Loader2, Palette, Sparkles, Users } from 'lucide-react';
+import { PrismWorkspaceShell } from '../components/PrismWorkspaceShell';
 
 export function WorkspacePage() {
   const { workspaceId } = useParams({ from: '/protected/w/$workspaceId' });
@@ -29,91 +30,41 @@ export function WorkspacePage() {
   }
 
   return (
-    <div className="prism-brand-screen flex min-h-screen bg-slate-50">
-      {/* Sidebar */}
-      <aside className="hidden w-56 shrink-0 flex-col border-r border-slate-200 bg-white md:flex">
-        <div className="border-b border-slate-200 px-4 py-4">
-          <Link
-            to="/"
-            className="mb-3 flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-600"
-          >
-            <ChevronLeft className="size-3.5" />
-            All workspaces
-          </Link>
-          <p className="prism-kicker truncate">Prism Studio</p>
-          <p className="truncate text-sm font-semibold text-slate-800">{workspace.name}</p>
-          <span
-            className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
-              workspace.role === 'owner'
-                ? 'bg-indigo-50 text-indigo-700'
-                : 'bg-slate-100 text-slate-600'
-            }`}
-          >
-            {workspace.role}
-          </span>
-        </div>
-
-        <nav className="p-2">
-          <Link
-            to="/w/$workspaceId/modules"
-            params={{ workspaceId }}
-            className="flex items-center gap-2.5 rounded-md px-3 py-2 text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-800"
-          >
-            <Layers className="size-4" /> Modules
-          </Link>
-          <Link
-            to="/w/$workspaceId/members"
-            params={{ workspaceId }}
-            className="flex items-center gap-2.5 rounded-md px-3 py-2 text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-800"
-          >
-            <Users className="size-4" /> Members
-          </Link>
-          <Link
-            to="/w/$workspaceId/theme"
-            params={{ workspaceId }}
-            className="flex items-center gap-2.5 rounded-md px-3 py-2 text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-800"
-          >
-            <Palette className="size-4" /> Theme
-          </Link>
-        </nav>
-      </aside>
-
-      {/* Main content */}
-      <main className="flex flex-1 flex-col">
-        {/* Top bar (mobile) */}
-        <header className="border-b border-slate-200 bg-white px-6 py-4 md:hidden">
-          <div className="flex items-center justify-between">
-            <p className="font-semibold">{workspace.name}</p>
-            <Link
-              to="/w/$workspaceId/members"
-              params={{ workspaceId }}
-              className="text-sm text-indigo-600"
-            >
-              Members
-            </Link>
-          </div>
-        </header>
-
-        <div className="flex flex-1 items-center justify-center p-10">
-          <div className="prism-glass-card max-w-sm rounded-3xl p-10 text-center">
-            <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-xl bg-indigo-50">
-              <Layers className="size-7 text-indigo-400" strokeWidth={1.5} />
-            </div>
-            <h2 className="mb-2 text-lg font-semibold">Ready to build</h2>
-            <p className="text-sm leading-relaxed text-slate-500">
-              Create and manage learning modules for this workspace.
-            </p>
-            <Link
-              to="/w/$workspaceId/modules"
-              params={{ workspaceId }}
-              className="mt-5 inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
-            >
-              <Layers className="size-4" />
-              View modules
-            </Link>
-          </div>
-        </div>
-      </main>
-    </div>
+    <PrismWorkspaceShell
+      workspaceId={workspaceId}
+      workspaceName={workspace.name}
+      workspaceRole={workspace.role}
+      active="overview"
+      overline="Workspace intelligence"
+      title="Operational learning studio"
+      subtitle="Coordinate modules, AI generation, brand controls, and team access from one production dashboard."
+      actions={(
+        <Link to="/w/$workspaceId/build-with-ai" params={{ workspaceId }} className="prism-action-primary flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-bold">
+          <Sparkles className="size-4" />
+          Build with AI
+        </Link>
+      )}
+    >
+      <div className="grid gap-5 md:grid-cols-3">
+        <Link to="/w/$workspaceId/modules" params={{ workspaceId }} className="widget p-6">
+          <div className="prism-icon-tile mb-5 size-12 rounded-xl"><Layers className="size-5" /></div>
+          <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--text-muted)]">Module Builder</p>
+          <h2 className="mt-2 text-3xl font-bold text-[var(--obsidian-50)] font-mono-value">Author</h2>
+          <p className="mt-3 text-xs leading-6 text-[var(--text-tertiary)]">Create, revise, preview, and export mobile-first SCORM learning modules.</p>
+        </Link>
+        <Link to="/w/$workspaceId/theme" params={{ workspaceId }} className="widget p-6">
+          <div className="prism-icon-tile mb-5 size-12 rounded-xl"><Palette className="size-5" /></div>
+          <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--text-muted)]">Brand System</p>
+          <h2 className="mt-2 text-3xl font-bold text-[var(--obsidian-50)] font-mono-value">Style</h2>
+          <p className="mt-3 text-xs leading-6 text-[var(--text-tertiary)]">Tune colors, typography, radii, and learner presentation across exports.</p>
+        </Link>
+        <Link to="/w/$workspaceId/members" params={{ workspaceId }} className="widget p-6">
+          <div className="prism-icon-tile mb-5 size-12 rounded-xl"><Users className="size-5" /></div>
+          <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--text-muted)]">Access Control</p>
+          <h2 className="mt-2 text-3xl font-bold text-[var(--obsidian-50)] font-mono-value">Team</h2>
+          <p className="mt-3 text-xs leading-6 text-[var(--text-tertiary)]">Invite collaborators and control authoring access for this workspace.</p>
+        </Link>
+      </div>
+    </PrismWorkspaceShell>
   );
 }

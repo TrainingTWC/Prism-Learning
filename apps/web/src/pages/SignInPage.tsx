@@ -34,8 +34,8 @@ export function SignInPage() {
   if (isLoading && hasCode) {
     return (
       <div className="prism-brand-screen flex min-h-screen items-center justify-center">
-        <Loader2 className="size-6 animate-spin text-indigo-500" />
-        <span className="ml-3 text-slate-600">Signing you in…</span>
+        <Loader2 className="size-6 animate-spin text-[var(--ember-400)]" />
+        <span className="ml-3 text-[var(--text-tertiary)]">Signing you in…</span>
       </div>
     );
   }
@@ -59,28 +59,33 @@ export function SignInPage() {
 
   return (
     <div className="prism-brand-screen flex min-h-screen items-center justify-center px-4">
-      <div className="w-full max-w-sm">
+      <div className="w-full max-w-md animate-fadeInUp">
         {/* Logo */}
-        <div className="mb-8 flex items-center justify-center gap-2">
-          <Sparkles className="size-6 text-indigo-500" />
-          <span className="text-xl font-semibold tracking-tight">Prism Studio</span>
+        <div className="mb-8 text-center">
+          <div className="prism-icon-tile mx-auto mb-5 size-12 rounded-xl">
+            <Sparkles className="size-5" />
+          </div>
+          <p className="text-overline mb-2">AI-native SCORM authoring</p>
+          <h1 className="text-4xl font-extrabold uppercase tracking-tight text-[var(--obsidian-50)]">
+            Prism <span className="text-gradient-ember">Intelligence</span>
+          </h1>
         </div>
 
         {step === 'completing' ? (
-          <div className="prism-glass-card rounded-2xl p-8 text-center">
-            <Loader2 className="mx-auto mb-4 size-8 animate-spin text-indigo-500" />
-            <p className="text-slate-600">Completing sign in…</p>
+          <div className="glass p-8 text-center">
+            <Loader2 className="mx-auto mb-4 size-8 animate-spin text-[var(--ember-400)]" />
+            <p className="text-[var(--text-tertiary)]">Completing sign in…</p>
           </div>
         ) : step === 'sent' ? (
-          <div className="prism-glass-card rounded-2xl p-8 shadow-sm">
+          <div className="widget p-8 shadow-sm">
             <div className="mb-4 flex justify-center">
-              <div className="flex size-12 items-center justify-center rounded-full bg-indigo-50">
-                <Mail className="size-6 text-indigo-500" />
+              <div className="prism-icon-tile flex size-12 items-center justify-center rounded-full">
+                <Mail className="size-6" />
               </div>
             </div>
-            <h1 className="mb-2 text-center text-xl font-semibold">Check your email</h1>
-            <p className="mb-6 text-center text-sm leading-relaxed text-slate-500">
-              We sent a sign-in link to <span className="font-medium text-slate-700">{email}</span>.
+            <h1 className="mb-2 text-center text-xl font-bold text-[var(--text-primary)]">Check your email</h1>
+            <p className="mb-6 text-center text-sm leading-relaxed text-[var(--text-tertiary)]">
+              We sent a sign-in link to <span className="font-medium text-[var(--text-primary)]">{email}</span>.
               Click the link to continue.
             </p>
             <button
@@ -89,21 +94,21 @@ export function SignInPage() {
                 setStep('form');
                 setError(null);
               }}
-              className="flex w-full items-center justify-center gap-2 text-sm text-slate-500 hover:text-slate-700"
+              className="flex w-full items-center justify-center gap-2 text-sm font-semibold text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
             >
               <ArrowLeft className="size-4" />
               Use a different email
             </button>
           </div>
         ) : (
-          <div className="prism-glass-card rounded-2xl p-8 shadow-sm">
-            <h1 className="mb-1 text-xl font-semibold">Sign in</h1>
-            <p className="mb-6 text-sm text-slate-500">
+          <div className="widget p-8 shadow-sm">
+            <h1 className="mb-1 text-xl font-bold text-[var(--text-primary)]">Sign in</h1>
+            <p className="mb-6 text-sm text-[var(--text-tertiary)]">
               Enter your email to receive a magic sign-in link.
             </p>
 
             <form onSubmit={(e) => void handleSubmit(e)} noValidate>
-              <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-slate-700">
+              <label htmlFor="email" className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]">
                 Email address
               </label>
               <input
@@ -115,11 +120,11 @@ export function SignInPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
-                className="mb-4 block w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm outline-none placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+                className="mb-4 block w-full rounded-lg border px-3.5 py-2.5 text-sm outline-none"
               />
 
               {error && (
-                <p className="mb-4 rounded-lg bg-red-50 px-3.5 py-2.5 text-sm text-red-600">
+                <p className="mb-4 rounded-lg bg-[rgba(239,68,68,0.08)] px-3.5 py-2.5 text-sm text-[var(--semantic-danger)]">
                   {error}
                 </p>
               )}
@@ -127,7 +132,7 @@ export function SignInPage() {
               <button
                 type="submit"
                 disabled={submitting || !email.trim()}
-                className="flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+                className="prism-action-primary flex w-full items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-bold disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {submitting && <Loader2 className="size-4 animate-spin" />}
                 {submitting ? 'Sending…' : 'Send magic link'}

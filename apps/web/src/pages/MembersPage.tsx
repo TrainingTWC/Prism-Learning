@@ -4,7 +4,6 @@ import { Link, useParams } from '@tanstack/react-router';
 import { api } from '~convex/_generated/api';
 import type { Id } from '~convex/_generated/dataModel';
 import {
-  ChevronLeft,
   Loader2,
   UserPlus,
   Trash2,
@@ -12,6 +11,7 @@ import {
   Copy,
   Check,
 } from 'lucide-react';
+import { PrismWorkspaceShell } from '../components/PrismWorkspaceShell';
 
 export function MembersPage() {
   const { workspaceId } = useParams({ from: '/protected/w/$workspaceId/members' });
@@ -90,29 +90,20 @@ export function MembersPage() {
   }
 
   return (
-    <div className="prism-brand-screen min-h-screen bg-slate-50">
-      <header className="border-b border-slate-200 bg-white px-6 py-4">
-        <div className="mx-auto flex max-w-3xl items-center justify-between">
-          <div>
-            <Link
-              to="/w/$workspaceId"
-              params={{ workspaceId }}
-              className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-600"
-            >
-              <ChevronLeft className="size-3.5" />
-              {workspace.name}
-            </Link>
-            <p className="prism-kicker mt-2">Access control</p>
-            <h1 className="mt-0.5 text-lg font-semibold">Members</h1>
-          </div>
-        </div>
-      </header>
-
-      <main className="mx-auto max-w-3xl px-6 py-8">
+    <PrismWorkspaceShell
+      workspaceId={workspaceId}
+      workspaceName={workspace.name}
+      workspaceRole={workspace.role}
+      active="members"
+      overline="Access control"
+      title="Members"
+      subtitle="Invite collaborators, review active members, and manage pending access for this workspace."
+    >
+      <div className="max-w-4xl">
         {/* Invite form — owner only */}
         {isOwner && (
-          <section className="prism-glass-card mb-8 rounded-2xl p-6">
-            <h2 className="mb-4 flex items-center gap-2 text-sm font-medium text-slate-700">
+          <section className="widget mb-8 p-6">
+            <h2 className="mb-4 flex items-center gap-2 text-sm font-bold text-[var(--text-primary)]">
               <UserPlus className="size-4" />
               Invite a member
             </h2>
@@ -124,12 +115,12 @@ export function MembersPage() {
                 value={inviteEmail}
                 onChange={(e) => setInviteEmail(e.target.value)}
                 placeholder="colleague@example.com"
-                className="block flex-1 rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm outline-none placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+                className="block flex-1 rounded-lg border px-3.5 py-2.5 text-sm outline-none"
               />
               <button
                 type="submit"
                 disabled={inviting || !inviteEmail.trim()}
-                className="flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+                className="prism-action-primary flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-bold disabled:opacity-50"
               >
                 {inviting && <Loader2 className="size-4 animate-spin" />}
                 Invite
@@ -137,22 +128,22 @@ export function MembersPage() {
             </form>
 
             {inviteError && (
-              <p className="mt-3 text-sm text-red-600">{inviteError}</p>
+              <p className="mt-3 text-sm text-[var(--semantic-danger)]">{inviteError}</p>
             )}
 
             {inviteLink && (
-              <div className="mt-4 rounded-lg bg-indigo-50 p-3.5">
-                <p className="mb-2 text-xs font-medium text-indigo-700">
+              <div className="mt-4 rounded-lg border border-[rgba(16,179,125,0.2)] bg-[rgba(13,140,99,0.08)] p-3.5">
+                <p className="mb-2 text-xs font-bold uppercase tracking-[0.12em] text-[var(--ember-400)]">
                   Share this invite link with them:
                 </p>
                 <div className="flex items-center gap-2">
-                  <code className="flex-1 overflow-x-auto rounded bg-white px-2.5 py-1.5 text-xs text-slate-700">
+                  <code className="flex-1 overflow-x-auto rounded bg-[var(--input-bg)] px-2.5 py-1.5 text-xs text-[var(--text-secondary)]">
                     {inviteLink}
                   </code>
                   <button
                     type="button"
                     onClick={() => void copyLink()}
-                    className="flex items-center gap-1 rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-700"
+                    className="prism-action-primary flex items-center gap-1 rounded-md px-3 py-1.5 text-xs font-bold"
                   >
                     {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
                     {copied ? 'Copied!' : 'Copy'}
@@ -164,29 +155,29 @@ export function MembersPage() {
         )}
 
         {/* Active members */}
-        <section className="prism-glass-card mb-6 rounded-2xl shadow-sm">
-          <div className="border-b border-slate-100 px-5 py-3">
-            <h2 className="text-sm font-medium text-slate-700">
+        <section className="glass mb-6 shadow-sm">
+          <div className="border-b border-[var(--border-subtle)] px-5 py-3">
+            <h2 className="text-sm font-bold text-[var(--text-primary)]">
               Active members ({members.length})
             </h2>
           </div>
-          <ul className="divide-y divide-slate-100">
+          <ul className="divide-y divide-[var(--border-subtle)]">
             {members.map((m) => (
               <li key={m._id} className="flex items-center justify-between px-5 py-3.5">
                 <div>
-                  <p className="text-sm font-medium text-slate-800">
+                  <p className="text-sm font-semibold text-[var(--text-primary)]">
                     {m.name ?? m.email ?? 'Unknown'}
                   </p>
                   {m.name && m.email && (
-                    <p className="text-xs text-slate-500">{m.email}</p>
+                    <p className="text-xs text-[var(--text-tertiary)]">{m.email}</p>
                   )}
                 </div>
                 <div className="flex items-center gap-3">
                   <span
-                    className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
+                    className={`badge-pill ${
                       m.role === 'owner'
-                        ? 'bg-indigo-50 text-indigo-700'
-                        : 'bg-slate-100 text-slate-600'
+                        ? 'bg-[rgba(13,140,99,0.1)] text-[var(--ember-400)]'
+                        : 'bg-white/[0.04] text-[var(--text-tertiary)]'
                     }`}
                   >
                     {m.role}
@@ -196,7 +187,7 @@ export function MembersPage() {
                       type="button"
                       onClick={() => void handleRemove(m.userId)}
                       disabled={removingId === m.userId}
-                      className="rounded p-1 text-slate-400 hover:text-red-500 disabled:opacity-50"
+                      className="rounded p-1 text-[var(--text-muted)] hover:text-[var(--semantic-danger)] disabled:opacity-50"
                       title="Remove member"
                     >
                       {removingId === m.userId ? (
@@ -214,18 +205,18 @@ export function MembersPage() {
 
         {/* Pending invites — owner only */}
         {isOwner && pendingInvites && pendingInvites.length > 0 && (
-          <section className="prism-glass-card rounded-2xl shadow-sm">
-            <div className="border-b border-slate-100 px-5 py-3">
-              <h2 className="flex items-center gap-2 text-sm font-medium text-slate-700">
+          <section className="glass shadow-sm">
+            <div className="border-b border-[var(--border-subtle)] px-5 py-3">
+              <h2 className="flex items-center gap-2 text-sm font-bold text-[var(--text-primary)]">
                 <Clock className="size-4" />
                 Pending invites ({pendingInvites.length})
               </h2>
             </div>
-            <ul className="divide-y divide-slate-100">
+            <ul className="divide-y divide-[var(--border-subtle)]">
               {pendingInvites.map((inv) => (
                 <li key={inv._id} className="px-5 py-3.5">
-                  <p className="text-sm text-slate-700">{inv.email}</p>
-                  <p className="mt-0.5 text-xs text-slate-400">
+                  <p className="text-sm text-[var(--text-secondary)]">{inv.email}</p>
+                  <p className="mt-0.5 text-xs text-[var(--text-muted)]">
                     Expires {new Date(inv.expiresAt).toLocaleDateString()}
                   </p>
                 </li>
@@ -233,7 +224,7 @@ export function MembersPage() {
             </ul>
           </section>
         )}
-      </main>
-    </div>
+      </div>
+    </PrismWorkspaceShell>
   );
 }

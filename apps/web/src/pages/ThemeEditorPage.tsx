@@ -1,10 +1,11 @@
 ﻿import { useState, useEffect } from 'react';
 import { useQuery, useMutation } from 'convex/react';
-import { Link, useParams } from '@tanstack/react-router';
+import { useParams } from '@tanstack/react-router';
 import { api } from '~convex/_generated/api';
 import type { Id } from '~convex/_generated/dataModel';
-import { ChevronLeft, Check, Loader2, RotateCcw } from 'lucide-react';
+import { Check, Loader2, RotateCcw } from 'lucide-react';
 import { FontPicker } from '../components/FontPicker';
+import { PrismWorkspaceShell } from '../components/PrismWorkspaceShell';
 
 // -- Types --
 
@@ -265,43 +266,27 @@ export function ThemeEditorPage() {
   );
 
   return (
-    <div className="prism-brand-screen flex min-h-screen bg-slate-50">
-      <aside className="hidden w-56 shrink-0 flex-col border-r border-slate-200 bg-white md:flex">
-        <div className="border-b border-slate-200 px-4 py-4">
-          <Link to="/w/$workspaceId" params={{ workspaceId }} className="mb-3 flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-600">
-            <ChevronLeft className="size-3.5" />{workspace?.name ?? 'Workspace'}
-          </Link>
-          <p className="prism-kicker">Brand kit</p>
-          <p className="text-sm font-semibold text-slate-800">Theme</p>
-        </div>
-        <nav className="flex-1 overflow-y-auto p-3">
-          {['Color palette','Brand colors','Feedback colors','Content colors','Typography','Type scale','Shape & buttons','Preview'].map((s) => (
-            <a key={s} href={"#" + s.toLowerCase().replace(/ & /g,'-').replace(/ /g,'-')} className="block rounded-lg px-3 py-2 text-xs text-slate-500 hover:bg-slate-50 hover:text-slate-700">{s}</a>
-          ))}
-        </nav>
-      </aside>
-
-      <main className="flex flex-1 flex-col">
-        <header className="sticky top-0 z-10 border-b border-slate-200 bg-white px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="prism-kicker">Visual system</p>
-              <h1 className="text-lg font-semibold text-slate-800">Workspace Theme</h1>
-              <p className="text-sm text-slate-500">Colors, fonts, and shape across all modules.</p>
-            </div>
-            <div className="flex items-center gap-3">
-              <button type="button" onClick={() => setTheme(DEFAULTS)} className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50">
-                <RotateCcw className="size-3.5" />Reset
-              </button>
-              <button type="button" onClick={() => void handleSave()} disabled={saving} className="flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-60">
-                {saving ? <Loader2 className="size-4 animate-spin" /> : saved ? <Check className="size-4" /> : null}
-                {saved ? 'Saved!' : 'Save theme'}
-              </button>
-            </div>
-          </div>
-        </header>
-
-        <div className="mx-auto w-full max-w-3xl space-y-10 p-8">
+    <PrismWorkspaceShell
+      workspaceId={workspaceId}
+      workspaceName={workspace?.name ?? 'Workspace'}
+      workspaceRole={workspace?.role}
+      active="theme"
+      overline="Visual system"
+      title="Workspace Theme"
+      subtitle="Colors, fonts, shape, and learner presentation controls for all modules in this workspace."
+      actions={(
+        <>
+          <button type="button" onClick={() => setTheme(DEFAULTS)} className="flex items-center gap-1.5 rounded-lg border border-[var(--border-primary)] px-3 py-2 text-sm font-bold text-[var(--text-tertiary)] hover:bg-[var(--card-bg-hover)]">
+            <RotateCcw className="size-3.5" />Reset
+          </button>
+          <button type="button" onClick={() => void handleSave()} disabled={saving} className="prism-action-primary flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-bold disabled:opacity-60">
+            {saving ? <Loader2 className="size-4 animate-spin" /> : saved ? <Check className="size-4" /> : null}
+            {saved ? 'Saved!' : 'Save theme'}
+          </button>
+        </>
+      )}
+    >
+        <div className="mx-auto w-full max-w-4xl space-y-10">
 
           <section id="color-palette">
             <SectionHeader title="Color palette" description="Quick-start with a curated scheme, or customize individual colors below." />
@@ -409,7 +394,6 @@ export function ThemeEditorPage() {
           </section>
 
         </div>
-      </main>
-    </div>
+    </PrismWorkspaceShell>
   );
 }

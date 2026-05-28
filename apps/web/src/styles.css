@@ -1,11 +1,103 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&display=swap');
 @import 'tailwindcss';
 
 @theme {
-  --color-prism-primary: #6366f1;
-  --color-prism-accent: #ec4899;
+  --color-prism-primary: #0d8c63;
+  --color-prism-accent: #10b37d;
+  --color-obsidian-950: var(--obsidian-950);
+  --color-obsidian-900: var(--obsidian-900);
+  --color-obsidian-800: var(--obsidian-800);
+  --color-obsidian-700: var(--obsidian-700);
+  --color-obsidian-600: var(--obsidian-600);
+  --color-obsidian-400: var(--obsidian-400);
+  --color-obsidian-300: var(--obsidian-300);
+  --color-obsidian-200: var(--obsidian-200);
+  --color-obsidian-100: var(--obsidian-100);
+  --color-obsidian-50: var(--obsidian-50);
+  --color-ember-600: #087a56;
+  --color-ember-500: #0d8c63;
+  --color-ember-400: #10b37d;
+  --color-ember-300: #34d399;
   --font-sans:
-    ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
-    'Noto Sans', sans-serif;
+    'JetBrains Mono', var(--font-jb), 'SF Mono', 'Fira Code', ui-monospace, monospace;
+  --font-mono:
+    'JetBrains Mono', var(--font-jb), 'SF Mono', 'Fira Code', ui-monospace, monospace;
+}
+
+:root {
+  --obsidian-950: #09090b;
+  --obsidian-900: #0c0c0f;
+  --obsidian-800: #141418;
+  --obsidian-700: #1c1c22;
+  --obsidian-600: #27272f;
+  --obsidian-400: #52525e;
+  --obsidian-300: #7a7a88;
+  --obsidian-200: #a1a1ae;
+  --obsidian-100: #e4e4e9;
+  --obsidian-50: #fafafa;
+  --ember-600: #087a56;
+  --ember-500: #0d8c63;
+  --ember-400: #10b37d;
+  --ember-300: #34d399;
+  --ember-200: #fdba74;
+  --ember-100: #fff7ed;
+  --semantic-success: #22c55e;
+  --semantic-danger: #ef4444;
+  --semantic-warning: #eab308;
+  --semantic-info: #3b82f6;
+  --bg-primary: #09090b;
+  --bg-secondary: #0c0c0f;
+  --bg-tertiary: #141418;
+  --bg-surface: rgba(20, 20, 24, 0.85);
+  --bg-surface-hover: rgba(28, 28, 34, 0.65);
+  --text-primary: #e4e4e9;
+  --text-secondary: #a1a1ae;
+  --text-tertiary: #7a7a88;
+  --text-muted: #52525e;
+  --border-primary: rgba(39, 39, 47, 0.6);
+  --border-subtle: rgba(39, 39, 47, 0.3);
+  --glass-bg: rgba(20, 20, 24, 0.85);
+  --glass-border: rgba(39, 39, 47, 0.6);
+  --card-bg: rgba(20, 20, 24, 0.5);
+  --card-bg-hover: rgba(28, 28, 34, 0.65);
+  --input-bg: rgba(20, 20, 24, 0.6);
+  --sidebar-bg: rgba(12, 12, 15, 0.95);
+  --sidebar-border: rgba(255, 255, 255, 0.04);
+  --glass-blur: 16px;
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out-smooth: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+html.light {
+  --obsidian-950: #f8f9fa;
+  --obsidian-900: #f1f3f5;
+  --obsidian-800: #e9ecef;
+  --obsidian-700: #dee2e6;
+  --obsidian-600: #ced4da;
+  --obsidian-400: #868e96;
+  --obsidian-300: #6c757d;
+  --obsidian-200: #4a4a5a;
+  --obsidian-100: #1a1a2e;
+  --obsidian-50: #0d0d1a;
+  --bg-primary: #f8f9fa;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #f1f3f5;
+  --bg-surface: rgba(255, 255, 255, 0.9);
+  --bg-surface-hover: rgba(241, 243, 245, 0.9);
+  --text-primary: #1a1a2e;
+  --text-secondary: #4a4a5a;
+  --text-tertiary: #7a7a88;
+  --text-muted: #a1a1ae;
+  --border-primary: rgba(0, 0, 0, 0.08);
+  --border-subtle: rgba(0, 0, 0, 0.04);
+  --glass-bg: rgba(255, 255, 255, 0.85);
+  --glass-border: rgba(0, 0, 0, 0.08);
+  --card-bg: rgba(255, 255, 255, 0.7);
+  --card-bg-hover: rgba(241, 243, 245, 0.9);
+  --input-bg: rgba(241, 243, 245, 0.8);
+  --sidebar-bg: rgba(255, 255, 255, 0.95);
+  --sidebar-border: rgba(0, 0, 0, 0.06);
 }
 
 html,
@@ -16,14 +108,24 @@ body,
 
 body {
   @apply antialiased;
-  background: #030712;
-  color: #e5edf8;
-  font-family: 'JetBrains Mono', 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: 'JetBrains Mono', var(--font-jb), 'SF Mono', 'Fira Code', ui-monospace, monospace;
 }
 
 ::selection {
-  background: rgb(16 185 129 / 0.32);
-  color: #ecfdf5;
+  background: rgba(13, 140, 99, 0.25);
+  color: var(--obsidian-50);
+}
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--obsidian-600); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--obsidian-400); }
+
+*:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(13, 140, 99, 0.25);
 }
 
 .prism-brand-screen {
@@ -31,11 +133,11 @@ body {
   position: relative;
   overflow-x: hidden;
   background:
-    radial-gradient(circle at 18% 12%, rgb(16 185 129 / .16), transparent 28rem),
-    radial-gradient(circle at 85% 8%, rgb(20 184 166 / .10), transparent 24rem),
-    linear-gradient(135deg, #030712 0%, #07111f 48%, #020617 100%);
-  color: #e5edf8;
-  font-family: 'JetBrains Mono', 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+    radial-gradient(circle at 16% 8%, rgba(16, 179, 125, 0.08), transparent 30rem),
+    radial-gradient(circle at 92% 82%, rgba(13, 140, 99, 0.06), transparent 34rem),
+    var(--bg-primary);
+  color: var(--text-primary);
+  font-family: 'JetBrains Mono', var(--font-jb), 'SF Mono', 'Fira Code', ui-monospace, monospace;
 }
 
 .prism-brand-screen::before {
@@ -43,57 +145,57 @@ body {
   position: fixed;
   inset: 0;
   pointer-events: none;
-  background-image: linear-gradient(rgb(148 163 184 / .055) 1px, transparent 1px), linear-gradient(90deg, rgb(148 163 184 / .055) 1px, transparent 1px);
-  background-size: 48px 48px;
-  mask-image: linear-gradient(to bottom, black, transparent 82%);
+  background-image: linear-gradient(rgba(228, 228, 233, 0.018) 1px, transparent 1px), linear-gradient(90deg, rgba(228, 228, 233, 0.018) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: linear-gradient(to bottom, black, transparent 78%);
 }
 
 .prism-brand-screen :is(.bg-white, .bg-white\/90, .bg-slate-50, .bg-slate-50\/70) {
-  background-color: rgb(15 23 42 / .68) !important;
-  backdrop-filter: blur(22px);
+  background: var(--glass-bg) !important;
+  backdrop-filter: blur(var(--glass-blur)) saturate(1.2);
 }
 
 .prism-brand-screen :is(.border-slate-200, .border-slate-300, .border-indigo-200, .border-indigo-300) {
-  border-color: rgb(148 163 184 / .18) !important;
+  border-color: var(--border-primary) !important;
 }
 
 .prism-brand-screen :is(.text-slate-900, .text-slate-800, .text-slate-700, .text-slate-600) {
-  color: #e5edf8 !important;
+  color: var(--text-primary) !important;
 }
 
 .prism-brand-screen :is(.text-slate-500, .text-slate-400) {
-  color: #94a3b8 !important;
+  color: var(--text-tertiary) !important;
 }
 
 .prism-brand-screen :is(.text-indigo-700, .text-indigo-600, .text-indigo-500, .text-indigo-400) {
-  color: #34d399 !important;
+  color: var(--ember-400) !important;
 }
 
 .prism-brand-screen :is(.bg-indigo-600, .bg-indigo-500) {
-  background: linear-gradient(135deg, #10b981, #14b8a6) !important;
-  color: #02110c !important;
-  box-shadow: 0 0 0 1px rgb(52 211 153 / .28), 0 14px 40px rgb(16 185 129 / .22);
+  background: linear-gradient(135deg, var(--ember-500), var(--ember-400)) !important;
+  color: #06110d !important;
+  box-shadow: 0 4px 14px rgba(13, 140, 99, 0.25);
 }
 
 .prism-brand-screen :is(.bg-indigo-50, .bg-indigo-100) {
-  background-color: rgb(16 185 129 / .11) !important;
+  background-color: rgba(13, 140, 99, 0.12) !important;
 }
 
 .prism-brand-screen :is(.border-indigo-500, .border-indigo-400) {
-  border-color: rgb(52 211 153 / .75) !important;
+  border-color: rgba(16, 179, 125, 0.72) !important;
 }
 
 .prism-brand-screen input:not([type='file']),
 .prism-brand-screen textarea {
-  background: rgb(2 6 23 / .62) !important;
-  border-color: rgb(148 163 184 / .20) !important;
-  color: #e5edf8 !important;
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / .04);
+  background: var(--input-bg) !important;
+  border-color: rgba(39, 39, 47, 0.75) !important;
+  color: var(--text-primary) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
 }
 
 .prism-brand-screen input::placeholder,
 .prism-brand-screen textarea::placeholder {
-  color: #64748b !important;
+  color: var(--text-muted) !important;
 }
 
 .prism-brand-screen input:focus,
@@ -101,22 +203,209 @@ body {
 .prism-brand-screen button:focus-visible,
 .prism-brand-screen a:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px rgb(16 185 129 / .22), 0 0 24px rgb(16 185 129 / .16) !important;
+  box-shadow: 0 0 0 3px rgba(13, 140, 99, 0.25), 0 0 24px rgba(13, 140, 99, 0.08) !important;
 }
 
+.glass,
 .prism-glass-card {
-  border: 1px solid rgb(148 163 184 / .18);
-  background: linear-gradient(180deg, rgb(15 23 42 / .78), rgb(2 6 23 / .58));
-  box-shadow: 0 24px 70px rgb(0 0 0 / .30), inset 0 1px 0 rgb(255 255 255 / .05);
-  backdrop-filter: blur(24px);
+  border: 1px solid var(--glass-border);
+  border-radius: 20px;
+  background: var(--glass-bg);
+  box-shadow:
+    0 0 0 0.5px rgba(255, 255, 255, 0.04),
+    0 4px 24px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(var(--glass-blur)) saturate(1.2);
+}
+
+.glass-interactive {
+  transition: transform 280ms var(--ease-out-expo), border-color 280ms var(--ease-out-expo), background 280ms var(--ease-out-expo), box-shadow 280ms var(--ease-out-expo);
+}
+
+.glass-interactive:hover {
+  transform: translateY(-2px);
+  border-color: rgba(13, 140, 99, 0.18);
+  background: rgba(28, 28, 34, 0.92);
+  box-shadow:
+    0 0 0 0.5px rgba(255, 255, 255, 0.05),
+    0 12px 32px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.widget {
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 24px;
+  background: linear-gradient(135deg, rgba(20, 20, 24, 0.9) 0%, rgba(16, 16, 20, 0.85) 100%);
+  box-shadow:
+    0 0 0 0.5px rgba(255, 255, 255, 0.03),
+    0 8px 32px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(20px) saturate(1.3);
+  transition: all 320ms var(--ease-out-expo);
+}
+
+.widget:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 0 0 0.5px rgba(255, 255, 255, 0.06),
+    0 12px 40px rgba(0, 0, 0, 0.36),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.12);
 }
 
 .prism-kicker {
-  color: #34d399;
-  font-size: .7rem;
+  color: var(--ember-400);
+  font-size: 10px;
   font-weight: 800;
-  letter-spacing: .16em;
+  letter-spacing: .12em;
   text-transform: uppercase;
+}
+
+.text-overline {
+  color: var(--ember-400);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.font-mono-value {
+  font-family: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+.text-gradient-ember {
+  background: linear-gradient(135deg, #0d8c63, #10b37d, #34d399);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.badge-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 100px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+
+.prism-app-shell {
+  display: grid;
+  min-height: 100vh;
+  grid-template-columns: 256px minmax(0, 1fr);
+}
+
+.prism-sidebar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  height: 100vh;
+  flex-direction: column;
+  border-right: 1px solid var(--sidebar-border);
+  background: var(--sidebar-bg);
+  backdrop-filter: blur(16px) saturate(1.2);
+}
+
+.prism-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 15;
+  height: 56px;
+  border-bottom: 1px solid var(--border-subtle);
+  background: rgba(12, 12, 15, 0.78);
+  backdrop-filter: blur(16px) saturate(1.2);
+}
+
+.prism-shell-main {
+  min-width: 0;
+  padding: 32px;
+}
+
+.prism-shell-inner {
+  margin-inline: auto;
+  width: min(100%, 1600px);
+}
+
+.prism-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: var(--text-tertiary);
+  font-size: 13px;
+  font-weight: 600;
+  transition: all 150ms var(--ease-out-expo);
+}
+
+.prism-nav-item:hover,
+.prism-nav-item[data-active='true'] {
+  background: rgba(16, 179, 125, 0.1);
+  color: var(--ember-400);
+}
+
+.prism-icon-tile {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(16, 179, 125, 0.2);
+  background: rgba(16, 179, 125, 0.08);
+  color: var(--ember-400);
+  box-shadow: 0 0 24px rgba(13, 140, 99, 0.06);
+}
+
+.prism-action-primary {
+  background: linear-gradient(135deg, var(--ember-500), var(--ember-400));
+  color: #06110d;
+  box-shadow: 0 4px 14px rgba(13, 140, 99, 0.25);
+  transition: transform 150ms var(--ease-spring), box-shadow 150ms var(--ease-out-expo);
+}
+
+.prism-action-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 22px rgba(13, 140, 99, 0.28); }
+.prism-action-primary:active { transform: scale(0.985); }
+
+.animate-fadeInUp {
+  animation: fadeInUp 450ms var(--ease-out-expo) forwards;
+}
+
+.stagger-1 { animation-delay: 0ms; }
+.stagger-2 { animation-delay: 60ms; }
+.stagger-3 { animation-delay: 120ms; }
+.stagger-4 { animation-delay: 180ms; }
+.stagger-5 { animation-delay: 240ms; }
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.skeleton {
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+  background-color: var(--obsidian-700);
+  border-radius: 12px;
+}
+
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 0.04; }
+  50% { opacity: 0.08; }
+}
+
+@media (max-width: 860px) {
+  .prism-app-shell {
+    grid-template-columns: 1fr;
+  }
+  .prism-sidebar {
+    position: relative;
+    height: auto;
+  }
+  .prism-shell-main {
+    padding: 20px;
+  }
 }
 
 /* Tiptap editor placeholder */

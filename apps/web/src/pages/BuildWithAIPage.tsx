@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect } from 'react';
-import { useParams, useNavigate, Link } from '@tanstack/react-router';
-import { useAction, useMutation } from 'convex/react';
+import { useParams, useNavigate } from '@tanstack/react-router';
+import { useAction, useMutation, useQuery } from 'convex/react';
 import { api } from '~convex/_generated/api';
 import type { Id } from '~convex/_generated/dataModel';
-import { Sparkles, ChevronLeft, Loader2, BookOpen, Zap, FileText, Upload, X } from 'lucide-react';
+import { Sparkles, Loader2, BookOpen, Zap, FileText, Upload, X } from 'lucide-react';
+import { PrismWorkspaceShell } from '../components/PrismWorkspaceShell';
 
 type ModuleType = 'microLearning' | 'course';
 type Step = 'form' | 'generating' | 'error';
@@ -54,7 +55,9 @@ async function extractPdfText(file: File): Promise<string> {
 
 export function BuildWithAIPage() {
   const { workspaceId } = useParams({ from: '/protected/w/$workspaceId/build-with-ai' });
+  const wsId = workspaceId as Id<'workspaces'>;
   const navigate = useNavigate();
+  const workspace = useQuery(api.workspaces.getById, { workspaceId: wsId });
   const generateModule = useAction(api.ai.generateModule);
   const generateUploadUrl = useMutation(api.files.generateUploadUrl);
   const deleteFile = useMutation(api.files.deleteFile);
@@ -165,7 +168,7 @@ export function BuildWithAIPage() {
 
     try {
       const moduleId = await generateModule({
-        workspaceId: workspaceId as Id<'workspaces'>,
+        workspaceId: wsId,
         name: name.trim(),
         objective: objective.trim(),
         type,
@@ -227,51 +230,30 @@ export function BuildWithAIPage() {
 
   // ── Form screen ──────────────────────────────────────────────────────────
   return (
-    <div className="prism-brand-screen min-h-screen">
-      {/* Header */}
-      <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/90 px-6 py-4 backdrop-blur">
-        <div className="mx-auto flex max-w-2xl items-center gap-3">
-          <Link
-            to="/w/$workspaceId/modules"
-            params={{ workspaceId }}
-            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition"
-          >
-            <ChevronLeft className="size-5" />
-          </Link>
-          <div className="flex items-center gap-2">
-            <Sparkles className="size-4 text-indigo-500" />
-            <span className="text-sm font-semibold text-slate-800">Prism Studio / Build with AI</span>
-          </div>
-        </div>
-      </header>
-
-      <main className="mx-auto max-w-2xl px-6 py-10">
-        {/* Hero */}
-        <div className="mb-8">
-          <div className="prism-kicker mb-4 inline-flex items-center gap-2 rounded-full bg-indigo-50 px-3 py-1.5">
-            <Sparkles className="size-3" />
-            AI-native learning intelligence
-          </div>
-          <h1 className="text-3xl font-bold text-slate-900">Generate a learning module</h1>
-          <p className="mt-1.5 text-sm text-slate-500">
-            Describe what you want to teach or upload a source document. Llama 3.3 will
-            generate a full mobile-ready module with lesson visuals, explanations, and
-            interactive questions for you.
-          </p>
-        </div>
+    <PrismWorkspaceShell
+      workspaceId={workspaceId}
+      workspaceName={workspace?.name ?? 'Workspace'}
+      workspaceRole={workspace?.role}
+      active="build"
+      overline="AI-native learning intelligence"
+      title="Generate a learning module"
+      subtitle="Describe what you want to teach or upload a source document. Llama 3.3 generates a complete mobile-ready module with visuals, explanations, and interactions."
+    >
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <div>
 
         {/* Error banner */}
         {step === 'error' && (
-          <div className="mb-6 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          <div className="mb-6 flex items-start gap-3 rounded-xl border border-[rgba(239,68,68,0.25)] bg-[rgba(239,68,68,0.08)] px-4 py-3 text-sm text-[var(--semantic-danger)]">
             <span className="mt-0.5 shrink-0 text-base">⚠</span>
             <span>{error}</span>
           </div>
         )}
 
-        <form onSubmit={(e) => void handleSubmit(e)} className="prism-glass-card space-y-6 rounded-3xl p-6">
+        <form onSubmit={(e) => void handleSubmit(e)} className="widget space-y-6 p-6">
           {/* Module name */}
           <div>
-            <label htmlFor="ai-name" className="mb-1.5 block text-sm font-medium text-slate-700">
+            <label htmlFor="ai-name" className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]">
               Module name
             </label>
             <input
@@ -281,13 +263,13 @@ export function BuildWithAIPage() {
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. Introduction to Cybersecurity"
               required
-              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 placeholder:text-slate-400 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100 transition"
+              className="w-full rounded-xl border px-4 py-3 text-sm transition"
             />
           </div>
 
           {/* Learning objective */}
           <div>
-            <label htmlFor="ai-objective" className="mb-1.5 block text-sm font-medium text-slate-700">
+            <label htmlFor="ai-objective" className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]">
               Learning objective
             </label>
             <input
@@ -297,30 +279,30 @@ export function BuildWithAIPage() {
               onChange={(e) => setObjective(e.target.value)}
               placeholder="e.g. Learners will identify phishing emails and avoid common attacks"
               required
-              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 placeholder:text-slate-400 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100 transition"
+              className="w-full rounded-xl border px-4 py-3 text-sm transition"
             />
           </div>
 
           {/* Type selector */}
           <div>
-            <p className="mb-2 text-sm font-medium text-slate-700">Module type</p>
+            <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]">Module type</p>
             <div className="grid grid-cols-2 gap-3">
               <button
                 type="button"
                 onClick={() => setType('microLearning')}
                 className={`group flex flex-col gap-1 rounded-xl border-2 px-4 py-4 text-left transition ${
                   type === 'microLearning'
-                    ? 'border-indigo-500 bg-indigo-50'
-                    : 'border-slate-200 bg-white hover:border-indigo-200 hover:bg-slate-50'
+                    ? 'border-[var(--ember-400)] bg-[rgba(13,140,99,0.12)]'
+                    : 'border-[var(--border-primary)] bg-white/[0.02] hover:border-[rgba(16,179,125,0.28)] hover:bg-[var(--card-bg-hover)]'
                 }`}
               >
                 <div className="flex items-center gap-2">
                   <Zap
-                    className={`size-4 ${type === 'microLearning' ? 'text-indigo-600' : 'text-slate-400'}`}
+                    className={`size-4 ${type === 'microLearning' ? 'text-[var(--ember-400)]' : 'text-[var(--text-muted)]'}`}
                   />
                   <span
                     className={`text-sm font-semibold ${
-                      type === 'microLearning' ? 'text-indigo-700' : 'text-slate-700'
+                      type === 'microLearning' ? 'text-[var(--ember-400)]' : 'text-[var(--text-primary)]'
                     }`}
                   >
                     Micro-learning
@@ -328,7 +310,7 @@ export function BuildWithAIPage() {
                 </div>
                 <p
                   className={`text-xs leading-relaxed ${
-                    type === 'microLearning' ? 'text-indigo-500' : 'text-slate-400'
+                    type === 'microLearning' ? 'text-[var(--ember-300)]' : 'text-[var(--text-tertiary)]'
                   }`}
                 >
                   1–3 lessons · 5–10 min · focused topic
@@ -340,17 +322,17 @@ export function BuildWithAIPage() {
                 onClick={() => setType('course')}
                 className={`group flex flex-col gap-1 rounded-xl border-2 px-4 py-4 text-left transition ${
                   type === 'course'
-                    ? 'border-indigo-500 bg-indigo-50'
-                    : 'border-slate-200 bg-white hover:border-indigo-200 hover:bg-slate-50'
+                    ? 'border-[var(--ember-400)] bg-[rgba(13,140,99,0.12)]'
+                    : 'border-[var(--border-primary)] bg-white/[0.02] hover:border-[rgba(16,179,125,0.28)] hover:bg-[var(--card-bg-hover)]'
                 }`}
               >
                 <div className="flex items-center gap-2">
                   <BookOpen
-                    className={`size-4 ${type === 'course' ? 'text-indigo-600' : 'text-slate-400'}`}
+                    className={`size-4 ${type === 'course' ? 'text-[var(--ember-400)]' : 'text-[var(--text-muted)]'}`}
                   />
                   <span
                     className={`text-sm font-semibold ${
-                      type === 'course' ? 'text-indigo-700' : 'text-slate-700'
+                      type === 'course' ? 'text-[var(--ember-400)]' : 'text-[var(--text-primary)]'
                     }`}
                   >
                     Course
@@ -358,7 +340,7 @@ export function BuildWithAIPage() {
                 </div>
                 <p
                   className={`text-xs leading-relaxed ${
-                    type === 'course' ? 'text-indigo-500' : 'text-slate-400'
+                    type === 'course' ? 'text-[var(--ember-300)]' : 'text-[var(--text-tertiary)]'
                   }`}
                 >
                   3–7 lessons · 20–40 min · comprehensive
@@ -369,15 +351,15 @@ export function BuildWithAIPage() {
 
           {/* Source mode */}
           <div>
-            <p className="mb-2 text-sm font-medium text-slate-700">Source material</p>
+            <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]">Source material</p>
             <div className="grid grid-cols-2 gap-3">
               <button
                 type="button"
                 onClick={() => setSourceMode('describe')}
                 className={`rounded-xl border-2 px-4 py-3 text-left transition ${
                   sourceMode === 'describe'
-                    ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
-                    : 'border-slate-200 bg-white text-slate-600 hover:border-indigo-200'
+                    ? 'border-[var(--ember-400)] bg-[rgba(13,140,99,0.12)] text-[var(--ember-400)]'
+                    : 'border-[var(--border-primary)] bg-white/[0.02] text-[var(--text-secondary)] hover:border-[rgba(16,179,125,0.28)]'
                 }`}
               >
                 <div className="flex items-center gap-2 text-sm font-semibold">
@@ -391,8 +373,8 @@ export function BuildWithAIPage() {
                 onClick={() => setSourceMode('upload')}
                 className={`rounded-xl border-2 px-4 py-3 text-left transition ${
                   sourceMode === 'upload'
-                    ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
-                    : 'border-slate-200 bg-white text-slate-600 hover:border-indigo-200'
+                    ? 'border-[var(--ember-400)] bg-[rgba(13,140,99,0.12)] text-[var(--ember-400)]'
+                    : 'border-[var(--border-primary)] bg-white/[0.02] text-[var(--text-secondary)] hover:border-[rgba(16,179,125,0.28)]'
                 }`}
               >
                 <div className="flex items-center gap-2 text-sm font-semibold">
@@ -407,14 +389,14 @@ export function BuildWithAIPage() {
           {/* Description */}
           <div>
             <div className="mb-1.5 flex items-baseline justify-between">
-              <label htmlFor="ai-description" className="text-sm font-medium text-slate-700">
+              <label htmlFor="ai-description" className="text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]">
                 {sourceMode === 'upload' ? 'Additional guidance' : 'Description'}
               </label>
               <span
                 className={`text-xs tabular-nums transition ${
                   description.length > MAX_DESC * 0.9
-                    ? 'text-amber-500 font-medium'
-                    : 'text-slate-400'
+                    ? 'font-medium text-[var(--semantic-warning)]'
+                    : 'text-[var(--text-muted)]'
                 }`}
               >
                 {description.length} / {MAX_DESC}
@@ -431,24 +413,24 @@ export function BuildWithAIPage() {
               }
               required={sourceMode === 'describe'}
               rows={6}
-              className="w-full resize-none rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 placeholder:text-slate-400 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100 transition"
+              className="w-full resize-none rounded-xl border px-4 py-3 text-sm transition"
             />
           </div>
 
           {sourceMode === 'upload' && (
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-slate-700">
+              <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]">
                 Upload document or media
               </label>
               {sourceFile ? (
-                <div className="flex items-center justify-between gap-3 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-3">
+                <div className="flex items-center justify-between gap-3 rounded-xl border border-[rgba(16,179,125,0.24)] bg-[rgba(13,140,99,0.1)] px-4 py-3">
                   <div className="flex min-w-0 items-center gap-3">
-                    <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-white text-indigo-600 shadow-sm">
+                    <div className="prism-icon-tile flex size-10 shrink-0 items-center justify-center rounded-full">
                       <FileText className="size-5" />
                     </div>
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-slate-800">{sourceFile.name}</p>
-                      <p className="text-xs text-slate-500">
+                      <p className="truncate text-sm font-semibold text-[var(--text-primary)]">{sourceFile.name}</p>
+                      <p className="text-xs text-[var(--text-tertiary)]">
                         {(sourceFile.size / 1024 / 1024).toFixed(2)} MB · {sourceFile.extractedText ? 'text extracted' : 'ready to use'}
                       </p>
                     </div>
@@ -456,7 +438,7 @@ export function BuildWithAIPage() {
                   <button
                     type="button"
                     onClick={() => void clearSourceFile()}
-                    className="rounded-lg p-1.5 text-slate-400 transition hover:bg-white hover:text-red-500"
+                    className="rounded-lg p-1.5 text-[var(--text-muted)] transition hover:bg-[var(--card-bg-hover)] hover:text-[var(--semantic-danger)]"
                     aria-label="Remove source file"
                   >
                     <X className="size-4" />
@@ -478,21 +460,21 @@ export function BuildWithAIPage() {
                   }}
                   className={`flex min-h-40 cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed px-6 text-center transition-colors ${
                     dragOverSource
-                      ? 'border-indigo-400 bg-indigo-50'
-                      : 'border-slate-200 bg-white hover:border-indigo-300 hover:bg-indigo-50/40'
+                      ? 'border-[var(--ember-400)] bg-[rgba(13,140,99,0.1)]'
+                      : 'border-[var(--border-primary)] bg-white/[0.02] hover:border-[rgba(16,179,125,0.3)] hover:bg-[rgba(13,140,99,0.08)]'
                   }`}
                 >
                   {uploadingSource ? (
-                    <Loader2 className="size-6 animate-spin text-indigo-500" />
+                    <Loader2 className="size-6 animate-spin text-[var(--ember-400)]" />
                   ) : (
                     <>
-                      <div className="flex size-11 items-center justify-center rounded-full border border-slate-200 bg-slate-50">
-                        <Upload className="size-5 text-slate-400" />
+                      <div className="prism-icon-tile flex size-11 items-center justify-center rounded-full">
+                        <Upload className="size-5" />
                       </div>
-                      <p className="text-sm font-semibold text-slate-700">
+                      <p className="text-sm font-semibold text-[var(--text-primary)]">
                         {dragOverSource ? 'Drop source file' : 'Click or drag a source file'}
                       </p>
-                      <p className="max-w-md text-xs leading-5 text-slate-400">
+                      <p className="max-w-md text-xs leading-5 text-[var(--text-tertiary)]">
                         PDF, DOCX, TXT, Markdown, CSV, JSON, image, or video up to 25 MB.
                         DOCX images/videos are imported as module assets when possible.
                       </p>
@@ -511,7 +493,7 @@ export function BuildWithAIPage() {
                   />
                 </div>
               )}
-              <p className="mt-2 text-xs leading-5 text-slate-400">
+              <p className="mt-2 text-xs leading-5 text-[var(--text-muted)]">
                 Scanned PDFs and legacy .doc files may need OCR or conversion to DOCX before the AI can read their text.
               </p>
             </div>
@@ -521,7 +503,7 @@ export function BuildWithAIPage() {
           <button
             type="submit"
             disabled={!canSubmit}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 py-3.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 active:scale-[.99] disabled:cursor-not-allowed disabled:opacity-40 transition"
+            className="prism-action-primary flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-sm font-bold disabled:cursor-not-allowed disabled:opacity-40"
           >
             {step === 'error' ? (
               <>
@@ -536,11 +518,29 @@ export function BuildWithAIPage() {
             )}
           </button>
 
-          <p className="text-center text-xs text-slate-400">
+          <p className="text-center text-xs text-[var(--text-muted)]">
             Generation takes 15–30 seconds. The module will open automatically when ready.
           </p>
         </form>
-      </main>
-    </div>
+        </div>
+
+        <aside className="space-y-4">
+          <div className="widget p-5">
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--text-muted)]">Input coverage</p>
+            <div className="mt-4 space-y-3 text-xs text-[var(--text-tertiary)]">
+              <div className="flex items-center justify-between"><span>PDF text extraction</span><span className="text-[var(--ember-400)]">Live</span></div>
+              <div className="flex items-center justify-between"><span>DOCX parsing</span><span className="text-[var(--ember-400)]">Live</span></div>
+              <div className="flex items-center justify-between"><span>Generated visuals</span><span className="text-[var(--ember-400)]">SVG</span></div>
+              <div className="flex items-center justify-between"><span>SCORM target</span><span className="text-[var(--obsidian-50)] font-mono-value">1.2</span></div>
+            </div>
+          </div>
+          <div className="glass p-5">
+            <p className="text-overline mb-3">Generation model</p>
+            <p className="font-mono-value text-2xl font-bold text-[var(--obsidian-50)]">Llama 3.3</p>
+            <p className="mt-3 text-xs leading-6 text-[var(--text-tertiary)]">Source documents are extracted before upload generation so module content is grounded in the provided file instead of only the form prompt.</p>
+          </div>
+        </aside>
+      </div>
+    </PrismWorkspaceShell>
   );
 }

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useConvexAuth } from 'convex/react';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { api } from '~convex/_generated/api';
-import { Plus, Loader2, Sparkles, LogOut, ChevronRight, Users } from 'lucide-react';
+import { Plus, Loader2, Sparkles, LogOut, ChevronRight, Users, Brain, Layers, Palette } from 'lucide-react';
 import { useAuthActions } from '@convex-dev/auth/react';
 
 export function DashboardPage() {
@@ -42,17 +42,21 @@ export function DashboardPage() {
 
   return (
     <div className="prism-brand-screen min-h-screen">
-      {/* Top nav */}
-      <header className="border-b border-slate-200 bg-white px-6 py-4">
-        <div className="mx-auto flex max-w-5xl items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Sparkles className="size-5 text-indigo-500" />
-            <span className="text-base font-semibold">Prism Studio</span>
+      <header className="border-b border-[var(--border-subtle)] bg-[rgba(12,12,15,0.78)] px-6 py-5 backdrop-blur-glass">
+        <div className="mx-auto flex max-w-6xl items-center justify-between">
+          <div className="flex items-center gap-3">
+            <span className="prism-icon-tile size-9 rounded-lg">
+              <Sparkles className="size-4" />
+            </span>
+            <div>
+              <p className="text-lg font-bold tracking-tight text-[var(--text-primary)]">PRISM</p>
+              <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--text-muted)]">Intelligence</p>
+            </div>
           </div>
           <button
             type="button"
             onClick={() => void handleSignOut()}
-            className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700"
+            className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold text-[var(--text-tertiary)] transition hover:bg-[var(--card-bg-hover)] hover:text-[var(--text-primary)]"
           >
             <LogOut className="size-4" />
             Sign out
@@ -60,29 +64,60 @@ export function DashboardPage() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-5xl px-6 py-10">
-        <div className="mb-8 flex items-center justify-between">
+      <main className="mx-auto max-w-6xl px-6 py-14">
+        <section className="animate-fadeInUp text-center">
+          <p className="mb-5 text-overline">AI-native SCORM authoring</p>
+          <h1 className="text-[clamp(3rem,9vw,6rem)] font-extrabold uppercase leading-none tracking-tight text-[var(--obsidian-50)]">
+            Prism <span className="text-gradient-ember">Intelligence</span>
+          </h1>
+          <p className="mx-auto mt-5 max-w-3xl text-sm leading-7 text-[var(--text-tertiary)]">
+            Build mobile-first learning modules, generate structured course content from documents,
+            and export SCORM packages from one dark operational authoring system.
+          </p>
+        </section>
+
+        <section className="mt-10 grid gap-5 sm:grid-cols-3">
+          {[
+            { icon: Layers, title: 'Workspaces', description: 'Organize authoring systems by team, client, or learning program.' },
+            { icon: Brain, title: 'AI Builder', description: 'Turn briefs, PDFs, DOCX files, images, and video into complete modules.' },
+            { icon: Palette, title: 'Brand System', description: 'Control colour, type, shape, and learner-facing presentation.' },
+          ].map((card, index) => {
+            const Icon = card.icon;
+            return (
+              <div key={card.title} className={`glass glass-interactive animate-fadeInUp stagger-${index + 2} p-6 text-left`}>
+                <div className="prism-icon-tile mb-5 size-12 rounded-xl">
+                  <Icon className="size-5" />
+                </div>
+                <h2 className="text-sm font-bold uppercase tracking-widest text-[var(--text-primary)]">{card.title}</h2>
+                <p className="mt-3 text-xs leading-6 text-[var(--text-tertiary)]">{card.description}</p>
+                <div className="mt-5 flex items-center gap-1 text-xs font-bold uppercase tracking-[0.12em] text-[var(--ember-400)]">
+                  Open <ChevronRight className="size-3.5" />
+                </div>
+              </div>
+            );
+          })}
+        </section>
+
+        <section className="mt-12 flex flex-col justify-between gap-5 border-b border-[var(--border-subtle)] pb-6 md:flex-row md:items-end">
           <div>
-            <p className="prism-kicker mb-2">Operational authoring system</p>
-            <h1 className="text-3xl font-semibold">Workspaces</h1>
-            <p className="mt-1 text-sm text-slate-500">
-              Launch intelligence workspaces for mobile-first SCORM modules.
-            </p>
+            <p className="text-overline mb-2">Workspace registry</p>
+            <h2 className="text-[32px] font-extrabold tracking-tight text-[var(--obsidian-100)]">Authoring environments</h2>
+            <p className="mt-2 text-sm text-[var(--text-tertiary)]">Launch and manage your collaborative learning production spaces.</p>
           </div>
           <button
             type="button"
             onClick={() => setCreating(true)}
-            className="flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+            className="prism-action-primary flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-bold"
           >
             <Plus className="size-4" />
             New workspace
           </button>
-        </div>
+        </section>
 
         {/* New workspace form */}
         {creating && (
-          <div className="prism-glass-card mb-6 rounded-2xl p-5">
-            <h2 className="mb-3 text-sm font-medium">New workspace name</h2>
+          <div className="glass mt-6 p-5">
+            <h2 className="mb-3 text-sm font-bold text-[var(--text-primary)]">New workspace name</h2>
             <form onSubmit={(e) => void handleCreate(e)} className="flex gap-3">
               <input
                 type="text"
@@ -90,12 +125,12 @@ export function DashboardPage() {
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
                 placeholder="e.g. Onboarding 2025"
-                className="block flex-1 rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm outline-none placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+                className="block flex-1 rounded-lg border px-3.5 py-2.5 text-sm outline-none"
               />
               <button
                 type="submit"
                 disabled={saving || !newName.trim()}
-                className="flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+                className="prism-action-primary flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-bold disabled:opacity-50"
               >
                 {saving && <Loader2 className="size-4 animate-spin" />}
                 Create
@@ -107,20 +142,20 @@ export function DashboardPage() {
                   setNewName('');
                   setError(null);
                 }}
-                className="rounded-lg border border-slate-200 px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-50"
+                className="rounded-lg border border-[var(--border-primary)] px-4 py-2.5 text-sm font-semibold text-[var(--text-tertiary)] hover:bg-[var(--card-bg-hover)]"
               >
                 Cancel
               </button>
             </form>
             {error && (
-              <p className="mt-3 text-sm text-red-600">{error}</p>
+              <p className="mt-3 text-sm text-[var(--semantic-danger)]">{error}</p>
             )}
           </div>
         )}
 
         {/* Loading state */}
         {workspaces === undefined && (
-          <div className="flex items-center gap-2 text-sm text-slate-500">
+          <div className="mt-6 flex items-center gap-2 text-sm text-[var(--text-tertiary)]">
             <Loader2 className="size-4 animate-spin" />
             Loading workspaces…
           </div>
@@ -128,18 +163,18 @@ export function DashboardPage() {
 
         {/* Empty state */}
         {workspaces !== undefined && workspaces.length === 0 && !creating && (
-          <div className="prism-glass-card rounded-2xl border-dashed p-12 text-center">
-            <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-full bg-indigo-50">
-              <Plus className="size-6 text-indigo-500" />
+          <div className="glass mt-6 border-dashed p-12 text-center">
+            <div className="prism-icon-tile mx-auto mb-4 size-12 rounded-xl">
+              <Plus className="size-6" />
             </div>
-            <h2 className="mb-1 text-base font-medium">No workspaces yet</h2>
-            <p className="mb-5 text-sm text-slate-500">
+            <h2 className="mb-1 text-base font-bold text-[var(--text-primary)]">No workspaces yet</h2>
+            <p className="mb-5 text-sm text-[var(--text-tertiary)]">
               Create your first workspace to start building learning modules.
             </p>
             <button
               type="button"
               onClick={() => setCreating(true)}
-              className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-indigo-700"
+              className="prism-action-primary inline-flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-bold"
             >
               <Plus className="size-4" />
               Create workspace
@@ -149,33 +184,33 @@ export function DashboardPage() {
 
         {/* Workspace list */}
         {workspaces && workspaces.length > 0 && (
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {workspaces.map((ws) => (
               <Link
                 key={ws._id}
                 to="/w/$workspaceId"
                 params={{ workspaceId: ws._id }}
-                className="prism-glass-card group flex items-center justify-between rounded-2xl p-5 transition-transform hover:-translate-y-0.5"
+                className="widget group flex items-center justify-between p-5"
               >
                 <div>
-                  <p className="font-medium text-slate-800">{ws.name}</p>
+                  <p className="font-bold text-[var(--text-primary)]">{ws.name}</p>
                   <div className="mt-1 flex items-center gap-2">
                     <span
-                      className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
+                      className={`badge-pill ${
                         ws.role === 'owner'
-                          ? 'bg-indigo-50 text-indigo-700'
-                          : 'bg-slate-100 text-slate-600'
+                          ? 'bg-[rgba(13,140,99,0.1)] text-[var(--ember-400)]'
+                          : 'bg-white/[0.04] text-[var(--text-tertiary)]'
                       }`}
                     >
                       {ws.role}
                     </span>
-                    <span className="flex items-center gap-1 text-xs text-slate-400">
+                    <span className="flex items-center gap-1 text-xs text-[var(--text-muted)]">
                       <Users className="size-3" />
                       Members
                     </span>
                   </div>
                 </div>
-                <ChevronRight className="size-5 text-slate-300 transition-colors group-hover:text-slate-500" />
+                <ChevronRight className="size-5 text-[var(--text-muted)] transition-colors group-hover:text-[var(--ember-400)]" />
               </Link>
             ))}
           </div>
