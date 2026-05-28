@@ -14,6 +14,8 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { PrismWorkspaceShell } from '../components/PrismWorkspaceShell';
+import { TemplateGalleryDialog } from '../components/TemplateGalleryDialog';
+import { LayoutGrid } from 'lucide-react';
 
 export function ModuleListPage() {
   const { workspaceId } = useParams({ from: '/protected/w/$workspaceId/modules' });
@@ -30,6 +32,7 @@ export function ModuleListPage() {
 
   const [creating, setCreating] = useState(false);
   const [newTitle, setNewTitle] = useState('');
+  const [showTemplates, setShowTemplates] = useState(false);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
@@ -90,6 +93,14 @@ export function ModuleListPage() {
           </Link>
           <button
             type="button"
+            onClick={() => setShowTemplates(true)}
+            className="flex items-center gap-1.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--card-bg-hover)] px-3 py-2 text-sm font-bold text-[var(--text-secondary)] transition hover:text-[var(--text-primary)]"
+          >
+            <LayoutGrid className="size-4" />
+            Use template
+          </button>
+          <button
+            type="button"
             onClick={() => setCreating(true)}
             className="prism-action-primary flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-bold"
           >
@@ -136,15 +147,25 @@ export function ModuleListPage() {
           <div className="glass flex flex-col items-center justify-center border-2 border-dashed py-20 text-center">
             <div className="prism-icon-tile mb-4 size-12 rounded-xl"><Layers className="size-5" /></div>
             <p className="font-bold text-[var(--text-primary)]">No modules yet</p>
-            <p className="mt-1 text-sm text-[var(--text-tertiary)]">Create your first learning module to get started.</p>
-            <button
-              type="button"
-              onClick={() => setCreating(true)}
-              className="prism-action-primary mt-4 flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-bold"
-            >
-              <Plus className="size-4" />
-              New module
-            </button>
+            <p className="mt-1 text-sm text-[var(--text-tertiary)]">Start from a template or create a blank module.</p>
+            <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+              <button
+                type="button"
+                onClick={() => setShowTemplates(true)}
+                className="prism-action-primary flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-bold"
+              >
+                <LayoutGrid className="size-4" />
+                Browse templates
+              </button>
+              <button
+                type="button"
+                onClick={() => setCreating(true)}
+                className="flex items-center gap-1.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--card-bg-hover)] px-4 py-2 text-sm font-bold text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+              >
+                <Plus className="size-4" />
+                New blank module
+              </button>
+            </div>
           </div>
         )}
 
@@ -241,6 +262,12 @@ export function ModuleListPage() {
           </div>
         ))}
       </div>
+      {showTemplates && (
+        <TemplateGalleryDialog
+          workspaceId={wsId}
+          onClose={() => setShowTemplates(false)}
+        />
+      )}
     </PrismWorkspaceShell>
   );
 }

@@ -177,3 +177,91 @@ export const softDelete = mutation({
     await ctx.db.patch(moduleId, { deletedAt: Date.now() });
   },
 });
+
+/** Block type literal — must mirror the schema.ts blocks.type union. */
+const blockTypeV = v.union(
+  v.literal('richText'),
+  v.literal('image'),
+  v.literal('video'),
+  v.literal('lottie'),
+  v.literal('mcq'),
+  v.literal('trueFalse'),
+  v.literal('accordion'),
+  v.literal('quote'),
+  v.literal('callout'),
+  v.literal('divider'),
+  v.literal('flashcard'),
+  v.literal('process'),
+  v.literal('tabs'),
+  v.literal('button'),
+  v.literal('customHtml'),
+  v.literal('hotspots'),
+  v.literal('gallery'),
+  v.literal('compare'),
+  v.literal('audio'),
+  v.literal('labeledGraphic'),
+  v.literal('matching'),
+  v.literal('sorting'),
+  v.literal('fillBlanks'),
+  v.literal('revealCards'),
+  v.literal('scenario'),
+);
+
+/**
+ * Create a new module from a client-side template payload.
+ * Performs module + lessons + blocks inserts in a single mutation (atomic).
+ */
+export const createFromTemplate = mutation({
+  args: {
+    workspaceId: v.id('workspaces'),
+    title: v.string(),
+    lessons: v.array(
+      v.object({
+        title: v.string(),
+        blocks: v.array(
+          v.object({
+            type: blockTypeV,
+            content: v.optional(v.string()),
+          }),
+        ),
+      }),
+    ),
+  },
+  handler: async (ctx, { workspaceId, title, lessons }) => {
+    const userId = await requireMember(ctx, workspaceId);
+    const now = Date.now();
+
+    const moduleId = await ctx.db.insert('modules', {
+      workspaceId,
+      title: title.trim() || 'Untitled Module',
+      status: 'draft',
+      createdAt: now,
+      updatedAt: now,
+      lastEditedBy: userId,
+    });
+
+    for (let li = 0; li < lessons.length; li++) {
+      const l = lessons[li]!;
+      const lessonId = await ctx.db.insert('lessons', {
+        moduleId,
+        title: l.title.trim() || `Lesson ${li + 1}`,
+        order: (li + 1) * 1000,
+        createdAt: now,
+      });
+      for (let bi = 0; bi < l.blocks.length; bi++) {
+        const b = l.blocks[bi]!;
+        await ctx.db.insert('blocks', {
+          lessonId,
+          moduleId,
+          type: b.type,
+          order: (bi + 1) * 1000,
+          content: b.content,
+          updatedAt: now,
+          lastEditedBy: userId,
+        });
+      }
+    }
+
+    return moduleId;
+  },
+});
