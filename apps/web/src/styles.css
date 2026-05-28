@@ -1,6 +1,22 @@
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&display=swap');
 @import 'tailwindcss';
 
+@font-face {
+  font-family: 'Necto Mono';
+  src: local('Necto Mono Regular'), local('NectoMono-Regular'), local('Necto Mono');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Necto Mono';
+  src: local('Necto Mono Bold'), local('NectoMono-Bold');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
 @theme {
   --color-prism-primary: #0d8c63;
   --color-prism-accent: #10b37d;
@@ -119,6 +135,10 @@ body {
   background: var(--bg-primary);
   color: var(--text-primary);
   font-family: 'JetBrains Mono', var(--font-jb), 'SF Mono', 'Fira Code', ui-monospace, monospace;
+}
+
+h1, h2, h3 {
+  font-family: 'Necto Mono', 'JetBrains Mono', var(--font-jb), 'SF Mono', ui-monospace, monospace;
 }
 
 ::selection {

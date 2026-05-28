@@ -17,6 +17,7 @@ import type * as lessons from "../lessons.js";
 import type * as members from "../members.js";
 import type * as modules from "../modules.js";
 import type * as presence from "../presence.js";
+import type * as users from "../users.js";
 import type * as workspaces from "../workspaces.js";
 
 import type {
@@ -35,6 +36,7 @@ declare const fullApi: ApiFromModules<{
   members: typeof members;
   modules: typeof modules;
   presence: typeof presence;
+  users: typeof users;
   workspaces: typeof workspaces;
 }>;
 

@@ -2,14 +2,12 @@ import { useState } from 'react';
 import { useQuery, useMutation } from 'convex/react';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { api } from '~convex/_generated/api';
-import { Plus, Loader2, LogOut, ChevronRight, Users, Brain, Layers, Palette } from 'lucide-react';
-import { useAuthActions } from '@convex-dev/auth/react';
+import { Plus, Loader2, ChevronRight, Users, Brain, Layers, Palette } from 'lucide-react';
 import { PrismWorkspaceShell } from '../components/PrismWorkspaceShell';
 
 export function DashboardPage() {
   const workspaces = useQuery(api.workspaces.listMine);
   const createWorkspace = useMutation(api.workspaces.create);
-  const { signOut } = useAuthActions();
   const navigate = useNavigate();
 
   const [creating, setCreating] = useState(false);
@@ -34,11 +32,6 @@ export function DashboardPage() {
     } finally {
       setSaving(false);
     }
-  }
-
-  async function handleSignOut() {
-    await signOut();
-    void navigate({ to: '/sign-in', replace: true });
   }
 
   const firstWorkspace = workspaces?.[0];
@@ -66,23 +59,13 @@ export function DashboardPage() {
       title="Prism Learning"
       subtitle="Build mobile-first learning modules, generate structured course content from documents, and export SCORM packages from one operational authoring system."
       showPageHeader={false}
-      topbarActions={(
-        <button
-            type="button"
-            onClick={() => void handleSignOut()}
-            className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold text-[var(--text-tertiary)] transition hover:bg-[var(--card-bg-hover)] hover:text-[var(--text-primary)]"
-          >
-            <LogOut className="size-4" />
-            Sign out
-          </button>
-      )}
     >
-        <section className="animate-fadeInUp pt-10 text-center lg:pt-16">
+        <section className="animate-fadeInUp pt-10 lg:pt-16">
           <p className="mb-5 text-overline">AI-native SCORM authoring</p>
           <h2 className="text-[clamp(3rem,8vw,5.5rem)] font-extrabold uppercase leading-none tracking-tight text-[var(--obsidian-50)]">
             Prism <span className="text-gradient-ember">Learning</span>
           </h2>
-          <p className="mx-auto mt-5 max-w-3xl text-sm leading-7 text-[var(--text-tertiary)]">
+          <p className="mt-5 max-w-3xl text-sm leading-7 text-[var(--text-tertiary)]">
             Build mobile-first learning modules, generate structured course content from documents,
             and export SCORM packages from one operational authoring system.
           </p>

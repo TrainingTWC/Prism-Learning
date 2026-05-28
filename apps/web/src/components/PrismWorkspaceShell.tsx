@@ -1,5 +1,8 @@
-import { Link } from '@tanstack/react-router';
-import { Bell, BookOpen, Brain, ChevronsLeft, ChevronsRight, Layers, Moon, Palette, Search, Sun, Users } from 'lucide-react';
+import { Link, useNavigate } from '@tanstack/react-router';
+import { Bell, BookOpen, Brain, ChevronsLeft, ChevronsRight, Layers, LogOut, Moon, Palette, Search, Sun, Users } from 'lucide-react';
+import { useAuthActions } from '@convex-dev/auth/react';
+import { useQuery } from 'convex/react';
+import { api } from '~convex/_generated/api';
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 
@@ -43,6 +46,16 @@ export function PrismWorkspaceShell({
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem('prism-sidebar-collapsed') === 'true');
   const [theme, setTheme] = useState<'dark' | 'light'>(() => localStorage.getItem('prism-theme') === 'light' ? 'light' : 'dark');
   const resolvedWorkspaceName = workspaceName ?? 'Prism Learning';
+  const { signOut } = useAuthActions();
+  const navigate = useNavigate();
+  const me = useQuery(api.users.getMe);
+  const displayName = me?.name ?? me?.email?.split('@')[0] ?? 'User';
+  const initials = getInitials(me?.name ?? me?.email ?? 'U');
+
+  async function handleSignOut() {
+    await signOut();
+    void navigate({ to: '/sign-in', replace: true });
+  }
 
   useEffect(() => {
     document.documentElement.classList.toggle('light', theme === 'light');
@@ -127,7 +140,13 @@ export function PrismWorkspaceShell({
             <Search className="size-4" />
             <span className="text-xs">Search Prism...</span>
           </div>
-          <div className="ml-6 flex items-center gap-4">
+          <div className="ml-4 flex shrink-0 items-center gap-1.5">
+            {topbarActions && (
+              <>
+                {topbarActions}
+                <span className="mx-1 h-4 w-px bg-[var(--border-subtle)]" />
+              </>
+            )}
             <button
               type="button"
               onClick={() => setTheme((value) => value === 'light' ? 'dark' : 'light')}
@@ -140,12 +159,25 @@ export function PrismWorkspaceShell({
               <Bell className="size-4" />
               <span className="absolute right-1.5 top-1.5 size-2 rounded-full bg-[var(--ember-400)]" />
             </button>
-            {topbarActions}
-            <div className="hidden border-l border-[var(--border-subtle)] pl-4 text-right sm:block">
-              <p className="text-xs font-semibold text-[var(--text-primary)]">Prism Author</p>
-              <p className="text-[10px] uppercase tracking-[0.12em] text-[var(--text-muted)]">Global Admin</p>
+            <span className="mx-1.5 h-5 w-px bg-[var(--border-subtle)]" />
+            <div className="flex items-center gap-2.5">
+              <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[rgba(13,140,99,0.16)] text-xs font-bold text-[var(--ember-400)]">{initials}</div>
+              <div className="hidden flex-col sm:flex">
+                <p className="text-xs font-semibold leading-none text-[var(--text-primary)]">{displayName}</p>
+                {workspaceRole && (
+                  <p className="mt-1 text-[10px] uppercase tracking-[0.12em] leading-none text-[var(--text-muted)]">{workspaceRole}</p>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => void handleSignOut()}
+                className="rounded-lg p-1.5 text-[var(--text-muted)] transition hover:bg-[var(--card-bg-hover)] hover:text-[var(--semantic-danger)]"
+                aria-label="Sign out"
+                title="Sign out"
+              >
+                <LogOut className="size-3.5" />
+              </button>
             </div>
-            <div className="flex size-8 items-center justify-center rounded-full bg-[rgba(13,140,99,0.16)] text-xs font-bold text-[var(--ember-400)]">PA</div>
           </div>
         </header>
 
@@ -167,4 +199,11 @@ export function PrismWorkspaceShell({
       </div>
     </div>
   );
+}
+
+function getInitials(str: string): string {
+  if (str.includes('@')) return str[0]?.toUpperCase() ?? 'U';
+  const words = str.trim().split(/\s+/);
+  if (words.length === 1) return words[0]?.[0]?.toUpperCase() ?? 'U';
+  return ((words[0]?.[0] ?? '') + (words[words.length - 1]?.[0] ?? '')).toUpperCase();
 }

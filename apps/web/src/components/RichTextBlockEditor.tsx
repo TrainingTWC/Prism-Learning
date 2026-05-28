@@ -3,6 +3,7 @@ import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
 import Underline from '@tiptap/extension-underline';
+import TextAlign from '@tiptap/extension-text-align';
 import {
   Bold,
   Italic,
@@ -13,6 +14,10 @@ import {
   Heading1,
   Heading2,
   Heading3,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  AlignJustify,
 } from 'lucide-react';
 
 interface RichTextBlockEditorProps {
@@ -35,6 +40,7 @@ export function RichTextBlockEditor({
       StarterKit,
       Placeholder.configure({ placeholder: 'Start writing…' }),
       Underline,
+      TextAlign.configure({ types: ['heading', 'paragraph'] }),
     ],
     content: initialContent,
     autofocus: autoFocus ? 'end' : false,
@@ -156,6 +162,35 @@ export function RichTextBlockEditor({
           title="Link"
         >
           <Link2 className="size-3.5" />
+        </ToolbarBtn>
+        <Divider />
+        <ToolbarBtn
+          active={editor.isActive({ textAlign: 'left' })}
+          onClick={() => handleToggle(() => editor.chain().focus().setTextAlign('left').run())}
+          title="Align left"
+        >
+          <AlignLeft className="size-3.5" />
+        </ToolbarBtn>
+        <ToolbarBtn
+          active={editor.isActive({ textAlign: 'center' })}
+          onClick={() => handleToggle(() => editor.chain().focus().setTextAlign('center').run())}
+          title="Align center"
+        >
+          <AlignCenter className="size-3.5" />
+        </ToolbarBtn>
+        <ToolbarBtn
+          active={editor.isActive({ textAlign: 'right' })}
+          onClick={() => handleToggle(() => editor.chain().focus().setTextAlign('right').run())}
+          title="Align right"
+        >
+          <AlignRight className="size-3.5" />
+        </ToolbarBtn>
+        <ToolbarBtn
+          active={editor.isActive({ textAlign: 'justify' })}
+          onClick={() => handleToggle(() => editor.chain().focus().setTextAlign('justify').run())}
+          title="Justify"
+        >
+          <AlignJustify className="size-3.5" />
         </ToolbarBtn>
       </div>
 
