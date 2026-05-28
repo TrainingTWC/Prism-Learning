@@ -48,6 +48,8 @@ import {
   MousePointerClick,
   Code2,
   X,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import { RichTextBlockEditor } from '../components/RichTextBlockEditor';
 import { ImageBlockEditor } from '../components/ImageBlockEditor';
@@ -145,6 +147,14 @@ export function ModuleEditorPage() {
   const [renameModuleValue, setRenameModuleValue] = useState('');
   const [addBlockMenuOpen, setAddBlockMenuOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [theme, setTheme] = useState<'dark' | 'light'>(
+    () => localStorage.getItem('prism-theme') === 'light' ? 'light' : 'dark'
+  );
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('light', theme === 'light');
+    localStorage.setItem('prism-theme', theme);
+  }, [theme]);
 
   const handleExportScorm = useCallback(async () => {
     if (!content) return;
@@ -275,14 +285,14 @@ export function ModuleEditorPage() {
   const mod = content.module;
 
   return (
-    <div className="prism-brand-screen flex h-screen flex-col overflow-hidden bg-slate-50">
+    <div className="prism-brand-screen flex h-screen flex-col overflow-hidden bg-[var(--bg-primary)]">
       {/* Top bar */}
-      <header className="flex shrink-0 items-center justify-between border-b border-slate-200 bg-white px-5 py-3 shadow-sm">
+      <header className="flex shrink-0 items-center justify-between border-b border-[var(--border-primary)] bg-[var(--bg-secondary)] px-5 py-3 shadow-sm">
         <div className="flex items-center gap-3 min-w-0">
           <Link
             to="/w/$workspaceId/modules"
             params={{ workspaceId }}
-            className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+            className="rounded-lg p-2 text-[var(--text-muted)] hover:bg-[var(--card-bg-hover)] hover:text-[var(--text-primary)]"
           >
             <ChevronLeft className="size-5" />
           </Link>
@@ -303,7 +313,7 @@ export function ModuleEditorPage() {
                   setRenamingModule(false);
                 }}
                 onKeyDown={(e) => e.key === 'Escape' && setRenamingModule(false)}
-                className="rounded-lg border border-indigo-300 px-3 py-1 text-base font-semibold text-slate-800 outline-none focus:ring-2 focus:ring-indigo-400 w-72"
+                className="rounded-lg border border-indigo-400 bg-[var(--input-bg)] px-3 py-1 text-base font-semibold text-[var(--text-primary)] outline-none focus:ring-2 focus:ring-indigo-400 w-72"
               />
             </form>
           ) : (
@@ -313,7 +323,7 @@ export function ModuleEditorPage() {
                 setRenameModuleValue(mod.title);
                 setRenamingModule(true);
               }}
-              className="group flex items-center gap-2 truncate max-w-sm text-base font-semibold text-slate-800 hover:text-indigo-600"
+              className="group flex items-center gap-2 truncate max-w-sm text-base font-semibold text-[var(--text-primary)] hover:text-indigo-400"
               title="Click to rename"
             >
               {mod.title}
@@ -326,13 +336,13 @@ export function ModuleEditorPage() {
         <div className="flex items-center gap-3">
           {(presence ?? []).length > 0 && (
             <div className="flex items-center gap-1.5">
-              <Users className="size-4 text-slate-400" />
+              <Users className="size-4 text-[var(--text-muted)]" />
               <div className="flex -space-x-1.5">
                 {(presence ?? []).slice(0, 4).map((p) => (
                   <div
                     key={p._id}
                     title={p.displayName}
-                    className="flex size-7 items-center justify-center rounded-full border-2 border-white bg-indigo-500 text-[10px] font-bold text-white"
+                    className="flex size-7 items-center justify-center rounded-full border-2 border-[var(--bg-secondary)] bg-indigo-500 text-[10px] font-bold text-white"
                   >
                     {p.displayName.slice(0, 1).toUpperCase()}
                   </div>
@@ -352,11 +362,20 @@ export function ModuleEditorPage() {
           <Link
             to="/w/$workspaceId/m/$moduleId/preview"
             params={{ workspaceId, moduleId }}
-            className="flex items-center gap-2 rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-800"
+            className="flex items-center gap-2 rounded-lg border border-[var(--border-primary)] px-4 py-2 text-sm font-medium text-[var(--text-secondary)] hover:bg-[var(--card-bg-hover)] hover:text-[var(--text-primary)]"
           >
             <Eye className="size-4" />
             Preview
           </Link>
+          {/* Theme toggle */}
+          <button
+            type="button"
+            onClick={() => setTheme((t) => t === 'light' ? 'dark' : 'light')}
+            className="rounded-lg p-2 text-[var(--text-tertiary)] hover:bg-[var(--card-bg-hover)] hover:text-[var(--text-primary)] transition-colors"
+            aria-label={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
+          >
+            {theme === 'light' ? <Moon className="size-4" /> : <Sun className="size-4" />}
+          </button>
           <button
             type="button"
             onClick={() => void handleExportScorm()}
@@ -371,12 +390,12 @@ export function ModuleEditorPage() {
 
       <div className="flex flex-1 overflow-hidden">
         {/* Lessons sidebar */}
-        <aside className="flex w-64 shrink-0 flex-col border-r border-slate-200 bg-white">
-          <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+        <aside className="flex w-64 shrink-0 flex-col border-r border-[var(--border-primary)] bg-[var(--bg-secondary)]">
+          <div className="flex items-center justify-between border-b border-[var(--border-subtle)] px-4 py-3">
+            <span className="text-xs font-bold uppercase tracking-wider text-[var(--text-tertiary)]">
               Lessons
             </span>
-            <span className="text-xs text-slate-400">{lessons.length}</span>
+            <span className="text-xs text-[var(--text-muted)]">{lessons.length}</span>
           </div>
 
           <DndContext
@@ -417,17 +436,17 @@ export function ModuleEditorPage() {
                   />
                 ))}
                 {lessons.length === 0 && (
-                  <li className="px-4 py-8 text-center text-sm text-slate-400">
+                  <li className="px-4 py-8 text-center text-sm text-[var(--text-muted)]">
                     No lessons yet
                   </li>
                 )}
               </ul>
               {/* Add lesson button at bottom */}
-              <div className="shrink-0 border-t border-slate-100 p-3">
+              <div className="shrink-0 border-t border-[var(--border-subtle)] p-3">
                 <button
                   type="button"
                   onClick={() => void handleAddLesson()}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-200 py-2.5 text-sm font-medium text-slate-400 hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-600 transition-colors"
+                  className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-[var(--border-primary)] py-2.5 text-sm font-medium text-[var(--text-muted)] hover:border-indigo-500 hover:bg-indigo-500/10 hover:text-indigo-400 transition-colors"
                 >
                   <Plus className="size-4" /> Add lesson
                 </button>
@@ -439,8 +458,8 @@ export function ModuleEditorPage() {
         {/* Block canvas */}
         <main className="flex-1 overflow-y-auto">
           {!activeLesson ? (
-            <div className="flex h-full items-center justify-center">
-              <div className="text-center text-slate-400">
+            <div className="flex h-full items-center justify-center bg-[var(--bg-primary)]">
+              <div className="text-center text-[var(--text-muted)]">
                 <p className="text-sm">Select or create a lesson to start editing</p>
                 <button
                   type="button"
@@ -453,12 +472,12 @@ export function ModuleEditorPage() {
             </div>
           ) : (
             <div className="mx-auto max-w-3xl px-8 py-8 space-y-4">
-              <div className="flex items-center gap-3 pb-2 border-b border-slate-200">
-                <h2 className="text-xl font-bold text-slate-800">{activeLesson.title}</h2>
+              <div className="flex items-center gap-3 pb-2 border-b border-[var(--border-primary)]">
+                <h2 className="text-xl font-bold text-[var(--text-primary)]">{activeLesson.title}</h2>
                 <button
                   type="button"
                   onClick={() => { setRenamingLessonId(activeLesson._id); setRenameLessonValue(activeLesson.title); }}
-                  className="rounded p-1 text-slate-300 hover:bg-slate-100 hover:text-slate-600"
+                  className="rounded p-1 text-[var(--text-muted)] hover:bg-[var(--card-bg-hover)] hover:text-[var(--text-secondary)]"
                   title="Rename lesson"
                 >
                   <Pencil className="size-4" />
@@ -495,30 +514,30 @@ export function ModuleEditorPage() {
 
               {/* Add block */}
               {addBlockMenuOpen ? (
-                <div className="rounded-2xl border-2 border-indigo-200 bg-white shadow-sm p-4">
+                <div className="rounded-2xl border-2 border-indigo-500/40 bg-[var(--bg-secondary)] shadow-sm p-4">
                   <div className="mb-3 flex items-center justify-between">
-                    <span className="text-sm font-bold text-indigo-600">Insert block</span>
+                    <span className="text-sm font-bold text-indigo-400">Insert block</span>
                     <button
                       type="button"
                       onClick={() => setAddBlockMenuOpen(false)}
-                      className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                      className="rounded-lg p-1 text-[var(--text-muted)] hover:bg-[var(--card-bg-hover)] hover:text-[var(--text-primary)]"
                     >
                       <X className="size-4" />
                     </button>
                   </div>
                   {['Content', 'Interactive', 'Layout', 'Advanced'].map((group) => (
                     <div key={group} className="mb-4 last:mb-0">
-                      <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-slate-400">{group}</p>
+                      <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)]">{group}</p>
                       <div className="grid grid-cols-4 gap-2">
                         {BLOCK_TYPES.filter((bt) => bt.group === group).map(({ type, label, icon }) => (
                           <button
                             key={type}
                             type="button"
                             onClick={() => void handleAddBlock(type)}
-                            className="flex flex-col items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-2 py-3 text-center hover:border-indigo-300 hover:bg-indigo-50 transition-colors"
+                            className="flex flex-col items-center gap-1.5 rounded-xl border border-[var(--border-primary)] bg-[var(--bg-tertiary)] px-2 py-3 text-center hover:border-indigo-500 hover:bg-indigo-500/10 transition-colors"
                           >
-                            <span className="[&>svg]:size-5 text-slate-500">{icon}</span>
-                            <span className="text-[11px] font-medium text-slate-600 leading-tight">{label}</span>
+                            <span className="[&>svg]:size-5 text-[var(--text-tertiary)]">{icon}</span>
+                            <span className="text-[11px] font-medium text-[var(--text-secondary)] leading-tight">{label}</span>
                           </button>
                         ))}
                       </div>
@@ -529,7 +548,7 @@ export function ModuleEditorPage() {
                 <button
                   type="button"
                   onClick={() => setAddBlockMenuOpen(true)}
-                  className="flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-slate-200 py-5 text-sm font-semibold text-slate-400 transition-colors hover:border-indigo-300 hover:bg-indigo-50/50 hover:text-indigo-500"
+                  className="flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-[var(--border-primary)] py-5 text-sm font-semibold text-[var(--text-muted)] transition-colors hover:border-indigo-500 hover:bg-indigo-500/10 hover:text-indigo-400"
                 >
                   <Plus className="size-5" /> Add block
                 </button>
@@ -583,8 +602,8 @@ function SortableLesson({
       style={style}
       className={`flex items-center gap-2 px-3 py-2.5 ${
         isActive
-          ? 'bg-indigo-50 border-r-2 border-indigo-500 text-indigo-700'
-          : 'text-slate-700 hover:bg-slate-50 border-r-2 border-transparent'
+          ? 'bg-indigo-500/10 border-r-2 border-indigo-500 text-[var(--text-primary)]'
+          : 'text-[var(--text-secondary)] hover:bg-[var(--card-bg-hover)] border-r-2 border-transparent'
       }`}
     >
       {/* Drag handle — always visible */}
@@ -592,7 +611,7 @@ function SortableLesson({
         type="button"
         {...attributes}
         {...listeners}
-        className="cursor-grab shrink-0 p-0.5 text-slate-300 hover:text-slate-500 touch-none"
+        className="cursor-grab shrink-0 p-0.5 text-[var(--text-muted)] hover:text-[var(--text-primary)] touch-none"
       >
         <GripVertical className="size-4" />
       </button>
@@ -611,7 +630,7 @@ function SortableLesson({
             onChange={(e) => onRenameChange(e.target.value)}
             onBlur={() => void onRename(renameValue)}
             onKeyDown={(e) => e.key === 'Escape' && onCancelRename()}
-            className="w-full rounded-lg border border-indigo-300 px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-indigo-300"
+            className="w-full rounded-lg border border-indigo-500 bg-[var(--input-bg)] px-2 py-1 text-sm text-[var(--text-primary)] outline-none focus:ring-2 focus:ring-indigo-400"
           />
         </form>
       ) : (
@@ -619,7 +638,7 @@ function SortableLesson({
           type="button"
           onClick={onSelect}
           onDoubleClick={onStartRename}
-          className="flex-1 truncate text-left text-sm font-medium"
+          className="flex-1 truncate text-left text-sm font-medium text-[var(--text-primary)]"
         >
           {lesson.title}
         </button>
@@ -631,7 +650,7 @@ function SortableLesson({
           <button
             type="button"
             onClick={onStartRename}
-            className="rounded-md p-1 text-slate-400 hover:bg-slate-200 hover:text-slate-600"
+            className="rounded-md p-1 text-[var(--text-muted)] hover:bg-[var(--card-bg-hover)] hover:text-[var(--text-primary)]"
             title="Rename"
           >
             <Pencil className="size-3.5" />
@@ -639,7 +658,7 @@ function SortableLesson({
           <button
             type="button"
             onClick={() => void onDelete()}
-            className="rounded-md p-1 text-slate-300 hover:bg-red-50 hover:text-red-400"
+            className="rounded-md p-1 text-[var(--text-muted)] hover:bg-red-500/10 hover:text-red-400"
             title="Delete"
           >
             <Trash2 className="size-3.5" />
@@ -680,7 +699,7 @@ function SortableBlock({
         type="button"
         {...attributes}
         {...listeners}
-        className="mt-4 cursor-grab self-start p-1.5 text-slate-300 hover:text-slate-500 touch-none rounded-lg hover:bg-slate-100"
+        className="mt-4 cursor-grab self-start p-2.5 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] touch-none rounded-xl bg-[var(--bg-tertiary)] hover:bg-[var(--card-bg-hover)] transition-colors"
         title="Drag to reorder"
       >
         <GripVertical className="size-5" />
@@ -795,23 +814,23 @@ function SortableBlock({
         )}
       </div>
 
-      {/* Block actions — always visible */}
-      <div className="mt-4 flex shrink-0 flex-col self-start gap-1">
+      {/* Block actions — big, bold, always visible */}
+      <div className="mt-4 flex shrink-0 flex-col self-start gap-1.5">
         <button
           type="button"
           onClick={() => void onDuplicate()}
-          className="rounded-lg p-1.5 text-slate-300 hover:bg-slate-100 hover:text-slate-600 transition-colors"
+          className="rounded-xl bg-[var(--bg-tertiary)] p-2.5 text-[var(--text-tertiary)] hover:bg-[var(--card-bg-hover)] hover:text-[var(--text-primary)] transition-colors"
           title="Duplicate block"
         >
-          <Copy className="size-4" />
+          <Copy className="size-5" />
         </button>
         <button
           type="button"
           onClick={() => void onDelete()}
-          className="rounded-lg p-1.5 text-slate-300 hover:bg-red-50 hover:text-red-400 transition-colors"
+          className="rounded-xl bg-[var(--bg-tertiary)] p-2.5 text-[var(--text-tertiary)] hover:bg-red-500/15 hover:text-red-400 transition-colors"
           title="Delete block"
         >
-          <Trash2 className="size-4" />
+          <Trash2 className="size-5" />
         </button>
       </div>
     </div>
