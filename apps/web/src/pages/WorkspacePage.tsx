@@ -11,7 +11,7 @@ export function WorkspacePage() {
 
   if (workspace === undefined) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <div className="prism-brand-screen flex min-h-screen items-center justify-center">
         <Loader2 className="size-6 animate-spin text-indigo-500" />
       </div>
     );
@@ -19,7 +19,7 @@ export function WorkspacePage() {
 
   if (workspace === null) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-4 text-slate-500">
+      <div className="prism-brand-screen flex min-h-screen flex-col items-center justify-center gap-4 text-slate-500">
         <p>Workspace not found or you don&apos;t have access.</p>
         <Link to="/" className="text-sm text-indigo-600 hover:underline">
           Back to workspaces
@@ -29,7 +29,7 @@ export function WorkspacePage() {
   }
 
   return (
-    <div className="flex min-h-screen bg-slate-50">
+    <div className="prism-brand-screen flex min-h-screen bg-slate-50">
       {/* Sidebar */}
       <aside className="hidden w-56 shrink-0 flex-col border-r border-slate-200 bg-white md:flex">
         <div className="border-b border-slate-200 px-4 py-4">
@@ -40,6 +40,7 @@ export function WorkspacePage() {
             <ChevronLeft className="size-3.5" />
             All workspaces
           </Link>
+          <p className="prism-kicker truncate">Prism Studio</p>
           <p className="truncate text-sm font-semibold text-slate-800">{workspace.name}</p>
           <span
             className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
@@ -94,7 +95,7 @@ export function WorkspacePage() {
         </header>
 
         <div className="flex flex-1 items-center justify-center p-10">
-          <div className="max-w-sm text-center">
+          <div className="prism-glass-card max-w-sm rounded-3xl p-10 text-center">
             <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-xl bg-indigo-50">
               <Layers className="size-7 text-indigo-400" strokeWidth={1.5} />
             </div>

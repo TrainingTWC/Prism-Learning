@@ -70,7 +70,7 @@ export function ModuleListPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="prism-brand-screen min-h-screen">
       {/* Header */}
       <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/90 px-6 py-4 backdrop-blur">
         <div className="mx-auto flex max-w-4xl items-center justify-between gap-4">
@@ -83,8 +83,8 @@ export function ModuleListPage() {
               <ChevronLeft className="size-5" />
             </Link>
             <div>
-              <p className="text-xs text-slate-400">{workspace?.name ?? '—'}</p>
-              <h1 className="text-lg font-semibold text-slate-800">Modules</h1>
+              <p className="prism-kicker">{workspace?.name ?? '—'}</p>
+              <h1 className="text-xl font-semibold text-slate-800">Modules</h1>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -113,7 +113,7 @@ export function ModuleListPage() {
         {creating && (
           <form
             onSubmit={(e) => void handleCreate(e)}
-            className="flex items-center gap-2 rounded-xl border border-indigo-300 bg-white p-4 shadow-sm"
+            className="prism-glass-card flex items-center gap-2 rounded-2xl p-4"
           >
             <Layers className="size-5 shrink-0 text-indigo-400" />
             <input
@@ -142,7 +142,7 @@ export function ModuleListPage() {
         )}
 
         {modules.length === 0 && !creating && (
-          <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-200 py-20 text-center">
+          <div className="prism-glass-card flex flex-col items-center justify-center rounded-2xl border-2 border-dashed py-20 text-center">
             <Layers className="mb-4 size-10 text-slate-300" />
             <p className="font-medium text-slate-500">No modules yet</p>
             <p className="mt-1 text-sm text-slate-400">Create your first learning module to get started.</p>
@@ -160,7 +160,7 @@ export function ModuleListPage() {
         {modules.map((mod) => (
           <div
             key={mod._id}
-            className="group relative flex items-center gap-4 rounded-xl border border-slate-200 bg-white px-5 py-4 shadow-sm hover:shadow-md transition-shadow"
+            className="prism-glass-card group relative flex items-center gap-4 rounded-2xl px-5 py-4 transition-transform hover:-translate-y-0.5"
             onClick={() => openMenuId && setOpenMenuId(null)}
           >
             <Layers className="size-5 shrink-0 text-indigo-400" />

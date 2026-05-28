@@ -444,8 +444,9 @@ export const generateModule = action({
       type: v.string(),
       size: v.number(),
     })),
+    sourceText: v.optional(v.string()),
   },
-  handler: async (ctx, { workspaceId, name, objective, type, description, sourceFile }): Promise<string> => {
+  handler: async (ctx, { workspaceId, name, objective, type, description, sourceFile, sourceText }): Promise<string> => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error('Unauthenticated');
 
@@ -462,7 +463,8 @@ export const generateModule = action({
     const model = process.env.GROQ_MODEL ?? 'llama-3.3-70b-versatile';
     const apiUrl = 'https://api.groq.com/openai/v1/chat/completions';
     const source = await extractSourceFile(ctx, sourceFile);
-    const sourceText = source?.text ? `\n\nSource document excerpts:\n${source.text}` : '';
+    const mergedSourceText = cleanExtractedText(`${sourceText ?? ''}\n\n${source?.text ?? ''}`);
+    const sourceTextBlock = mergedSourceText ? `\n\nSource document excerpts:\n${mergedSourceText}` : '';
     const sourceNote = source?.note ? `\n\nSource handling note: ${source.note}` : '';
 
     const systemPrompt = buildSystemPrompt(type);
@@ -470,7 +472,7 @@ export const generateModule = action({
 
 Module name: ${name}
 Learning objective: ${objective}
-  Description: ${description || 'Use the uploaded source file as the primary source material.'}${sourceText}${sourceNote}
+Description: ${description || 'Use the uploaded source file as the primary source material.'}${sourceTextBlock}${sourceNote}
 
 Output only the JSON structure. Begin now.`;
 

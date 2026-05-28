@@ -233,14 +233,14 @@ export function ModuleEditorPage() {
 
   if (content === undefined) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <div className="prism-brand-screen flex min-h-screen items-center justify-center">
         <Loader2 className="size-6 animate-spin text-indigo-500" />
       </div>
     );
   }
   if (content === null) {
     return (
-      <div className="flex min-h-screen items-center justify-center text-slate-500">
+      <div className="prism-brand-screen flex min-h-screen items-center justify-center text-slate-500">
         Module not found.
       </div>
     );
@@ -249,7 +249,7 @@ export function ModuleEditorPage() {
   const mod = content.module;
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-slate-50">
+    <div className="prism-brand-screen flex h-screen flex-col overflow-hidden bg-slate-50">
       {/* Top bar */}
       <header className="flex shrink-0 items-center justify-between border-b border-slate-200 bg-white px-4 py-2.5 shadow-sm">
         <div className="flex items-center gap-2 min-w-0">

@@ -72,7 +72,7 @@ export function MembersPage() {
 
   if (workspace === undefined || members === undefined) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <div className="prism-brand-screen flex min-h-screen items-center justify-center">
         <Loader2 className="size-6 animate-spin text-indigo-500" />
       </div>
     );
@@ -80,7 +80,7 @@ export function MembersPage() {
 
   if (workspace === null) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-4 text-slate-500">
+      <div className="prism-brand-screen flex min-h-screen flex-col items-center justify-center gap-4 text-slate-500">
         <p>Workspace not found.</p>
         <Link to="/" className="text-sm text-indigo-600 hover:underline">
           Back to workspaces
@@ -90,7 +90,7 @@ export function MembersPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="prism-brand-screen min-h-screen bg-slate-50">
       <header className="border-b border-slate-200 bg-white px-6 py-4">
         <div className="mx-auto flex max-w-3xl items-center justify-between">
           <div>
@@ -102,6 +102,7 @@ export function MembersPage() {
               <ChevronLeft className="size-3.5" />
               {workspace.name}
             </Link>
+            <p className="prism-kicker mt-2">Access control</p>
             <h1 className="mt-0.5 text-lg font-semibold">Members</h1>
           </div>
         </div>
@@ -110,7 +111,7 @@ export function MembersPage() {
       <main className="mx-auto max-w-3xl px-6 py-8">
         {/* Invite form — owner only */}
         {isOwner && (
-          <section className="mb-8 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+          <section className="prism-glass-card mb-8 rounded-2xl p-6">
             <h2 className="mb-4 flex items-center gap-2 text-sm font-medium text-slate-700">
               <UserPlus className="size-4" />
               Invite a member
@@ -163,7 +164,7 @@ export function MembersPage() {
         )}
 
         {/* Active members */}
-        <section className="mb-6 rounded-xl border border-slate-200 bg-white shadow-sm">
+        <section className="prism-glass-card mb-6 rounded-2xl shadow-sm">
           <div className="border-b border-slate-100 px-5 py-3">
             <h2 className="text-sm font-medium text-slate-700">
               Active members ({members.length})
@@ -213,7 +214,7 @@ export function MembersPage() {
 
         {/* Pending invites — owner only */}
         {isOwner && pendingInvites && pendingInvites.length > 0 && (
-          <section className="rounded-xl border border-slate-200 bg-white shadow-sm">
+          <section className="prism-glass-card rounded-2xl shadow-sm">
             <div className="border-b border-slate-100 px-5 py-3">
               <h2 className="flex items-center gap-2 text-sm font-medium text-slate-700">
                 <Clock className="size-4" />

@@ -14,6 +14,7 @@ type UploadedSourceFile = {
   name: string;
   type: string;
   size: number;
+  extractedText?: string;
 };
 
 const GENERATING_MESSAGES = [
@@ -24,6 +25,32 @@ const GENERATING_MESSAGES = [
   'Adding interactive questions…',
   'Polishing the module…',
 ];
+
+async function extractPdfText(file: File): Promise<string> {
+  const [pdfjsLib, pdfWorker] = await Promise.all([
+    import('pdfjs-dist/legacy/build/pdf.mjs'),
+    import('pdfjs-dist/legacy/build/pdf.worker.mjs?url'),
+  ]);
+  pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker.default;
+
+  const data = new Uint8Array(await file.arrayBuffer());
+  const pdf = await pdfjsLib.getDocument({ data }).promise;
+  const pages: string[] = [];
+  const maxPages = Math.min(pdf.numPages, 80);
+
+  for (let pageNumber = 1; pageNumber <= maxPages; pageNumber++) {
+    const page = await pdf.getPage(pageNumber);
+    const content = await page.getTextContent();
+    const pageText = content.items
+      .map((item) => ('str' in item ? item.str : ''))
+      .join(' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (pageText) pages.push(pageText);
+  }
+
+  return pages.join('\n\n').slice(0, 18000);
+}
 
 export function BuildWithAIPage() {
   const { workspaceId } = useParams({ from: '/protected/w/$workspaceId/build-with-ai' });
@@ -96,6 +123,15 @@ export function BuildWithAIPage() {
     setStep('form');
 
     try {
+      const extractedText = file.type === 'application/pdf' || /\.pdf$/i.test(file.name)
+        ? await extractPdfText(file)
+        : undefined;
+      if ((file.type === 'application/pdf' || /\.pdf$/i.test(file.name)) && !extractedText?.trim()) {
+        setError('I could not extract readable text from this PDF. It may be scanned or image-only. Try a text-based PDF or convert it with OCR first.');
+        setStep('error');
+        return;
+      }
+
       const uploadUrl = await generateUploadUrl();
       const res = await fetch(uploadUrl, {
         method: 'POST',
@@ -106,7 +142,7 @@ export function BuildWithAIPage() {
       const { storageId } = (await res.json()) as { storageId: string };
 
       if (sourceFile) await deleteFile({ storageId: sourceFile.storageId });
-      setSourceFile({ storageId, name: file.name, type: file.type || 'application/octet-stream', size: file.size });
+      setSourceFile({ storageId, name: file.name, type: file.type || 'application/octet-stream', size: file.size, extractedText });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Upload failed. Please try again.');
       setStep('error');
@@ -134,7 +170,13 @@ export function BuildWithAIPage() {
         objective: objective.trim(),
         type,
         description: description.trim(),
-        sourceFile: sourceMode === 'upload' && sourceFile ? sourceFile : undefined,
+        sourceFile: sourceMode === 'upload' && sourceFile ? {
+          storageId: sourceFile.storageId,
+          name: sourceFile.name,
+          type: sourceFile.type,
+          size: sourceFile.size,
+        } : undefined,
+        sourceText: sourceMode === 'upload' ? sourceFile?.extractedText : undefined,
       });
 
       void navigate({
@@ -150,7 +192,7 @@ export function BuildWithAIPage() {
   // ── Generating screen ────────────────────────────────────────────────────
   if (step === 'generating') {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-slate-50 px-6">
+      <div className="prism-brand-screen flex min-h-screen flex-col items-center justify-center px-6">
         <div className="w-full max-w-xs text-center">
           {/* Animated icon */}
           <div className="relative mx-auto mb-6 flex h-20 w-20 items-center justify-center">
@@ -185,7 +227,7 @@ export function BuildWithAIPage() {
 
   // ── Form screen ──────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="prism-brand-screen min-h-screen">
       {/* Header */}
       <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/90 px-6 py-4 backdrop-blur">
         <div className="mx-auto flex max-w-2xl items-center gap-3">
@@ -198,7 +240,7 @@ export function BuildWithAIPage() {
           </Link>
           <div className="flex items-center gap-2">
             <Sparkles className="size-4 text-indigo-500" />
-            <span className="text-sm font-semibold text-slate-800">Build with AI</span>
+            <span className="text-sm font-semibold text-slate-800">Prism Studio / Build with AI</span>
           </div>
         </div>
       </header>
@@ -206,11 +248,11 @@ export function BuildWithAIPage() {
       <main className="mx-auto max-w-2xl px-6 py-10">
         {/* Hero */}
         <div className="mb-8">
-          <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-indigo-50 px-3 py-1.5 text-xs font-medium text-indigo-600">
+          <div className="prism-kicker mb-4 inline-flex items-center gap-2 rounded-full bg-indigo-50 px-3 py-1.5">
             <Sparkles className="size-3" />
-            Powered by Llama 3.3 via Groq
+            AI-native learning intelligence
           </div>
-          <h1 className="text-2xl font-bold text-slate-900">Generate a learning module</h1>
+          <h1 className="text-3xl font-bold text-slate-900">Generate a learning module</h1>
           <p className="mt-1.5 text-sm text-slate-500">
             Describe what you want to teach or upload a source document. Llama 3.3 will
             generate a full mobile-ready module with lesson visuals, explanations, and
@@ -226,7 +268,7 @@ export function BuildWithAIPage() {
           </div>
         )}
 
-        <form onSubmit={(e) => void handleSubmit(e)} className="space-y-6">
+        <form onSubmit={(e) => void handleSubmit(e)} className="prism-glass-card space-y-6 rounded-3xl p-6">
           {/* Module name */}
           <div>
             <label htmlFor="ai-name" className="mb-1.5 block text-sm font-medium text-slate-700">
@@ -407,7 +449,7 @@ export function BuildWithAIPage() {
                     <div className="min-w-0">
                       <p className="truncate text-sm font-semibold text-slate-800">{sourceFile.name}</p>
                       <p className="text-xs text-slate-500">
-                        {(sourceFile.size / 1024 / 1024).toFixed(2)} MB · ready to use
+                        {(sourceFile.size / 1024 / 1024).toFixed(2)} MB · {sourceFile.extractedText ? 'text extracted' : 'ready to use'}
                       </p>
                     </div>
                   </div>

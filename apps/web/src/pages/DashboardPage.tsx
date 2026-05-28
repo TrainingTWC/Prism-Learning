@@ -41,13 +41,13 @@ export function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="prism-brand-screen min-h-screen">
       {/* Top nav */}
       <header className="border-b border-slate-200 bg-white px-6 py-4">
         <div className="mx-auto flex max-w-5xl items-center justify-between">
           <div className="flex items-center gap-2">
             <Sparkles className="size-5 text-indigo-500" />
-            <span className="text-base font-semibold">Prism Learning</span>
+            <span className="text-base font-semibold">Prism Studio</span>
           </div>
           <button
             type="button"
@@ -63,9 +63,10 @@ export function DashboardPage() {
       <main className="mx-auto max-w-5xl px-6 py-10">
         <div className="mb-8 flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-semibold">Workspaces</h1>
-            <p className="mt-0.5 text-sm text-slate-500">
-              Select a workspace or create a new one.
+            <p className="prism-kicker mb-2">Operational authoring system</p>
+            <h1 className="text-3xl font-semibold">Workspaces</h1>
+            <p className="mt-1 text-sm text-slate-500">
+              Launch intelligence workspaces for mobile-first SCORM modules.
             </p>
           </div>
           <button
@@ -80,7 +81,7 @@ export function DashboardPage() {
 
         {/* New workspace form */}
         {creating && (
-          <div className="mb-6 rounded-xl border border-indigo-200 bg-white p-5 shadow-sm">
+          <div className="prism-glass-card mb-6 rounded-2xl p-5">
             <h2 className="mb-3 text-sm font-medium">New workspace name</h2>
             <form onSubmit={(e) => void handleCreate(e)} className="flex gap-3">
               <input
@@ -127,7 +128,7 @@ export function DashboardPage() {
 
         {/* Empty state */}
         {workspaces !== undefined && workspaces.length === 0 && !creating && (
-          <div className="rounded-xl border border-dashed border-slate-300 bg-white p-12 text-center">
+          <div className="prism-glass-card rounded-2xl border-dashed p-12 text-center">
             <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-full bg-indigo-50">
               <Plus className="size-6 text-indigo-500" />
             </div>
@@ -154,7 +155,7 @@ export function DashboardPage() {
                 key={ws._id}
                 to="/w/$workspaceId"
                 params={{ workspaceId: ws._id }}
-                className="group flex items-center justify-between rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md"
+                className="prism-glass-card group flex items-center justify-between rounded-2xl p-5 transition-transform hover:-translate-y-0.5"
               >
                 <div>
                   <p className="font-medium text-slate-800">{ws.name}</p>
@@ -168,15 +169,10 @@ export function DashboardPage() {
                     >
                       {ws.role}
                     </span>
-                    <Link
-                      to="/w/$workspaceId/members"
-                      params={{ workspaceId: ws._id }}
-                      onClick={(e: React.MouseEvent) => e.stopPropagation()}
-                      className="flex items-center gap-1 text-xs text-slate-400 hover:text-slate-600"
-                    >
+                    <span className="flex items-center gap-1 text-xs text-slate-400">
                       <Users className="size-3" />
                       Members
-                    </Link>
+                    </span>
                   </div>
                 </div>
                 <ChevronRight className="size-5 text-slate-300 transition-colors group-hover:text-slate-500" />

@@ -33,7 +33,7 @@ export function SignInPage() {
   // Already loading (could be code completion)
   if (isLoading && hasCode) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <div className="prism-brand-screen flex min-h-screen items-center justify-center">
         <Loader2 className="size-6 animate-spin text-indigo-500" />
         <span className="ml-3 text-slate-600">Signing you in…</span>
       </div>
@@ -58,21 +58,21 @@ export function SignInPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
+    <div className="prism-brand-screen flex min-h-screen items-center justify-center px-4">
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="mb-8 flex items-center justify-center gap-2">
           <Sparkles className="size-6 text-indigo-500" />
-          <span className="text-xl font-semibold tracking-tight">Prism Learning</span>
+          <span className="text-xl font-semibold tracking-tight">Prism Studio</span>
         </div>
 
         {step === 'completing' ? (
-          <div className="rounded-xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+          <div className="prism-glass-card rounded-2xl p-8 text-center">
             <Loader2 className="mx-auto mb-4 size-8 animate-spin text-indigo-500" />
             <p className="text-slate-600">Completing sign in…</p>
           </div>
         ) : step === 'sent' ? (
-          <div className="rounded-xl border border-slate-200 bg-white p-8 shadow-sm">
+          <div className="prism-glass-card rounded-2xl p-8 shadow-sm">
             <div className="mb-4 flex justify-center">
               <div className="flex size-12 items-center justify-center rounded-full bg-indigo-50">
                 <Mail className="size-6 text-indigo-500" />
@@ -96,7 +96,7 @@ export function SignInPage() {
             </button>
           </div>
         ) : (
-          <div className="rounded-xl border border-slate-200 bg-white p-8 shadow-sm">
+          <div className="prism-glass-card rounded-2xl p-8 shadow-sm">
             <h1 className="mb-1 text-xl font-semibold">Sign in</h1>
             <p className="mb-6 text-sm text-slate-500">
               Enter your email to receive a magic sign-in link.
