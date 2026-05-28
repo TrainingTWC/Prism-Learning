@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { useQuery, useMutation, useConvexAuth } from 'convex/react';
+import { useQuery, useMutation } from 'convex/react';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { api } from '~convex/_generated/api';
-import { Plus, Loader2, Sparkles, LogOut, ChevronRight, Users, Brain, Layers, Palette } from 'lucide-react';
+import { Plus, Loader2, LogOut, ChevronRight, Users, Brain, Layers, Palette } from 'lucide-react';
 import { useAuthActions } from '@convex-dev/auth/react';
+import { PrismWorkspaceShell } from '../components/PrismWorkspaceShell';
 
 export function DashboardPage() {
   const workspaces = useQuery(api.workspaces.listMine);
@@ -40,20 +41,32 @@ export function DashboardPage() {
     void navigate({ to: '/sign-in', replace: true });
   }
 
+  const firstWorkspace = workspaces?.[0];
+
+  function handleFeatureCard(kind: 'workspaces' | 'build' | 'theme') {
+    if (kind === 'workspaces') {
+      document.getElementById('workspace-registry')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return;
+    }
+    if (!firstWorkspace) {
+      setCreating(true);
+      document.getElementById('workspace-registry')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return;
+    }
+    void navigate({
+      to: kind === 'build' ? '/w/$workspaceId/build-with-ai' : '/w/$workspaceId/theme',
+      params: { workspaceId: firstWorkspace._id },
+    });
+  }
+
   return (
-    <div className="prism-brand-screen min-h-screen">
-      <header className="border-b border-[var(--border-subtle)] bg-[rgba(12,12,15,0.78)] px-6 py-5 backdrop-blur-glass">
-        <div className="mx-auto flex max-w-6xl items-center justify-between">
-          <div className="flex items-center gap-3">
-            <span className="prism-icon-tile size-9 rounded-lg">
-              <Sparkles className="size-4" />
-            </span>
-            <div>
-              <p className="text-lg font-bold tracking-tight text-[var(--text-primary)]">PRISM</p>
-              <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--text-muted)]">Intelligence</p>
-            </div>
-          </div>
-          <button
+    <PrismWorkspaceShell
+      active="home"
+      overline="AI-native SCORM authoring"
+      title="Prism Learning"
+      subtitle="Build mobile-first learning modules, generate structured course content from documents, and export SCORM packages from one operational authoring system."
+      topbarActions={(
+        <button
             type="button"
             onClick={() => void handleSignOut()}
             className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold text-[var(--text-tertiary)] transition hover:bg-[var(--card-bg-hover)] hover:text-[var(--text-primary)]"
@@ -61,30 +74,23 @@ export function DashboardPage() {
             <LogOut className="size-4" />
             Sign out
           </button>
-        </div>
-      </header>
-
-      <main className="mx-auto max-w-6xl px-6 py-14">
+      )}
+    >
         <section className="animate-fadeInUp text-center">
-          <p className="mb-5 text-overline">AI-native SCORM authoring</p>
-          <h1 className="text-[clamp(3rem,9vw,6rem)] font-extrabold uppercase leading-none tracking-tight text-[var(--obsidian-50)]">
-            Prism <span className="text-gradient-ember">Intelligence</span>
-          </h1>
-          <p className="mx-auto mt-5 max-w-3xl text-sm leading-7 text-[var(--text-tertiary)]">
-            Build mobile-first learning modules, generate structured course content from documents,
-            and export SCORM packages from one dark operational authoring system.
-          </p>
+          <h2 className="text-[clamp(3rem,8vw,5.5rem)] font-extrabold uppercase leading-none tracking-tight text-[var(--obsidian-50)]">
+            Prism <span className="text-gradient-ember">Learning</span>
+          </h2>
         </section>
 
         <section className="mt-10 grid gap-5 sm:grid-cols-3">
           {[
-            { icon: Layers, title: 'Workspaces', description: 'Organize authoring systems by team, client, or learning program.' },
-            { icon: Brain, title: 'AI Builder', description: 'Turn briefs, PDFs, DOCX files, images, and video into complete modules.' },
-            { icon: Palette, title: 'Brand System', description: 'Control colour, type, shape, and learner-facing presentation.' },
+            { kind: 'workspaces' as const, icon: Layers, title: 'Workspaces', description: 'Organize authoring systems by team, client, or learning program.' },
+            { kind: 'build' as const, icon: Brain, title: 'AI Builder', description: 'Turn briefs, PDFs, DOCX files, images, and video into complete modules.' },
+            { kind: 'theme' as const, icon: Palette, title: 'Brand System', description: 'Control colour, type, shape, and learner-facing presentation.' },
           ].map((card, index) => {
             const Icon = card.icon;
             return (
-              <div key={card.title} className={`glass glass-interactive animate-fadeInUp stagger-${index + 2} p-6 text-left`}>
+              <button key={card.title} type="button" onClick={() => handleFeatureCard(card.kind)} className={`glass glass-interactive animate-fadeInUp stagger-${index + 2} p-6 text-left`}>
                 <div className="prism-icon-tile mb-5 size-12 rounded-xl">
                   <Icon className="size-5" />
                 </div>
@@ -93,12 +99,12 @@ export function DashboardPage() {
                 <div className="mt-5 flex items-center gap-1 text-xs font-bold uppercase tracking-[0.12em] text-[var(--ember-400)]">
                   Open <ChevronRight className="size-3.5" />
                 </div>
-              </div>
+              </button>
             );
           })}
         </section>
 
-        <section className="mt-12 flex flex-col justify-between gap-5 border-b border-[var(--border-subtle)] pb-6 md:flex-row md:items-end">
+        <section id="workspace-registry" className="mt-12 flex scroll-mt-24 flex-col justify-between gap-5 border-b border-[var(--border-subtle)] pb-6 md:flex-row md:items-end">
           <div>
             <p className="text-overline mb-2">Workspace registry</p>
             <h2 className="text-[32px] font-extrabold tracking-tight text-[var(--obsidian-100)]">Authoring environments</h2>
@@ -215,7 +221,6 @@ export function DashboardPage() {
             ))}
           </div>
         )}
-      </main>
-    </div>
+    </PrismWorkspaceShell>
   );
 }

@@ -235,7 +235,7 @@ export function BuildWithAIPage() {
       workspaceName={workspace?.name ?? 'Workspace'}
       workspaceRole={workspace?.role}
       active="build"
-      overline="AI-native learning intelligence"
+      overline="AI-native learning builder"
       title="Generate a learning module"
       subtitle="Describe what you want to teach or upload a source document. Llama 3.3 generates a complete mobile-ready module with visuals, explanations, and interactions."
     >

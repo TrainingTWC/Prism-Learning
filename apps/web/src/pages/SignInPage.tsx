@@ -67,7 +67,7 @@ export function SignInPage() {
           </div>
           <p className="text-overline mb-2">AI-native SCORM authoring</p>
           <h1 className="text-4xl font-extrabold uppercase tracking-tight text-[var(--obsidian-50)]">
-            Prism <span className="text-gradient-ember">Intelligence</span>
+            Prism <span className="text-gradient-ember">Learning</span>
           </h1>
         </div>
 
