@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import { useConvexAuth } from 'convex/react';
 import { useAuthActions } from '@convex-dev/auth/react';
-import { Loader2, Mail, ArrowLeft } from 'lucide-react';
+import { Loader2, Mail, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 
 type Step = 'form' | 'sent' | 'completing';
 
@@ -20,7 +20,10 @@ export function SignInPage() {
 
   const [step, setStep] = useState<Step>(hasCode ? 'completing' : 'form');
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [sendingLink, setSendingLink] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Redirect once authenticated
@@ -40,11 +43,40 @@ export function SignInPage() {
     );
   }
 
-  async function handleSubmit(e: React.FormEvent) {
+  /** Sign in with password / PIN */
+  async function handlePasswordSignIn(e: React.FormEvent) {
     e.preventDefault();
-    if (!email.trim()) return;
+    if (!email.trim() || !password) return;
 
     setSubmitting(true);
+    setError(null);
+
+    try {
+      await signIn('password', { email: email.trim(), password, flow: 'signIn' });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Sign in failed.';
+      // If they don't have a password set, prompt them to use magic link
+      const isNotFound =
+        msg.toLowerCase().includes('not found') ||
+        msg.toLowerCase().includes('invalid') ||
+        msg.toLowerCase().includes('no account');
+      setError(
+        isNotFound
+          ? 'No password found for this account. Send a magic link to sign in.'
+          : msg,
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  /** Send a magic-link email */
+  async function handleMagicLink() {
+    if (!email.trim()) {
+      setError('Enter your email address first.');
+      return;
+    }
+    setSendingLink(true);
     setError(null);
 
     try {
@@ -53,7 +85,7 @@ export function SignInPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
     } finally {
-      setSubmitting(false);
+      setSendingLink(false);
     }
   }
 
@@ -83,7 +115,8 @@ export function SignInPage() {
             </div>
             <h1 className="mb-2 text-center text-xl font-bold text-[var(--text-primary)]">Check your email</h1>
             <p className="mb-6 text-center text-sm leading-relaxed text-[var(--text-tertiary)]">
-              We sent a sign-in link to <span className="font-medium text-[var(--text-primary)]">{email}</span>.
+              We sent a sign-in link to{' '}
+              <span className="font-medium text-[var(--text-primary)]">{email}</span>.
               Click the link to continue.
             </p>
             <button
@@ -102,11 +135,15 @@ export function SignInPage() {
           <div className="widget p-8 shadow-sm">
             <h1 className="mb-1 text-xl font-bold text-[var(--text-primary)]">Sign in</h1>
             <p className="mb-6 text-sm text-[var(--text-tertiary)]">
-              Enter your email to receive a magic sign-in link.
+              Sign in with your password / PIN, or use a magic link.
             </p>
 
-            <form onSubmit={(e) => void handleSubmit(e)} noValidate>
-              <label htmlFor="email" className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]">
+            <form onSubmit={(e) => void handlePasswordSignIn(e)} noValidate>
+              {/* Email */}
+              <label
+                htmlFor="email"
+                className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]"
+              >
                 Email address
               </label>
               <input
@@ -121,6 +158,33 @@ export function SignInPage() {
                 className="mb-4 block w-full rounded-lg border px-3.5 py-2.5 text-sm outline-none"
               />
 
+              {/* Password / PIN */}
+              <label
+                htmlFor="password"
+                className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]"
+              >
+                Password or PIN
+              </label>
+              <div className="relative mb-4">
+                <input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Your password or PIN"
+                  className="block w-full rounded-lg border px-3.5 py-2.5 pr-10 text-sm outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
+                  tabIndex={-1}
+                >
+                  {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                </button>
+              </div>
+
               {error && (
                 <p className="mb-4 rounded-lg bg-[rgba(239,68,68,0.08)] px-3.5 py-2.5 text-sm text-[var(--semantic-danger)]">
                   {error}
@@ -129,13 +193,35 @@ export function SignInPage() {
 
               <button
                 type="submit"
-                disabled={submitting || !email.trim()}
+                disabled={submitting || !email.trim() || !password}
                 className="prism-action-primary flex w-full items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-bold disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {submitting && <Loader2 className="size-4 animate-spin" />}
-                {submitting ? 'Sending…' : 'Send magic link'}
+                {submitting ? 'Signing in…' : 'Sign in'}
               </button>
             </form>
+
+            {/* Divider */}
+            <div className="my-5 flex items-center gap-3">
+              <div className="h-px flex-1 bg-[var(--border-subtle)]" />
+              <span className="text-[10px] font-semibold uppercase tracking-widest text-[var(--text-muted)]">or</span>
+              <div className="h-px flex-1 bg-[var(--border-subtle)]" />
+            </div>
+
+            {/* Magic link fallback */}
+            <button
+              type="button"
+              disabled={sendingLink}
+              onClick={() => void handleMagicLink()}
+              className="flex w-full items-center justify-center gap-2 rounded-lg border border-[var(--border-subtle)] px-4 py-2.5 text-sm font-semibold text-[var(--text-secondary)] transition-colors hover:border-[var(--border-default)] hover:text-[var(--text-primary)] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {sendingLink ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Mail className="size-4" />
+              )}
+              {sendingLink ? 'Sending link…' : 'Send magic link instead'}
+            </button>
           </div>
         )}
       </div>

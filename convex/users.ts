@@ -15,3 +15,22 @@ export const getMe = query({
     };
   },
 });
+
+/**
+ * Returns true if the authenticated user has a password/PIN registered.
+ * Used by account settings to show "Set password" vs "Change password".
+ */
+export const hasPassword = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return false;
+    const account = await ctx.db
+      .query('authAccounts')
+      .withIndex('userIdAndProvider', (q) =>
+        q.eq('userId', userId).eq('provider', 'password'),
+      )
+      .first();
+    return account !== null;
+  },
+});

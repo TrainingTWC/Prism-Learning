@@ -1,5 +1,7 @@
 import { convexAuth } from '@convex-dev/auth/server';
 import { Email } from '@convex-dev/auth/providers/Email';
+import { Password } from '@convex-dev/auth/providers/Password';
+import { ConvexError } from 'convex/values';
 import { Resend } from 'resend';
 
 /**
@@ -18,8 +20,6 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
   providers: [
     Email({
       id: 'email',
-      // authorize: undefined → only the token is needed to sign in (true magic link).
-      // The token must be high entropy; Convex Auth generates a secure default.
       authorize: undefined,
       sendVerificationRequest: async ({ identifier: email, token }) => {
         const siteUrl = process.env.SITE_URL ?? 'http://localhost:5173';
@@ -52,6 +52,20 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
 
         if (error) {
           throw new Error(`Failed to send sign-in email: ${error.message}`);
+        }
+      },
+    }),
+
+    /**
+     * Password / PIN provider.
+     * Allows 4+ characters so users can use a short numeric PIN or a full password.
+     * On first use, signUp links the password account to the existing magic-link user.
+     */
+    Password({
+      id: 'password',
+      validatePasswordRequirements: (password: string) => {
+        if (password.length < 4) {
+          throw new ConvexError('Password or PIN must be at least 4 characters.');
         }
       },
     }),

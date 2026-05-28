@@ -1,5 +1,6 @@
 import { Link, useNavigate } from '@tanstack/react-router';
-import { Bell, BookOpen, Brain, ChevronsLeft, ChevronsRight, Layers, LogOut, Moon, Palette, Search, Sun, Users } from 'lucide-react';
+import { Bell, BookOpen, Brain, ChevronsLeft, ChevronsRight, KeyRound, Layers, LogOut, Moon, Palette, Search, Sun, Users } from 'lucide-react';
+import { SetPasswordModal } from './SetPasswordModal';
 import { useAuthActions } from '@convex-dev/auth/react';
 import { useQuery } from 'convex/react';
 import { api } from '~convex/_generated/api';
@@ -45,6 +46,7 @@ export function PrismWorkspaceShell({
 }: PrismWorkspaceShellProps) {
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem('prism-sidebar-collapsed') === 'true');
   const [theme, setTheme] = useState<'dark' | 'light'>(() => localStorage.getItem('prism-theme') === 'light' ? 'light' : 'dark');
+  const [passwordModalOpen, setPasswordModalOpen] = useState(false);
   const resolvedWorkspaceName = workspaceName ?? 'Prism Learning';
   const { signOut } = useAuthActions();
   const navigate = useNavigate();
@@ -170,6 +172,15 @@ export function PrismWorkspaceShell({
               </div>
               <button
                 type="button"
+                onClick={() => setPasswordModalOpen(true)}
+                className="rounded-lg p-1.5 text-[var(--text-muted)] transition hover:bg-[var(--card-bg-hover)] hover:text-[var(--text-primary)]"
+                aria-label="Set or change password"
+                title="Set / change password"
+              >
+                <KeyRound className="size-3.5" />
+              </button>
+              <button
+                type="button"
                 onClick={() => void handleSignOut()}
                 className="rounded-lg p-1.5 text-[var(--text-muted)] transition hover:bg-[var(--card-bg-hover)] hover:text-[var(--semantic-danger)]"
                 aria-label="Sign out"
@@ -197,6 +208,13 @@ export function PrismWorkspaceShell({
           </div>
         </main>
       </div>
+      {me?.email && (
+        <SetPasswordModal
+          email={me.email}
+          open={passwordModalOpen}
+          onClose={() => setPasswordModalOpen(false)}
+        />
+      )}
     </div>
   );
 }
