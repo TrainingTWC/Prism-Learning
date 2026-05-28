@@ -7,6 +7,14 @@ import { LottieBlockRenderer } from './LottieBlockRenderer';
 import { MCQBlockRenderer } from './MCQBlockRenderer';
 import { TrueFalseBlockRenderer } from './TrueFalseBlockRenderer';
 import { AccordionBlockRenderer } from './AccordionBlockRenderer';
+import { QuoteBlockRenderer } from './QuoteBlockRenderer';
+import { CalloutBlockRenderer } from './CalloutBlockRenderer';
+import { DividerBlockRenderer } from './DividerBlockRenderer';
+import { FlashcardBlockRenderer } from './FlashcardBlockRenderer';
+import { ProcessBlockRenderer } from './ProcessBlockRenderer';
+import { TabsBlockRenderer } from './TabsBlockRenderer';
+import { ButtonBlockRenderer } from './ButtonBlockRenderer';
+import { CustomHtmlBlockRenderer } from './CustomHtmlBlockRenderer';
 
 /**
  * Pure module renderer. Same component drives:
@@ -43,6 +51,30 @@ export function Module({ blocks, theme, resolveAsset }: ModuleProps) {
             break;
           case 'accordion':
             rendered = <AccordionBlockRenderer block={block} />;
+            break;
+          case 'quote':
+            rendered = <QuoteBlockRenderer block={block} />;
+            break;
+          case 'callout':
+            rendered = <CalloutBlockRenderer block={block} />;
+            break;
+          case 'divider':
+            rendered = <DividerBlockRenderer block={block} />;
+            break;
+          case 'flashcard':
+            rendered = <FlashcardBlockRenderer block={block} />;
+            break;
+          case 'process':
+            rendered = <ProcessBlockRenderer block={block} />;
+            break;
+          case 'tabs':
+            rendered = <TabsBlockRenderer block={block} />;
+            break;
+          case 'button':
+            rendered = <ButtonBlockRenderer block={block} />;
+            break;
+          case 'custom-html':
+            rendered = <CustomHtmlBlockRenderer block={block} />;
             break;
           default: {
             const _exhaustive: never = block;

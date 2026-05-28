@@ -41,6 +41,14 @@ function mapBlockType(type: string): Block['type'] | null {
     mcq: 'mcq',
     trueFalse: 'true-false',
     accordion: 'accordion',
+    quote: 'quote',
+    callout: 'callout',
+    divider: 'divider',
+    flashcard: 'flashcard',
+    process: 'process',
+    tabs: 'tabs',
+    button: 'button',
+    customHtml: 'custom-html',
   };
   return map[type] ?? null;
 }

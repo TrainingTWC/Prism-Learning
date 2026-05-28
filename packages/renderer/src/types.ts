@@ -29,7 +29,15 @@ export type Block =
   | LottieBlock
   | MCQBlock
   | TrueFalseBlock
-  | AccordionBlock;
+  | AccordionBlock
+  | QuoteBlock
+  | CalloutBlock
+  | DividerBlock
+  | FlashcardBlock
+  | ProcessBlock
+  | TabsBlock
+  | ButtonBlock
+  | CustomHtmlBlock;
 
 export interface RichTextBlock {
   id: string;
@@ -72,6 +80,54 @@ export interface AccordionBlock {
   id: string;
   type: 'accordion';
   content: string; // JSON: { sections: [{ id, title, content }] }
+}
+
+export interface QuoteBlock {
+  id: string;
+  type: 'quote';
+  content: string; // JSON: { text: string; attribution?: string }
+}
+
+export interface CalloutBlock {
+  id: string;
+  type: 'callout';
+  content: string; // JSON: { variant: 'info'|'warning'|'success'|'tip'; title?: string; body: string }
+}
+
+export interface DividerBlock {
+  id: string;
+  type: 'divider';
+  content: string; // JSON: { style: 'line'|'space'|'dots'; label?: string }
+}
+
+export interface FlashcardBlock {
+  id: string;
+  type: 'flashcard';
+  content: string; // JSON: { cards: { id: string; front: string; back: string }[] }
+}
+
+export interface ProcessBlock {
+  id: string;
+  type: 'process';
+  content: string; // JSON: { steps: { id: string; title: string; body: string }[] }
+}
+
+export interface TabsBlock {
+  id: string;
+  type: 'tabs';
+  content: string; // JSON: { tabs: { id: string; title: string; content: string }[] }
+}
+
+export interface ButtonBlock {
+  id: string;
+  type: 'button';
+  content: string; // JSON: { label: string; url?: string; style: 'primary'|'outline'|'ghost'; align: 'left'|'center'|'right' }
+}
+
+export interface CustomHtmlBlock {
+  id: string;
+  type: 'custom-html';
+  content: string; // JSON: { html: string; notes?: string }
 }
 
 export interface ModuleProps {

@@ -159,6 +159,112 @@ function renderBlock(block: ExportBlock, assetMap: Record<string, string>): stri
       return `<div class="prism-acc">${sections}</div>`;
     }
 
+    case 'quote': {
+      let p: { text?: string; attribution?: string } = {};
+      try { p = JSON.parse(c) as typeof p; } catch { /* */ }
+      if (!p.text) return '';
+      return `<blockquote class="prism-quote">
+  <p>${escapeHtml(p.text)}</p>
+  ${p.attribution ? `<cite>${escapeHtml(p.attribution)}</cite>` : ''}
+</blockquote>`;
+    }
+
+    case 'callout': {
+      let p: { variant?: string; title?: string; body?: string } = {};
+      try { p = JSON.parse(c) as typeof p; } catch { /* */ }
+      const variant = p.variant ?? 'info';
+      return `<div class="prism-callout prism-callout--${escapeHtml(variant)}">
+  ${p.title ? `<p class="prism-callout-title">${escapeHtml(p.title)}</p>` : ''}
+  <p>${escapeHtml(p.body ?? '')}</p>
+</div>`;
+    }
+
+    case 'divider': {
+      let p: { style?: string; label?: string } = {};
+      try { p = JSON.parse(c) as typeof p; } catch { /* */ }
+      const style = p.style ?? 'line';
+      if (style === 'space') return `<div class="prism-divider prism-divider--space"></div>`;
+      if (style === 'dots') return `<div class="prism-divider prism-divider--dots">···</div>`;
+      return p.label
+        ? `<div class="prism-divider prism-divider--label"><span>${escapeHtml(p.label)}</span></div>`
+        : `<hr class="prism-divider prism-divider--line" />`;
+    }
+
+    case 'flashcard': {
+      let p: { cards?: Array<{ id: string; front: string; back: string }> } = {};
+      try { p = JSON.parse(c) as typeof p; } catch { /* */ }
+      const cards = p.cards ?? [];
+      if (!cards.length) return '';
+      const cardsHtml = cards.map((card, i) =>
+        `<div class="prism-fc-card" data-idx="${i}" style="${i > 0 ? 'display:none' : ''}">
+  <div class="prism-fc-inner" data-flipped="false">
+    <div class="prism-fc-front"><p>${escapeHtml(card.front)}</p></div>
+    <div class="prism-fc-back" style="display:none"><p>${escapeHtml(card.back)}</p></div>
+  </div>
+  <button type="button" class="prism-fc-flip">Tap to reveal</button>
+</div>`,
+      ).join('');
+      return `<div class="prism-flashcards" data-total="${cards.length}" data-current="0">
+  ${cardsHtml}
+  <div class="prism-fc-nav">
+    <button type="button" class="prism-fc-prev" disabled>← Prev</button>
+    <span class="prism-fc-count">1 / ${cards.length}</span>
+    <button type="button" class="prism-fc-next" ${cards.length <= 1 ? 'disabled' : ''}>Next →</button>
+  </div>
+</div>`;
+    }
+
+    case 'process': {
+      let p: { steps?: Array<{ id: string; title: string; body: string }> } = {};
+      try { p = JSON.parse(c) as typeof p; } catch { /* */ }
+      const steps = (p.steps ?? []).map((step, i) =>
+        `<div class="prism-process-step">
+  <div class="prism-process-num">${i + 1}</div>
+  <div class="prism-process-body">
+    <p class="prism-process-title">${escapeHtml(step.title)}</p>
+    ${step.body ? `<p class="prism-process-desc">${escapeHtml(step.body)}</p>` : ''}
+  </div>
+</div>`,
+      ).join('');
+      return `<div class="prism-process">${steps}</div>`;
+    }
+
+    case 'tabs': {
+      let p: { tabs?: Array<{ id: string; title: string; content: string }> } = {};
+      try { p = JSON.parse(c) as typeof p; } catch { /* */ }
+      const tabs = p.tabs ?? [];
+      if (!tabs.length) return '';
+      const tabBtns = tabs.map((t, i) =>
+        `<button type="button" class="prism-tab-btn${i === 0 ? ' active' : ''}" data-idx="${i}">${escapeHtml(t.title)}</button>`,
+      ).join('');
+      const tabPanels = tabs.map((t, i) =>
+        `<div class="prism-tab-panel" data-idx="${i}" style="${i > 0 ? 'display:none' : ''}"><p>${escapeHtml(t.content)}</p></div>`,
+      ).join('');
+      return `<div class="prism-tabs">
+  <div class="prism-tabs-bar">${tabBtns}</div>
+  <div class="prism-tabs-panels">${tabPanels}</div>
+</div>`;
+    }
+
+    case 'button': {
+      let p: { label?: string; url?: string; style?: string; align?: string } = {};
+      try { p = JSON.parse(c) as typeof p; } catch { /* */ }
+      if (!p.label) return '';
+      const align = p.align ?? 'left';
+      const cls = `prism-btn prism-btn--${p.style ?? 'primary'}`;
+      const textAlign = align === 'center' ? 'center' : align === 'right' ? 'right' : 'left';
+      const tag = p.url ? `<a href="${escapeHtml(p.url)}" class="${cls}" target="_blank" rel="noopener noreferrer">${escapeHtml(p.label)}</a>`
+        : `<button type="button" class="${cls}">${escapeHtml(p.label)}</button>`;
+      return `<div class="prism-btn-wrap" style="text-align:${textAlign};margin:1.5rem 0">${tag}</div>`;
+    }
+
+    case 'customHtml': {
+      // In SCORM export, author controls their own output — use raw HTML (no sanitization)
+      let p: { html?: string } = {};
+      try { p = JSON.parse(c) as typeof p; } catch { /* */ }
+      return `<div class="prism-custom-html">${p.html ?? ''}</div>`;
+    }
+
     default:
       return '';
   }
@@ -291,6 +397,60 @@ h1{font-family:var(--prism-font-heading);font-size:1.25rem;line-height:1.25;font
 @media (min-width:700px){.prism-shell{padding:2rem}.prism-phone{min-height:min(844px,calc(100vh - 4rem));border:10px solid #0f172a;border-radius:32px;max-width:390px}.prism-lesson{padding:1.5rem 1.25rem}}
 @media (max-width:379px){.prism-tf-btns{grid-template-columns:1fr}.prism-actions{align-items:flex-start;flex-direction:column}}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}.prism-block{animation:none}}
+/* ── New block types ── */
+.prism-quote{border-left:4px solid var(--prism-primary);background:#f8fafc;border-radius:0 12px 12px 0;padding:1.25rem 1.25rem 1.25rem 1.5rem;margin:1.5rem 0;font-size:1.05rem;font-style:italic;color:#334155;line-height:1.7}
+.prism-quote p{margin:0}
+.prism-quote cite{display:block;margin-top:.625rem;font-size:.8rem;font-style:normal;font-weight:700;color:#64748b;letter-spacing:.03em}
+.prism-callout{border-radius:14px;padding:1rem 1.125rem;margin:1.5rem 0;border-width:1.5px;border-style:solid}
+.prism-callout--info{background:#eff6ff;border-color:#93c5fd;color:#1e40af}
+.prism-callout--warning{background:#fffbeb;border-color:#fcd34d;color:#92400e}
+.prism-callout--success{background:#f0fdf4;border-color:#86efac;color:#166534}
+.prism-callout--tip{background:#fdf4ff;border-color:#d8b4fe;color:#6b21a8}
+.prism-callout-title{font-weight:700;margin-bottom:.375rem;font-size:.9rem}
+.prism-callout p{font-size:.875rem;line-height:1.6;margin:0}
+.prism-divider--line{border:none;border-top:2px solid #e2e8f0;margin:1.5rem 0}
+.prism-divider--space{height:2rem;margin:0}
+.prism-divider--dots{text-align:center;color:#cbd5e1;font-size:1.5rem;letter-spacing:.4em;margin:1.25rem 0;display:block}
+.prism-divider--label{display:flex;align-items:center;gap:.75rem;margin:1.5rem 0;color:#94a3b8;font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em}
+.prism-divider--label::before,.prism-divider--label::after{content:'';flex:1;border-top:1.5px solid #e2e8f0}
+.prism-flashcards{background:#f8fafc;border:1px solid #e2e8f0;border-radius:18px;padding:1.25rem;margin:1.5rem 0}
+.prism-fc-card{}
+.prism-fc-inner{min-height:10rem;background:#fff;border-radius:14px;border:2px solid #e2e8f0;padding:1.5rem;display:flex;align-items:center;justify-content:center;text-align:center;margin-bottom:.875rem;box-shadow:0 2px 8px rgba(15,23,42,.05)}
+.prism-fc-front p,.prism-fc-back p{font-size:.95rem;line-height:1.6;color:#334155;margin:0}
+.prism-fc-back{display:none}
+.prism-fc-flip{width:100%;min-height:2.5rem;background:var(--prism-primary);color:#fff;border:0;border-radius:10px;font-size:.875rem;font-weight:700;cursor:pointer;margin-bottom:.75rem;transition:opacity .15s}
+.prism-fc-nav{display:flex;align-items:center;justify-content:space-between;gap:.5rem}
+.prism-fc-prev,.prism-fc-next{background:none;border:1.5px solid #e2e8f0;border-radius:8px;padding:.4rem .75rem;font-size:.8rem;font-weight:600;cursor:pointer;color:#475569;transition:background-color .15s}
+.prism-fc-prev:hover:not(:disabled),.prism-fc-next:hover:not(:disabled){background:#f1f5f9}
+.prism-fc-prev:disabled,.prism-fc-next:disabled{opacity:.35;cursor:not-allowed}
+.prism-fc-count{font-size:.8rem;color:#94a3b8;font-weight:600}
+.prism-process{margin:1.5rem 0;position:relative;padding-left:.25rem}
+.prism-process-step{display:flex;align-items:flex-start;gap:1rem;margin-bottom:1.25rem;position:relative}
+.prism-process-step:not(:last-child)::before{content:'';position:absolute;left:1.1rem;top:2.5rem;width:2px;height:calc(100% + .25rem);background:linear-gradient(to bottom,var(--prism-primary),#e2e8f0)}
+.prism-process-num{width:2.25rem;height:2.25rem;border-radius:50%;background:var(--prism-primary);color:#fff;font-weight:800;font-size:.875rem;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.prism-process-title{font-weight:700;color:#1e293b;margin:0 0 .25rem;line-height:1.4;font-size:.925rem}
+.prism-process-desc{font-size:.85rem;color:#64748b;margin:0;line-height:1.5}
+.prism-tabs{background:#fff;border:1px solid #e2e8f0;border-radius:18px;overflow:hidden;margin:1.5rem 0;box-shadow:0 1px 2px rgba(15,23,42,.04)}
+.prism-tabs-bar{display:flex;border-bottom:2px solid #f1f5f9;overflow-x:auto;scrollbar-width:none}
+.prism-tabs-bar::-webkit-scrollbar{display:none}
+.prism-tab-btn{flex-shrink:0;padding:.75rem 1rem;font-size:.85rem;font-weight:600;border:0;background:none;cursor:pointer;color:#64748b;border-bottom:2px solid transparent;margin-bottom:-2px;transition:color .15s,border-color .15s;white-space:nowrap}
+.prism-tab-btn.active{color:var(--prism-primary);border-bottom-color:var(--prism-primary)}
+.prism-tabs-panels{padding:1.25rem}
+.prism-tab-panel{font-size:.875rem;line-height:1.65;color:#475569}
+.prism-tab-panel p{margin:0}
+.prism-btn-wrap{}
+.prism-btn{display:inline-flex;align-items:center;justify-content:center;min-height:2.75rem;padding:.6rem 1.5rem;border-radius:12px;font-size:.9rem;font-weight:700;cursor:pointer;text-decoration:none;transition:opacity .15s,transform .1s}
+.prism-btn:active{transform:scale(.97)}
+.prism-btn--primary{background:var(--prism-primary);color:#fff;border:none}
+.prism-btn--outline{background:transparent;color:var(--prism-primary);border:2px solid var(--prism-primary)}
+.prism-btn--ghost{background:transparent;color:var(--prism-primary);border:none;text-decoration:underline}
+.prism-custom-html{margin:1.5rem 0}
+/* ── Image lightbox ── */
+.prism-img img{cursor:zoom-in}
+.prism-lightbox{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.88);cursor:zoom-out;animation:prism-lb-in .18s ease both}
+@keyframes prism-lb-in{from{opacity:0}to{opacity:1}}
+.prism-lightbox img{max-width:min(96vw,1200px);max-height:92vh;object-fit:contain;border-radius:12px;cursor:default;box-shadow:0 8px 48px rgba(0,0,0,.6)}
+.prism-lb-close{position:absolute;top:1rem;right:1rem;width:2.5rem;height:2.5rem;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.15);border:none;border-radius:50%;color:#fff;font-size:1.25rem;cursor:pointer;line-height:1}
 `;
 }
 
@@ -379,6 +539,85 @@ document.querySelectorAll('.prism-acc-btn').forEach(function(btn){
     var open=body.style.display!=='none';
     body.style.display=open?'none':'block';
     if(arrow)arrow.style.transform=open?'':'rotate(180deg)';
+  });
+});
+// Flashcards
+document.querySelectorAll('.prism-flashcards').forEach(function(fc){
+  var total=parseInt(fc.dataset.total||'0',10);
+  var current=0;
+  var cards=fc.querySelectorAll('.prism-fc-card');
+  var count=fc.querySelector('.prism-fc-count');
+  var prev=fc.querySelector('.prism-fc-prev');
+  var next=fc.querySelector('.prism-fc-next');
+  function goTo(idx){
+    cards[current].style.display='none';
+    current=idx;
+    cards[current].style.display='';
+    if(count)count.textContent=(current+1)+' / '+total;
+    if(prev)prev.disabled=(current===0);
+    if(next)next.disabled=(current===total-1);
+  }
+  fc.querySelectorAll('.prism-fc-flip').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      var inner=btn.previousElementSibling;
+      if(!inner)return;
+      var flipped=inner.dataset.flipped==='true';
+      var front=inner.querySelector('.prism-fc-front');
+      var back=inner.querySelector('.prism-fc-back');
+      if(!flipped){
+        if(front)front.style.display='none';
+        if(back)back.style.display='flex';
+        btn.textContent='Tap to flip back';
+        inner.dataset.flipped='true';
+      } else {
+        if(front)front.style.display='flex';
+        if(back)back.style.display='none';
+        btn.textContent='Tap to reveal';
+        inner.dataset.flipped='false';
+      }
+    });
+  });
+  if(prev)prev.addEventListener('click',function(){if(current>0)goTo(current-1);});
+  if(next)next.addEventListener('click',function(){if(current<total-1)goTo(current+1);});
+});
+// Tabs
+document.querySelectorAll('.prism-tabs').forEach(function(tabs){
+  var btns=tabs.querySelectorAll('.prism-tab-btn');
+  var panels=tabs.querySelectorAll('.prism-tab-panel');
+  btns.forEach(function(btn){
+    btn.addEventListener('click',function(){
+      var idx=parseInt(btn.dataset.idx||'0',10);
+      btns.forEach(function(b){b.classList.remove('active');});
+      panels.forEach(function(p){p.style.display='none';});
+      btn.classList.add('active');
+      if(panels[idx])panels[idx].style.display='';
+    });
+  });
+});
+// Image lightbox
+document.querySelectorAll('.prism-img img').forEach(function(img){
+  img.addEventListener('click',function(){
+    var lb=document.createElement('div');
+    lb.className='prism-lightbox';
+    lb.setAttribute('role','dialog');
+    lb.setAttribute('aria-modal','true');
+    var close=document.createElement('button');
+    close.className='prism-lb-close';
+    close.type='button';
+    close.setAttribute('aria-label','Close fullscreen');
+    close.innerHTML='&times;';
+    var lbImg=document.createElement('img');
+    lbImg.src=img.src;
+    lbImg.alt=img.alt||'';
+    lbImg.addEventListener('click',function(e){e.stopPropagation();});
+    lb.appendChild(close);
+    lb.appendChild(lbImg);
+    document.body.appendChild(lb);
+    function closeLb(){document.body.removeChild(lb);document.removeEventListener('keydown',onKey);}
+    lb.addEventListener('click',closeLb);
+    close.addEventListener('click',function(e){e.stopPropagation();closeLb();});
+    function onKey(e){if(e.key==='Escape')closeLb();}
+    document.addEventListener('keydown',onKey);
   });
 });
 })();`;

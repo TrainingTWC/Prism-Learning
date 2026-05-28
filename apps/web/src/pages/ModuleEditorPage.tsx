@@ -41,6 +41,14 @@ import {
   AlignJustify,
   Eye,
   Download,
+  Quote,
+  AlertCircle,
+  Minus,
+  CreditCard,
+  ListOrdered,
+  PanelTop,
+  MousePointerClick,
+  Code2,
 } from 'lucide-react';
 import { RichTextBlockEditor } from '../components/RichTextBlockEditor';
 import { ImageBlockEditor } from '../components/ImageBlockEditor';
@@ -49,6 +57,14 @@ import { LottieBlockEditor } from '../components/LottieBlockEditor';
 import { MCQBlockEditor } from '../components/MCQBlockEditor';
 import { TrueFalseBlockEditor } from '../components/TrueFalseBlockEditor';
 import { AccordionBlockEditor } from '../components/AccordionBlockEditor';
+import { QuoteBlockEditor } from '../components/QuoteBlockEditor';
+import { CalloutBlockEditor } from '../components/CalloutBlockEditor';
+import { DividerBlockEditor } from '../components/DividerBlockEditor';
+import { FlashcardBlockEditor } from '../components/FlashcardBlockEditor';
+import { ProcessBlockEditor } from '../components/ProcessBlockEditor';
+import { TabsBlockEditor } from '../components/TabsBlockEditor';
+import { ButtonBlockEditor } from '../components/ButtonBlockEditor';
+import { CustomHtmlBlockEditor } from '../components/CustomHtmlBlockEditor';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -60,7 +76,7 @@ type Lesson = {
   moduleId: Id<'modules'>;
 };
 
-type BlockType = 'richText' | 'image' | 'video' | 'lottie' | 'mcq' | 'trueFalse' | 'accordion';
+type BlockType = 'richText' | 'image' | 'video' | 'lottie' | 'mcq' | 'trueFalse' | 'accordion' | 'quote' | 'callout' | 'divider' | 'flashcard' | 'process' | 'tabs' | 'button' | 'customHtml';
 
 type Block = {
   _id: Id<'blocks'>;
@@ -73,14 +89,26 @@ type Block = {
   lastEditedBy?: Id<'users'>;
 };
 
-const BLOCK_TYPES: { type: BlockType; label: string; icon: React.ReactNode }[] = [
-  { type: 'richText',  label: 'Rich text',       icon: <Type className="size-3.5" /> },
-  { type: 'image',     label: 'Image',            icon: <ImageIcon className="size-3.5" /> },
-  { type: 'video',     label: 'Video',            icon: <Video className="size-3.5" /> },
-  { type: 'lottie',    label: 'Animation',        icon: <Zap className="size-3.5" /> },
-  { type: 'mcq',       label: 'Multiple choice',  icon: <CheckCircle2 className="size-3.5" /> },
-  { type: 'trueFalse', label: 'True / False',     icon: <ToggleLeft className="size-3.5" /> },
-  { type: 'accordion', label: 'Accordion',        icon: <AlignJustify className="size-3.5" /> },
+const BLOCK_TYPES: { type: BlockType; label: string; icon: React.ReactNode; group: string }[] = [
+  // Content
+  { type: 'richText',   label: 'Rich text',       icon: <Type className="size-3.5" />,              group: 'Content' },
+  { type: 'image',      label: 'Image',            icon: <ImageIcon className="size-3.5" />,         group: 'Content' },
+  { type: 'video',      label: 'Video',            icon: <Video className="size-3.5" />,             group: 'Content' },
+  { type: 'lottie',     label: 'Animation',        icon: <Zap className="size-3.5" />,               group: 'Content' },
+  { type: 'quote',      label: 'Pull Quote',       icon: <Quote className="size-3.5" />,             group: 'Content' },
+  { type: 'callout',    label: 'Callout',          icon: <AlertCircle className="size-3.5" />,       group: 'Content' },
+  { type: 'button',     label: 'Button',           icon: <MousePointerClick className="size-3.5" />, group: 'Content' },
+  { type: 'divider',    label: 'Divider',          icon: <Minus className="size-3.5" />,             group: 'Content' },
+  // Interactive
+  { type: 'mcq',        label: 'Multiple choice',  icon: <CheckCircle2 className="size-3.5" />,      group: 'Interactive' },
+  { type: 'trueFalse',  label: 'True / False',     icon: <ToggleLeft className="size-3.5" />,        group: 'Interactive' },
+  { type: 'flashcard',  label: 'Flashcards',       icon: <CreditCard className="size-3.5" />,        group: 'Interactive' },
+  // Layout
+  { type: 'accordion',  label: 'Accordion',        icon: <AlignJustify className="size-3.5" />,      group: 'Layout' },
+  { type: 'tabs',       label: 'Tabs',             icon: <PanelTop className="size-3.5" />,          group: 'Layout' },
+  { type: 'process',    label: 'Process',          icon: <ListOrdered className="size-3.5" />,       group: 'Layout' },
+  // Advanced
+  { type: 'customHtml', label: 'Custom HTML',      icon: <Code2 className="size-3.5" />,             group: 'Advanced' },
 ];
 
 // ── Main Page ──────────────────────────────────────────────────────────────
@@ -481,18 +509,26 @@ export function ModuleEditorPage() {
                   </button>
                 </div>
                 {addBlockMenuOpen && (
-                  <div className="absolute bottom-full left-0 mb-1 w-48 rounded-xl border border-slate-200 bg-white shadow-lg py-1 z-20">
-                    {BLOCK_TYPES.map(({ type, label, icon }) => (
-                      <button
-                        key={type}
-                        type="button"
-                        onClick={() => void handleAddBlock(type)}
-                        className="flex w-full items-center gap-2.5 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
-                      >
-                        <span className="text-slate-400">{icon}</span>
-                        {label}
-                      </button>
-                    ))}
+                  <div className="absolute bottom-full left-0 mb-1 w-52 rounded-xl border border-slate-200 bg-white shadow-lg py-1 z-20 max-h-96 overflow-y-auto">
+                    {['Content', 'Interactive', 'Layout', 'Advanced'].map((group) => {
+                      const items = BLOCK_TYPES.filter((bt) => bt.group === group);
+                      return (
+                        <div key={group}>
+                          <p className="px-3 pt-2 pb-1 text-[10px] font-bold uppercase tracking-widest text-slate-400">{group}</p>
+                          {items.map(({ type, label, icon }) => (
+                            <button
+                              key={type}
+                              type="button"
+                              onClick={() => void handleAddBlock(type)}
+                              className="flex w-full items-center gap-2.5 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                            >
+                              <span className="text-slate-400">{icon}</span>
+                              {label}
+                            </button>
+                          ))}
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -695,6 +731,62 @@ function SortableBlock({
         )}
         {block.type === 'accordion' && (
           <AccordionBlockEditor
+            blockId={block._id}
+            initialContent={block.content}
+            onSave={onSave}
+          />
+        )}
+        {block.type === 'quote' && (
+          <QuoteBlockEditor
+            blockId={block._id}
+            initialContent={block.content}
+            onSave={onSave}
+          />
+        )}
+        {block.type === 'callout' && (
+          <CalloutBlockEditor
+            blockId={block._id}
+            initialContent={block.content}
+            onSave={onSave}
+          />
+        )}
+        {block.type === 'divider' && (
+          <DividerBlockEditor
+            blockId={block._id}
+            initialContent={block.content}
+            onSave={onSave}
+          />
+        )}
+        {block.type === 'flashcard' && (
+          <FlashcardBlockEditor
+            blockId={block._id}
+            initialContent={block.content}
+            onSave={onSave}
+          />
+        )}
+        {block.type === 'process' && (
+          <ProcessBlockEditor
+            blockId={block._id}
+            initialContent={block.content}
+            onSave={onSave}
+          />
+        )}
+        {block.type === 'tabs' && (
+          <TabsBlockEditor
+            blockId={block._id}
+            initialContent={block.content}
+            onSave={onSave}
+          />
+        )}
+        {block.type === 'button' && (
+          <ButtonBlockEditor
+            blockId={block._id}
+            initialContent={block.content}
+            onSave={onSave}
+          />
+        )}
+        {block.type === 'customHtml' && (
+          <CustomHtmlBlockEditor
             blockId={block._id}
             initialContent={block.content}
             onSave={onSave}
