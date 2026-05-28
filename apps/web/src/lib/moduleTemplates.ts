@@ -34,33 +34,53 @@ export type ModuleTemplate = {
 
 const j = (o: unknown) => JSON.stringify(o);
 
+/** Deterministic id helper — readable + collision-free within a single block. */
+let __idCounter = 0;
+const id = (prefix: string) => `${prefix}-${++__idCounter}`;
+
 // ───────── Helpers to keep template payloads readable ─────────
+// Each helper emits the EXACT payload shape the matching renderer expects
+// (see packages/renderer/src/*BlockRenderer.tsx).
 const rt = (html: string): TemplateBlock => ({ type: 'richText', content: html });
+
 const quote = (text: string, attribution?: string): TemplateBlock => ({
   type: 'quote',
   content: j({ text, attribution: attribution ?? '' }),
 });
+
 const callout = (
   variant: 'info' | 'warning' | 'success' | 'tip',
   title: string,
   body: string,
 ): TemplateBlock => ({ type: 'callout', content: j({ variant, title, body }) });
+
 const divider = (variant: 'line' | 'space' | 'dots' | 'label', label?: string): TemplateBlock => ({
   type: 'divider',
-  content: j({ variant, label: label ?? '' }),
+  // Renderer only knows 'line' | 'space' | 'dots'; collapse 'label' to 'line'.
+  content: j({ style: variant === 'label' ? 'line' : variant, label: label ?? '' }),
 });
+
 const process = (steps: { title: string; description: string }[]): TemplateBlock => ({
   type: 'process',
-  content: j({ steps }),
+  content: j({
+    steps: steps.map((s) => ({ id: id('step'), title: s.title, body: s.description })),
+  }),
 });
+
 const tabs = (items: { label: string; content: string }[]): TemplateBlock => ({
   type: 'tabs',
-  content: j({ tabs: items }),
+  content: j({
+    tabs: items.map((t) => ({ id: id('tab'), title: t.label, content: t.content })),
+  }),
 });
+
 const accordion = (items: { title: string; body: string }[]): TemplateBlock => ({
   type: 'accordion',
-  content: j({ items }),
+  content: j({
+    sections: items.map((i) => ({ id: id('acc'), title: i.title, content: i.body })),
+  }),
 });
+
 const mcq = (
   question: string,
   options: string[],
@@ -68,40 +88,90 @@ const mcq = (
   explanation?: string,
 ): TemplateBlock => ({
   type: 'mcq',
-  content: j({ question, options, correctIndex, explanation: explanation ?? '' }),
+  content: j({
+    question,
+    options: options.map((text, i) => ({
+      id: id('opt'),
+      text,
+      isCorrect: i === correctIndex,
+      feedback: i === correctIndex ? explanation ?? '' : '',
+    })),
+    multiSelect: false,
+    showFeedback: true,
+  }),
 });
+
 const trueFalse = (
   question: string,
   answer: boolean,
   explanation?: string,
 ): TemplateBlock => ({
   type: 'trueFalse',
-  content: j({ question, answer, explanation: explanation ?? '' }),
+  content: j({
+    statement: question,
+    correctAnswer: answer,
+    trueFeedback: answer ? explanation ?? '' : '',
+    falseFeedback: !answer ? explanation ?? '' : '',
+  }),
 });
+
 const flashcard = (cards: { front: string; back: string }[]): TemplateBlock => ({
   type: 'flashcard',
-  content: j({ cards }),
+  content: j({
+    cards: cards.map((c) => ({ id: id('fc'), front: c.front, back: c.back })),
+  }),
 });
+
 const fillBlanks = (
   text: string,
   blanks: { answer: string; alternates?: string[] }[],
-): TemplateBlock => ({
-  type: 'fillBlanks',
-  content: j({ text, blanks }),
-});
+): TemplateBlock => {
+  // Renderer expects `{template, answers: Record<key,string>}` and parses
+  // `{{key}}` placeholders. Templates already use numeric `{{0}}` keys, so
+  // we map blanks[i].answer → answers[String(i)].
+  const answers: Record<string, string> = {};
+  blanks.forEach((b, i) => {
+    answers[String(i)] = b.answer;
+  });
+  return { type: 'fillBlanks', content: j({ template: text, answers }) };
+};
+
 const revealCards = (cards: { front: string; back: string }[]): TemplateBlock => ({
   type: 'revealCards',
-  content: j({ cards }),
+  content: j({
+    columns: 3,
+    cards: cards.map((c) => ({ id: id('rc'), front: c.front, back: c.back })),
+  }),
 });
+
 const scenario = (
   intro: string,
   branches: { id: string; text: string; choices: { label: string; nextId: string }[] }[],
   startId: string,
 ): TemplateBlock => ({
   type: 'scenario',
-  content: j({ intro, startId, branches }),
+  content: j({
+    startNodeId: startId,
+    // Surface the intro as the start node's title for context.
+    nodes: branches.map((b) => ({
+      id: b.id,
+      title: b.id === startId ? intro.slice(0, 80) : '',
+      body: b.text,
+      isEnding: false,
+      choices: b.choices.map((c) => ({
+        id: id('ch'),
+        label: c.label,
+        nextNodeId: c.nextId,
+      })),
+    })),
+  }),
 });
-const button = (label: string, href: string, variant: 'primary' | 'outline' | 'ghost' = 'primary'): TemplateBlock => ({
+
+const button = (
+  label: string,
+  href: string,
+  variant: 'primary' | 'outline' | 'ghost' = 'primary',
+): TemplateBlock => ({
   type: 'button',
   content: j({ label, href, variant }),
 });

@@ -487,31 +487,33 @@ body{font-family:var(--prism-font-body);background:var(--prism-bg);color:var(--p
 body::before{content:'';position:fixed;inset:0;background:var(--prism-bg-grad);z-index:0;pointer-events:none}
 
 /* ── Shell ── */
-.prism-shell{position:relative;z-index:1;min-height:100vh;display:flex;justify-content:center;padding:24px 16px 120px;}
-.prism-stage{width:100%;max-width:880px;display:flex;flex-direction:column;gap:18px;animation:prism-stage-in var(--prism-motion-slow) var(--prism-ease-emphasized) both}
+.prism-shell{position:relative;z-index:1;min-height:100vh;display:flex;justify-content:center;padding:0;}
+.prism-stage{width:100%;max-width:1080px;display:flex;flex-direction:column;animation:prism-stage-in var(--prism-motion-slow) var(--prism-ease-emphasized) both}
 @keyframes prism-stage-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 
-/* ── Top toolbar (above card) ── */
-.prism-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;color:var(--prism-text-muted)}
-.prism-brand{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:700;color:var(--prism-text-2);letter-spacing:.01em}
-.prism-brand-mark{width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,var(--prism-primary),var(--prism-accent));box-shadow:0 6px 18px -6px var(--prism-primary)}
-.prism-brand-name{opacity:.95}
-.prism-tools{display:flex;align-items:center;gap:6px}
-.prism-tool{appearance:none;border:1px solid var(--prism-border);background:var(--prism-surface);color:var(--prism-text-2);width:36px;height:36px;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;transition:all var(--prism-motion-fast) var(--prism-ease-standard);box-shadow:var(--prism-shadow-soft)}
-.prism-tool:hover{transform:translateY(-1px);border-color:var(--prism-primary)}
-.prism-tool svg{width:16px;height:16px}
+/* ── Top toolbar (sticky page chrome) ── */
+.prism-toolbar{position:sticky;top:0;z-index:40;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 28px;background:color-mix(in srgb, var(--prism-surface) 92%, transparent);backdrop-filter:saturate(180%) blur(14px);-webkit-backdrop-filter:saturate(180%) blur(14px);border-bottom:1px solid var(--prism-border-subtle)}
+.prism-brand{display:flex;align-items:center;gap:12px;font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--prism-text-2)}
+.prism-brand-mark{width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,var(--prism-primary),var(--prism-accent));box-shadow:0 6px 18px -6px var(--prism-primary);flex-shrink:0}
+.prism-brand-name{opacity:.85;max-width:42ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.prism-tools{display:flex;align-items:center;gap:8px}
+.prism-tool{appearance:none;border:1px solid transparent;background:transparent;color:var(--prism-text-2);width:42px;height:42px;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;transition:all var(--prism-motion-fast) var(--prism-ease-standard)}
+.prism-tool:hover{background:var(--prism-surface-2);border-color:var(--prism-border)}
+.prism-tool svg{width:20px;height:20px}
+.prism-exit{appearance:none;border:1px solid var(--prism-border);background:var(--prism-surface);color:var(--prism-text-2);padding:0 18px;height:42px;border-radius:10px;font:inherit;font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;transition:all var(--prism-motion-fast)}
+.prism-exit:hover{border-color:var(--prism-text-muted);color:var(--prism-text)}
 
-/* ── Card ── */
-.prism-card{position:relative;background:var(--prism-surface);border:1px solid var(--prism-border);border-radius:24px;overflow:hidden;box-shadow:var(--prism-shadow-card);display:flex;flex-direction:column;min-height:min(86vh,800px)}
+/* ── Page (formerly card) ── */
+.prism-card{position:relative;background:var(--prism-surface);display:flex;flex-direction:column;min-height:calc(100vh - 70px)}
 
-/* ── Header inside card ── */
-.prism-top{position:sticky;top:0;z-index:3;background:color-mix(in srgb, var(--prism-surface) 88%, transparent);backdrop-filter:saturate(180%) blur(14px);-webkit-backdrop-filter:saturate(180%) blur(14px);border-bottom:1px solid var(--prism-border-subtle);padding:18px 22px 14px}
-.prism-kicker{font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--prism-primary);display:flex;align-items:center;gap:8px}
-.prism-kicker::before{content:'';width:18px;height:2px;border-radius:2px;background:currentColor}
-.prism-title-row{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-top:8px}
-h1{font-family:var(--prism-font-heading);font-size:1.6rem;line-height:1.2;font-weight:800;color:var(--prism-text);letter-spacing:-.015em}
-.prism-count{flex-shrink:0;border-radius:999px;background:var(--prism-surface-3);padding:6px 12px;font-size:12px;font-weight:700;color:var(--prism-text-muted);font-variant-numeric:tabular-nums}
-.prism-progress{position:relative;height:6px;border-radius:999px;background:var(--prism-surface-3);overflow:hidden;margin-top:16px}
+/* ── Hero band (lesson header) ── */
+.prism-top{position:relative;z-index:2;background:linear-gradient(180deg, color-mix(in srgb, var(--prism-primary) 4%, var(--prism-surface)) 0%, var(--prism-surface) 100%);border-bottom:1px solid var(--prism-border-subtle);padding:56px 64px 36px;}
+.prism-kicker{font-size:11px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:var(--prism-primary);display:flex;align-items:center;gap:10px}
+.prism-kicker::before{content:'';width:22px;height:2px;border-radius:2px;background:currentColor}
+.prism-title-row{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;margin-top:14px}
+h1{font-family:var(--prism-font-heading);font-size:2.5rem;line-height:1.12;font-weight:800;color:var(--prism-text);letter-spacing:-.025em;max-width:24ch}
+.prism-count{flex-shrink:0;font-size:13px;font-weight:700;color:var(--prism-text-muted);font-variant-numeric:tabular-nums;padding-bottom:6px}
+.prism-progress{position:relative;height:4px;border-radius:999px;background:var(--prism-surface-3);overflow:hidden;margin-top:24px}
 .prism-progress span{position:absolute;inset:0 auto 0 0;border-radius:999px;background:linear-gradient(90deg,var(--prism-primary),var(--prism-accent));transition:width var(--prism-motion-slow) var(--prism-ease-emphasized);box-shadow:0 0 12px -2px var(--prism-primary)}
 .prism-progress::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.4),transparent);transform:translateX(-100%);animation:prism-shimmer 2.6s ease-in-out infinite;opacity:.5;pointer-events:none}
 @keyframes prism-shimmer{0%{transform:translateX(-100%)}60%,100%{transform:translateX(200%)}}
@@ -524,22 +526,22 @@ h1{font-family:var(--prism-font-heading);font-size:1.6rem;line-height:1.2;font-w
 .prism-dot.current{background:linear-gradient(90deg,var(--prism-primary),var(--prism-accent));opacity:1;box-shadow:0 0 0 3px color-mix(in srgb, var(--prism-primary) 18%, transparent)}
 
 /* ── Lesson body ── */
-.prism-lesson{flex:1;padding:28px 26px 32px;overflow:auto;animation:prism-lesson-in var(--prism-motion-slow) var(--prism-ease-emphasized) both}
+.prism-lesson{flex:1;padding:48px 64px 56px;max-width:780px;width:100%;margin:0 auto;animation:prism-lesson-in var(--prism-motion-slow) var(--prism-ease-emphasized) both}
 @keyframes prism-lesson-in{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
 .prism-block{animation:prism-block-reveal var(--prism-motion-slow) var(--prism-ease-emphasized) both;animation-delay:calc(var(--i,0) * var(--prism-stagger-step))}
 @keyframes prism-block-reveal{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 @keyframes prism-feedback-enter{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
 @keyframes prism-marker-pop{0%{opacity:0;transform:scale(.65)}100%{opacity:1;transform:scale(1)}}
 
-/* ── Bottom nav (sticky inside card) ── */
-.prism-nav{position:sticky;bottom:0;z-index:3;display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 22px calc(14px + env(safe-area-inset-bottom));border-top:1px solid var(--prism-border-subtle);background:color-mix(in srgb, var(--prism-surface) 92%, transparent);backdrop-filter:saturate(180%) blur(14px)}
-.prism-nav-btn{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:10px 18px;border-radius:12px;border:1px solid var(--prism-border);background:var(--prism-surface);color:var(--prism-text-2);font:inherit;font-size:14px;font-weight:700;cursor:pointer;text-decoration:none;transition:all var(--prism-motion-fast) var(--prism-ease-standard)}
-.prism-nav-btn:hover{transform:translateY(-1px);border-color:var(--prism-primary);color:var(--prism-text)}
+/* ── Bottom nav (sticky page footer) ── */
+.prism-nav{position:sticky;bottom:0;z-index:30;display:flex;justify-content:space-between;align-items:center;gap:12px;padding:18px 64px calc(18px + env(safe-area-inset-bottom));border-top:1px solid var(--prism-border-subtle);background:color-mix(in srgb, var(--prism-surface) 92%, transparent);backdrop-filter:saturate(180%) blur(14px)}
+.prism-nav-btn{display:inline-flex;align-items:center;gap:10px;min-height:48px;padding:0 22px;border-radius:10px;border:1px solid var(--prism-border);background:var(--prism-surface);color:var(--prism-text-2);font:inherit;font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;text-decoration:none;transition:all var(--prism-motion-fast) var(--prism-ease-standard)}
+.prism-nav-btn:hover{border-color:var(--prism-text-muted);color:var(--prism-text)}
 .prism-nav-btn--ghost{visibility:hidden;pointer-events:none}
-.prism-nav-btn--primary{background:linear-gradient(135deg,var(--prism-primary),var(--prism-accent));color:#fff;border-color:transparent;box-shadow:0 10px 24px -10px var(--prism-primary)}
-.prism-nav-btn--primary:hover{color:#fff;filter:brightness(1.05)}
-.prism-nav-meta{font-size:12px;font-weight:700;color:var(--prism-text-muted);font-variant-numeric:tabular-nums;display:flex;align-items:center;gap:6px;letter-spacing:.02em}
-.prism-nav-meta-dot{width:6px;height:6px;border-radius:50%;background:var(--prism-primary)}
+.prism-nav-btn--primary{min-height:52px;padding:0 32px;background:var(--prism-primary);color:#fff;border-color:transparent;font-size:13px;box-shadow:0 12px 26px -12px var(--prism-primary)}
+.prism-nav-btn--primary:hover{color:#fff;background:color-mix(in srgb, var(--prism-primary) 88%, #000)}
+.prism-nav-meta{font-size:11px;font-weight:700;color:var(--prism-text-faint);font-variant-numeric:tabular-nums;display:flex;align-items:center;gap:8px;letter-spacing:.14em;text-transform:uppercase}
+.prism-nav-meta-dot{width:5px;height:5px;border-radius:50%;background:var(--prism-primary)}
 
 /* ── Lessons drawer ── */
 .prism-drawer{position:fixed;inset:0;z-index:50;display:none;background:rgba(2,6,14,.55);backdrop-filter:blur(6px);animation:prism-fade-in var(--prism-motion-base) both}
@@ -580,12 +582,12 @@ h1{font-family:var(--prism-font-heading);font-size:1.6rem;line-height:1.2;font-w
 @keyframes prism-confetti-fall{to{transform:translateY(110vh) rotate(720deg)}}
 
 /* ── Typography & blocks ── */
-.prism-rt{line-height:1.75;margin-bottom:1.5rem;font-size:1rem;color:var(--prism-text-2)}
-.prism-rt h1,.prism-rt h2,.prism-rt h3{font-family:var(--prism-font-heading);color:var(--prism-text);margin:1.5rem 0 .6rem;letter-spacing:-.01em;line-height:1.25}
-.prism-rt h1{font-size:1.75rem;font-weight:800}
-.prism-rt h2{font-size:1.4rem;font-weight:800}
-.prism-rt h3{font-size:1.1rem;font-weight:700}
-.prism-rt p{margin-bottom:.85rem}
+.prism-rt{line-height:1.75;margin-bottom:1.75rem;font-size:1.0625rem;color:var(--prism-text-2)}
+.prism-rt h1,.prism-rt h2,.prism-rt h3{font-family:var(--prism-font-heading);color:var(--prism-text);margin:1.75rem 0 .75rem;letter-spacing:-.015em;line-height:1.2}
+.prism-rt h1{font-size:2rem;font-weight:800}
+.prism-rt h2{font-size:1.5rem;font-weight:800}
+.prism-rt h3{font-size:1.2rem;font-weight:700}
+.prism-rt p{margin-bottom:1rem}
 .prism-rt a{color:var(--prism-primary);text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1.5px}
 .prism-rt ul,.prism-rt ol{margin-left:1.5rem;margin-bottom:.85rem}
 .prism-rt code{background:var(--prism-surface-3);color:var(--prism-text);padding:1px 6px;border-radius:5px;font-size:.9em;font-family:ui-monospace,'SF Mono',Menlo,monospace}
@@ -645,7 +647,8 @@ html[data-theme="dark"] .prism-tf-btns button.selected-bad{color:#fca5a5}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}.prism-block{animation:none}.prism-progress::after{display:none}}
 
 /* ── Responsive ── */
-@media (max-width:560px){.prism-shell{padding:14px 10px 110px}.prism-card{border-radius:18px;min-height:auto}.prism-top{padding:14px 16px 12px}.prism-lesson{padding:20px 16px 26px}.prism-nav{padding:12px 14px}.prism-nav-btn{padding:10px 14px;font-size:13px}h1{font-size:1.25rem}.prism-toolbar{padding:0 4px}}
+@media (max-width:900px){.prism-top{padding:40px 28px 28px}.prism-lesson{padding:36px 28px 44px}.prism-nav{padding:14px 28px}.prism-toolbar{padding:12px 20px}h1{font-size:2rem}}
+@media (max-width:560px){.prism-top{padding:32px 20px 22px}.prism-lesson{padding:28px 20px 36px}.prism-nav{padding:12px 18px}.prism-nav-btn{padding:0 16px;font-size:11px}.prism-nav-btn--primary{padding:0 22px;font-size:12px}h1{font-size:1.625rem;max-width:none}.prism-toolbar{padding:10px 14px}.prism-brand-name{display:none}}
 
 /* ── New block types ── */
 .prism-quote{border-left:4px solid var(--prism-primary);background:var(--prism-surface-2);border-radius:0 12px 12px 0;padding:1.25rem 1.25rem 1.25rem 1.5rem;margin:1.75rem 0;font-size:1.1rem;font-style:italic;color:var(--prism-text-2);line-height:1.75}
@@ -1008,11 +1011,11 @@ function buildLessonPage(
     .join('');
 
   const prevBtn = lessonIdx > 0
-    ? `<a class="prism-nav-btn" href="lesson_${lessonIdx - 1}.html" data-prism-prev><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px"><path d="M15 18l-6-6 6-6"/></svg>Back</a>`
+    ? `<a class="prism-nav-btn" href="lesson_${lessonIdx - 1}.html" data-prism-prev><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><path d="M15 18l-6-6 6-6"/></svg>Back</a>`
     : `<span class="prism-nav-btn prism-nav-btn--ghost"></span>`;
   const nextBtn = !isLast
-    ? `<a class="prism-nav-btn prism-nav-btn--primary" href="lesson_${lessonIdx + 1}.html" data-prism-next>Continue<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px"><path d="M9 6l6 6-6 6"/></svg></a>`
-    : `<button class="prism-nav-btn prism-nav-btn--primary" type="button" data-prism-finish>Finish<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px"><path d="M20 6L9 17l-5-5"/></svg></button>`;
+    ? `<a class="prism-nav-btn prism-nav-btn--primary" href="lesson_${lessonIdx + 1}.html" data-prism-next>Continue<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><path d="M9 6l6 6-6 6"/></svg></a>`
+    : `<button class="prism-nav-btn prism-nav-btn--primary" type="button" data-prism-finish>Finish<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><path d="M20 6L9 17l-5-5"/></svg></button>`;
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -1034,6 +1037,7 @@ function buildLessonPage(
       <div class="prism-tools">
         <button class="prism-tool" type="button" data-prism-lessons aria-label="Show lessons" title="Lessons"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
         <button class="prism-tool" type="button" data-prism-theme aria-label="Toggle theme" title="Toggle theme"><svg class="prism-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg></button>
+        <button class="prism-exit" type="button" data-prism-exit>Exit course</button>
       </div>
     </div>
     <main class="prism-card">
@@ -1099,6 +1103,10 @@ function buildLessonPage(
   if(openBtn)openBtn.addEventListener('click',openDrawer);
   if(closeBtn)closeBtn.addEventListener('click',closeDrawer);
   if(drawer)drawer.addEventListener('click',function(e){if(e.target===drawer)closeDrawer();});
+
+  // Exit course
+  var exitBtn=document.querySelector('[data-prism-exit]');
+  if(exitBtn)exitBtn.addEventListener('click',function(){var api=window.__prismAPI;if(api){try{api.LMSCommit('');api.LMSFinish('');}catch(e){}}try{if(window.parent&&window.parent!==window)window.parent.postMessage({prism:'exit'},'*');}catch(e){}});
 
   // Keyboard nav
   document.addEventListener('keydown',function(e){
