@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import { useConvexAuth } from 'convex/react';
 import { useAuthActions } from '@convex-dev/auth/react';
-import { Sparkles, Loader2, Mail, ArrowLeft } from 'lucide-react';
+import { Loader2, Mail, ArrowLeft } from 'lucide-react';
 
 type Step = 'form' | 'sent' | 'completing';
 
@@ -62,9 +62,7 @@ export function SignInPage() {
       <div className="w-full max-w-md animate-fadeInUp">
         {/* Logo */}
         <div className="mb-8 text-center">
-          <div className="prism-icon-tile mx-auto mb-5 size-12 rounded-xl">
-            <Sparkles className="size-5" />
-          </div>
+          <img src="/prism-logo.svg" className="mx-auto mb-5 size-14" alt="Prism Learning" />
           <p className="text-overline mb-2">AI-native SCORM authoring</p>
           <h1 className="text-4xl font-extrabold uppercase tracking-tight text-[var(--obsidian-50)]">
             Prism <span className="text-gradient-ember">Learning</span>

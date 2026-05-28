@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router';
-import { Bell, BookOpen, Brain, ChevronsLeft, ChevronsRight, Layers, Moon, Palette, Search, Sparkles, Sun, Users } from 'lucide-react';
+import { Bell, BookOpen, Brain, ChevronsLeft, ChevronsRight, Layers, Moon, Palette, Search, Sun, Users } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 
@@ -57,10 +57,8 @@ export function PrismWorkspaceShell({
     <div className="prism-brand-screen prism-app-shell" data-collapsed={collapsed}>
       <aside className="prism-sidebar">
         <div className="border-b border-[var(--sidebar-border)] px-5 py-5">
-          <Link to="/" className="mb-5 flex items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)] transition hover:text-[var(--ember-400)]">
-            <span className="prism-icon-tile size-8 rounded-lg">
-              <Sparkles className="size-4" />
-            </span>
+          <Link to="/" className="mb-5 flex items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)] transition hover:opacity-80">
+            <img src="/prism-logo.svg" className="size-8 shrink-0" alt="Prism Learning" />
             <span className="prism-sidebar-label">Prism Learning</span>
           </Link>
           <p className="prism-sidebar-label truncate text-lg font-bold tracking-tight text-[var(--text-primary)]">{resolvedWorkspaceName}</p>
