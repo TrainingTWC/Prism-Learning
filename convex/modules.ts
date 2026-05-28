@@ -25,7 +25,14 @@ async function requireMember(ctx: AnyCtx, workspaceId: Id<'workspaces'>) {
 export const list = query({
   args: { workspaceId: v.id('workspaces') },
   handler: async (ctx, { workspaceId }) => {
-    await requireMember(ctx, workspaceId);
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return [];
+    const membership = await ctx.db
+      .query('memberships')
+      .withIndex('by_workspace', (q) => q.eq('workspaceId', workspaceId))
+      .filter((q) => q.eq(q.field('userId'), userId))
+      .first();
+    if (!membership) return [];
 
     const modules = await ctx.db
       .query('modules')
