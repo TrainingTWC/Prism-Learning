@@ -65,6 +65,7 @@ export function DashboardPage() {
       overline="AI-native SCORM authoring"
       title="Prism Learning"
       subtitle="Build mobile-first learning modules, generate structured course content from documents, and export SCORM packages from one operational authoring system."
+      showPageHeader={false}
       topbarActions={(
         <button
             type="button"
@@ -76,10 +77,15 @@ export function DashboardPage() {
           </button>
       )}
     >
-        <section className="animate-fadeInUp text-center">
+        <section className="animate-fadeInUp pt-10 text-center lg:pt-16">
+          <p className="mb-5 text-overline">AI-native SCORM authoring</p>
           <h2 className="text-[clamp(3rem,8vw,5.5rem)] font-extrabold uppercase leading-none tracking-tight text-[var(--obsidian-50)]">
             Prism <span className="text-gradient-ember">Learning</span>
           </h2>
+          <p className="mx-auto mt-5 max-w-3xl text-sm leading-7 text-[var(--text-tertiary)]">
+            Build mobile-first learning modules, generate structured course content from documents,
+            and export SCORM packages from one operational authoring system.
+          </p>
         </section>
 
         <section className="mt-10 grid gap-5 sm:grid-cols-3">

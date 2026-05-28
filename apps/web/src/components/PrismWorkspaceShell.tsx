@@ -15,6 +15,7 @@ type PrismWorkspaceShellProps = {
   subtitle?: string;
   actions?: ReactNode;
   topbarActions?: ReactNode;
+  showPageHeader?: boolean;
   children: ReactNode;
 };
 
@@ -36,6 +37,7 @@ export function PrismWorkspaceShell({
   subtitle,
   actions,
   topbarActions,
+  showPageHeader = true,
   children,
 }: PrismWorkspaceShellProps) {
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem('prism-sidebar-collapsed') === 'true');
@@ -151,14 +153,16 @@ export function PrismWorkspaceShell({
 
         <main className="prism-shell-main">
           <div className="prism-shell-inner animate-fadeInUp">
-            <div className="mb-8 flex flex-col justify-between gap-5 border-b border-[var(--border-subtle)] pb-6 md:flex-row md:items-end">
-              <div>
-                {overline && <p className="text-overline mb-2">{overline}</p>}
-                <h1 className="text-[32px] font-extrabold tracking-tight text-[var(--obsidian-100)]">{title}</h1>
-                {subtitle && <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--text-tertiary)]">{subtitle}</p>}
+            {showPageHeader && (
+              <div className="mb-8 flex flex-col justify-between gap-5 border-b border-[var(--border-subtle)] pb-6 md:flex-row md:items-end">
+                <div>
+                  {overline && <p className="text-overline mb-2">{overline}</p>}
+                  <h1 className="text-[32px] font-extrabold tracking-tight text-[var(--obsidian-100)]">{title}</h1>
+                  {subtitle && <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--text-tertiary)]">{subtitle}</p>}
+                </div>
+                {actions && <div className="flex flex-wrap items-center gap-3">{actions}</div>}
               </div>
-              {actions && <div className="flex flex-wrap items-center gap-3">{actions}</div>}
-            </div>
+            )}
             {children}
           </div>
         </main>
