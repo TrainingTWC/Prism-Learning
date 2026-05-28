@@ -37,7 +37,17 @@ export type Block =
   | ProcessBlock
   | TabsBlock
   | ButtonBlock
-  | CustomHtmlBlock;
+  | CustomHtmlBlock
+  | HotspotsBlock
+  | GalleryBlock
+  | CompareBlock
+  | AudioBlock
+  | LabeledGraphicBlock
+  | MatchingBlock
+  | SortingBlock
+  | FillBlanksBlock
+  | RevealCardsBlock
+  | ScenarioBlock;
 
 export interface RichTextBlock {
   id: string;
@@ -128,6 +138,66 @@ export interface CustomHtmlBlock {
   id: string;
   type: 'custom-html';
   content: string; // JSON: { html: string; notes?: string }
+}
+
+export interface HotspotsBlock {
+  id: string;
+  type: 'hotspots';
+  content: string; // JSON: { storageId, altText, hotspots: [{ id, xPct, yPct, title, body }] }
+}
+
+export interface GalleryBlock {
+  id: string;
+  type: 'gallery';
+  content: string; // JSON: { layout: 'carousel'|'grid', items: [{ storageId, altText, caption }] }
+}
+
+export interface CompareBlock {
+  id: string;
+  type: 'compare';
+  content: string; // JSON: { beforeStorageId, afterStorageId, beforeLabel, afterLabel }
+}
+
+export interface AudioBlock {
+  id: string;
+  type: 'audio';
+  content: string; // JSON: { storageId, title, transcript }
+}
+
+export interface LabeledGraphicBlock {
+  id: string;
+  type: 'labeled-graphic';
+  content: string; // JSON: { storageId, altText, labels: [{ id, xPct, yPct, text }] }
+}
+
+export interface MatchingBlock {
+  id: string;
+  type: 'matching';
+  content: string; // JSON: { instructions, pairs: [{ id, term, definition }] }
+}
+
+export interface SortingBlock {
+  id: string;
+  type: 'sorting';
+  content: string; // JSON: { instructions, items: [{ id, text }] }  // order in array = correct order
+}
+
+export interface FillBlanksBlock {
+  id: string;
+  type: 'fill-blanks';
+  content: string; // JSON: { template, blanks: [{ key, answer, alternates }] }
+}
+
+export interface RevealCardsBlock {
+  id: string;
+  type: 'reveal-cards';
+  content: string; // JSON: { columns: 2|3|4, cards: [{ id, front, back }] }
+}
+
+export interface ScenarioBlock {
+  id: string;
+  type: 'scenario';
+  content: string; // JSON: { startNodeId, nodes: [{ id, prompt, choices: [{ label, nextId, feedback }], outcome }] }
 }
 
 export interface ModuleProps {

@@ -50,6 +50,15 @@ import {
   X,
   Sun,
   Moon,
+  Target,
+  Images,
+  ArrowLeftRight,
+  Music,
+  Tag,
+  Layers,
+  GitMerge,
+  ArrowUpDown,
+  GitBranch,
 } from 'lucide-react';
 import { RichTextBlockEditor } from '../components/RichTextBlockEditor';
 import { ImageBlockEditor } from '../components/ImageBlockEditor';
@@ -66,6 +75,16 @@ import { ProcessBlockEditor } from '../components/ProcessBlockEditor';
 import { TabsBlockEditor } from '../components/TabsBlockEditor';
 import { ButtonBlockEditor } from '../components/ButtonBlockEditor';
 import { CustomHtmlBlockEditor } from '../components/CustomHtmlBlockEditor';
+import { HotspotsBlockEditor } from '../components/HotspotsBlockEditor';
+import { GalleryBlockEditor } from '../components/GalleryBlockEditor';
+import { CompareBlockEditor } from '../components/CompareBlockEditor';
+import { AudioBlockEditor } from '../components/AudioBlockEditor';
+import { LabeledGraphicBlockEditor } from '../components/LabeledGraphicBlockEditor';
+import { FillBlanksBlockEditor } from '../components/FillBlanksBlockEditor';
+import { RevealCardsBlockEditor } from '../components/RevealCardsBlockEditor';
+import { MatchingBlockEditor } from '../components/MatchingBlockEditor';
+import { SortingBlockEditor } from '../components/SortingBlockEditor';
+import { ScenarioBlockEditor } from '../components/ScenarioBlockEditor';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -77,7 +96,7 @@ type Lesson = {
   moduleId: Id<'modules'>;
 };
 
-type BlockType = 'richText' | 'image' | 'video' | 'lottie' | 'mcq' | 'trueFalse' | 'accordion' | 'quote' | 'callout' | 'divider' | 'flashcard' | 'process' | 'tabs' | 'button' | 'customHtml';
+type BlockType = 'richText' | 'image' | 'video' | 'lottie' | 'mcq' | 'trueFalse' | 'accordion' | 'quote' | 'callout' | 'divider' | 'flashcard' | 'process' | 'tabs' | 'button' | 'customHtml' | 'hotspots' | 'gallery' | 'compare' | 'audio' | 'labeledGraphic' | 'fillBlanks' | 'revealCards' | 'matching' | 'sorting' | 'scenario';
 
 type Block = {
   _id: Id<'blocks'>;
@@ -104,10 +123,22 @@ const BLOCK_TYPES: { type: BlockType; label: string; icon: React.ReactNode; grou
   { type: 'mcq',        label: 'Multiple choice',  icon: <CheckCircle2 className="size-3.5" />,      group: 'Interactive' },
   { type: 'trueFalse',  label: 'True / False',     icon: <ToggleLeft className="size-3.5" />,        group: 'Interactive' },
   { type: 'flashcard',  label: 'Flashcards',       icon: <CreditCard className="size-3.5" />,        group: 'Interactive' },
+  { type: 'fillBlanks', label: 'Fill blanks',      icon: <Type className="size-3.5" />,              group: 'Interactive' },
+  { type: 'matching',   label: 'Matching',         icon: <GitMerge className="size-3.5" />,          group: 'Interactive' },
+  { type: 'sorting',    label: 'Sort order',       icon: <ArrowUpDown className="size-3.5" />,       group: 'Interactive' },
+  { type: 'revealCards',label: 'Reveal cards',     icon: <Layers className="size-3.5" />,            group: 'Interactive' },
+  // Media
+  { type: 'audio',          label: 'Audio',            icon: <Music className="size-3.5" />,          group: 'Media' },
+  { type: 'gallery',        label: 'Gallery',          icon: <Images className="size-3.5" />,         group: 'Media' },
+  { type: 'compare',        label: 'Before / after',   icon: <ArrowLeftRight className="size-3.5" />, group: 'Media' },
+  { type: 'hotspots',       label: 'Hotspots',         icon: <Target className="size-3.5" />,         group: 'Media' },
+  { type: 'labeledGraphic', label: 'Labeled graphic',  icon: <Tag className="size-3.5" />,            group: 'Media' },
   // Layout
   { type: 'accordion',  label: 'Accordion',        icon: <AlignJustify className="size-3.5" />,      group: 'Layout' },
   { type: 'tabs',       label: 'Tabs',             icon: <PanelTop className="size-3.5" />,          group: 'Layout' },
   { type: 'process',    label: 'Process',          icon: <ListOrdered className="size-3.5" />,       group: 'Layout' },
+  // Scenario
+  { type: 'scenario',   label: 'Branching scenario', icon: <GitBranch className="size-3.5" />,       group: 'Scenario' },
   // Advanced
   { type: 'customHtml', label: 'Custom HTML',      icon: <Code2 className="size-3.5" />,             group: 'Advanced' },
 ];
@@ -525,7 +556,7 @@ export function ModuleEditorPage() {
                       <X className="size-4" />
                     </button>
                   </div>
-                  {['Content', 'Interactive', 'Layout', 'Advanced'].map((group) => (
+                  {['Content', 'Media', 'Interactive', 'Layout', 'Scenario', 'Advanced'].map((group) => (
                     <div key={group} className="mb-4 last:mb-0">
                       <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)]">{group}</p>
                       <div className="grid grid-cols-4 gap-2">
@@ -811,6 +842,36 @@ function SortableBlock({
             initialContent={block.content}
             onSave={onSave}
           />
+        )}
+        {block.type === 'hotspots' && (
+          <HotspotsBlockEditor blockId={block._id} initialContent={block.content} onSave={onSave} />
+        )}
+        {block.type === 'gallery' && (
+          <GalleryBlockEditor blockId={block._id} initialContent={block.content} onSave={onSave} />
+        )}
+        {block.type === 'compare' && (
+          <CompareBlockEditor blockId={block._id} initialContent={block.content} onSave={onSave} />
+        )}
+        {block.type === 'audio' && (
+          <AudioBlockEditor blockId={block._id} initialContent={block.content} onSave={onSave} />
+        )}
+        {block.type === 'labeledGraphic' && (
+          <LabeledGraphicBlockEditor blockId={block._id} initialContent={block.content} onSave={onSave} />
+        )}
+        {block.type === 'fillBlanks' && (
+          <FillBlanksBlockEditor blockId={block._id} initialContent={block.content} onSave={onSave} />
+        )}
+        {block.type === 'revealCards' && (
+          <RevealCardsBlockEditor blockId={block._id} initialContent={block.content} onSave={onSave} />
+        )}
+        {block.type === 'matching' && (
+          <MatchingBlockEditor blockId={block._id} initialContent={block.content} onSave={onSave} />
+        )}
+        {block.type === 'sorting' && (
+          <SortingBlockEditor blockId={block._id} initialContent={block.content} onSave={onSave} />
+        )}
+        {block.type === 'scenario' && (
+          <ScenarioBlockEditor blockId={block._id} initialContent={block.content} onSave={onSave} />
         )}
       </div>
 

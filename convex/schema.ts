@@ -89,6 +89,19 @@ export default defineSchema({
       v.literal('tabs'),
       v.literal('button'),
       v.literal('customHtml'),
+      // Media
+      v.literal('hotspots'),
+      v.literal('gallery'),
+      v.literal('compare'),
+      v.literal('audio'),
+      // Interactive
+      v.literal('labeledGraphic'),
+      v.literal('matching'),
+      v.literal('sorting'),
+      v.literal('fillBlanks'),
+      v.literal('revealCards'),
+      // Scenario
+      v.literal('scenario'),
     ),
     order: v.number(),
     /**

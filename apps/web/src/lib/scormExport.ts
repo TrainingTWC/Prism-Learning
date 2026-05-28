@@ -265,6 +265,122 @@ function renderBlock(block: ExportBlock, assetMap: Record<string, string>): stri
       return `<div class="prism-custom-html">${p.html ?? ''}</div>`;
     }
 
+    case 'hotspots': {
+      type Hot = { id: string; xPct: number; yPct: number; title: string; body: string };
+      let p: { storageId?: string; altText?: string; hotspots?: Hot[] } = {};
+      try { p = JSON.parse(c) as typeof p; } catch { /* */ }
+      const src = p.storageId ? (assetMap[p.storageId] ?? '') : '';
+      if (!src) return '';
+      const hs = p.hotspots ?? [];
+      const dots = hs.map((h, i) => `<button type="button" class="prism-hs-dot" data-hid="${escapeHtml(h.id)}" style="left:${h.xPct}%;top:${h.yPct}%">${i + 1}</button>`).join('');
+      const pops = hs.map((h) => `<div class="prism-hs-pop" data-hid="${escapeHtml(h.id)}" style="left:${h.xPct}%;top:${h.yPct}%;transform:translate(${h.xPct > 50 ? 'calc(-100% - 24px)' : '24px'},-50%)"><div class="prism-hs-pop-h"><strong>${escapeHtml(h.title)}</strong><button type="button" class="prism-hs-close" aria-label="Close">×</button></div>${h.body ? `<p>${escapeHtml(h.body)}</p>` : ''}</div>`).join('');
+      return `<div class="prism-hotspots"><img src="${escapeHtml(src)}" alt="${escapeHtml(p.altText ?? '')}"/>${dots}${pops}<script>(function(){var r=document.currentScript.parentElement;r.querySelectorAll('.prism-hs-dot').forEach(function(d){d.addEventListener('click',function(){var id=d.getAttribute('data-hid');r.querySelectorAll('.prism-hs-pop').forEach(function(p){p.style.display=p.getAttribute('data-hid')===id&&p.style.display!=='block'?'block':'none'})})});r.querySelectorAll('.prism-hs-close').forEach(function(b){b.addEventListener('click',function(e){e.stopPropagation();b.closest('.prism-hs-pop').style.display='none'})})})();</script></div>`;
+    }
+
+    case 'gallery': {
+      type Item = { storageId: string; altText: string; caption: string };
+      let p: { layout?: 'carousel' | 'grid'; items?: Item[] } = {};
+      try { p = JSON.parse(c) as typeof p; } catch { /* */ }
+      const items = (p.items ?? []).filter((it) => assetMap[it.storageId]);
+      if (items.length === 0) return '';
+      if (p.layout === 'grid') {
+        return `<div class="prism-gallery-grid">${items.map((it) => `<figure><img src="${escapeHtml(assetMap[it.storageId]!)}" alt="${escapeHtml(it.altText)}"/>${it.caption ? `<figcaption>${escapeHtml(it.caption)}</figcaption>` : ''}</figure>`).join('')}</div>`;
+      }
+      const slides = items.map((it, i) => `<div class="prism-g-slide${i === 0 ? ' active' : ''}"><img src="${escapeHtml(assetMap[it.storageId]!)}" alt="${escapeHtml(it.altText)}"/>${it.caption ? `<p>${escapeHtml(it.caption)}</p>` : ''}</div>`).join('');
+      const dots = items.map((_, i) => `<button type="button" class="prism-g-dot${i === 0 ? ' active' : ''}" data-i="${i}" aria-label="Slide ${i + 1}"></button>`).join('');
+      return `<div class="prism-gallery"><div class="prism-g-slides">${slides}</div><div class="prism-g-controls"><button type="button" class="prism-g-prev" aria-label="Previous">‹</button><div class="prism-g-dots">${dots}</div><button type="button" class="prism-g-next" aria-label="Next">›</button></div><script>(function(){var r=document.currentScript.parentElement,i=0,n=${items.length};function go(j){i=(j+n)%n;r.querySelectorAll('.prism-g-slide').forEach(function(s,k){s.classList.toggle('active',k===i)});r.querySelectorAll('.prism-g-dot').forEach(function(d,k){d.classList.toggle('active',k===i)})}r.querySelector('.prism-g-prev').addEventListener('click',function(){go(i-1)});r.querySelector('.prism-g-next').addEventListener('click',function(){go(i+1)});r.querySelectorAll('.prism-g-dot').forEach(function(d){d.addEventListener('click',function(){go(parseInt(d.getAttribute('data-i')))})})})();</script></div>`;
+    }
+
+    case 'compare': {
+      let p: { beforeStorageId?: string; afterStorageId?: string; beforeLabel?: string; afterLabel?: string } = {};
+      try { p = JSON.parse(c) as typeof p; } catch { /* */ }
+      const before = p.beforeStorageId ? assetMap[p.beforeStorageId] : null;
+      const after = p.afterStorageId ? assetMap[p.afterStorageId] : null;
+      if (!before || !after) return '';
+      return `<div class="prism-compare"><img class="prism-cmp-after" src="${escapeHtml(after)}" alt="${escapeHtml(p.afterLabel ?? '')}"/><div class="prism-cmp-clip"><img src="${escapeHtml(before)}" alt="${escapeHtml(p.beforeLabel ?? '')}"/></div><div class="prism-cmp-divider"></div><div class="prism-cmp-handle">⇆</div><span class="prism-cmp-label prism-cmp-lbefore">${escapeHtml(p.beforeLabel ?? 'Before')}</span><span class="prism-cmp-label prism-cmp-lafter">${escapeHtml(p.afterLabel ?? 'After')}</span><script>(function(){var r=document.currentScript.parentElement,clip=r.querySelector('.prism-cmp-clip'),div=r.querySelector('.prism-cmp-divider'),h=r.querySelector('.prism-cmp-handle'),img=clip.querySelector('img'),drag=false,pos=50;function set(p){pos=Math.max(0,Math.min(100,p));clip.style.width=pos+'%';img.style.width=(10000/pos)+'%';div.style.left=pos+'%';h.style.left=pos+'%'}function move(e){var rect=r.getBoundingClientRect(),x=(e.touches?e.touches[0].clientX:e.clientX)-rect.left;set((x/rect.width)*100)}r.addEventListener('pointerdown',function(e){drag=true;move(e)});window.addEventListener('pointermove',function(e){if(drag)move(e)});window.addEventListener('pointerup',function(){drag=false});set(50)})();</script></div>`;
+    }
+
+    case 'audio': {
+      let p: { storageId?: string; title?: string; transcript?: string } = {};
+      try { p = JSON.parse(c) as typeof p; } catch { /* */ }
+      const src = p.storageId ? assetMap[p.storageId] : null;
+      if (!src) return '';
+      return `<div class="prism-audio">${p.title ? `<div class="prism-audio-title">${escapeHtml(p.title)}</div>` : ''}<audio src="${escapeHtml(src)}" controls></audio>${p.transcript ? `<details><summary>Transcript</summary><p>${escapeHtml(p.transcript)}</p></details>` : ''}</div>`;
+    }
+
+    case 'labeledGraphic': {
+      type Lab = { id: string; xPct: number; yPct: number; text: string };
+      let p: { storageId?: string; altText?: string; labels?: Lab[] } = {};
+      try { p = JSON.parse(c) as typeof p; } catch { /* */ }
+      const src = p.storageId ? assetMap[p.storageId] : null;
+      if (!src) return '';
+      const labs = (p.labels ?? []).map((l) => `<div class="prism-lg-label" style="left:${l.xPct}%;top:${l.yPct}%"><span class="prism-lg-dot"></span>${escapeHtml(l.text)}</div>`).join('');
+      return `<div class="prism-labeled-graphic"><img src="${escapeHtml(src)}" alt="${escapeHtml(p.altText ?? '')}"/>${labs}</div>`;
+    }
+
+    case 'fillBlanks': {
+      let p: { template?: string; answers?: Record<string, string> } = {};
+      try { p = JSON.parse(c) as typeof p; } catch { /* */ }
+      const tpl = p.template ?? '';
+      const ans = p.answers ?? {};
+      const parts: string[] = [];
+      const re = /\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g;
+      let last = 0;
+      let m: RegExpExecArray | null;
+      while ((m = re.exec(tpl)) !== null) {
+        parts.push(escapeHtml(tpl.slice(last, m.index)));
+        parts.push(`<input class="prism-fb-input" data-key="${escapeHtml(m[1]!)}" data-ans="${escapeHtml((ans[m[1]!] ?? '').toLowerCase())}"/>`);
+        last = m.index + m[0].length;
+      }
+      parts.push(escapeHtml(tpl.slice(last)));
+      return `<div class="prism-fill-blanks"><p>${parts.join('')}</p><div class="prism-fb-actions"><button type="button" class="prism-fb-check">Check</button></div><script>(function(){var r=document.currentScript.parentElement;r.querySelector('.prism-fb-check').addEventListener('click',function(){r.querySelectorAll('.prism-fb-input').forEach(function(i){var ok=(i.value||'').trim().toLowerCase()===i.getAttribute('data-ans');i.classList.remove('correct','wrong');i.classList.add(ok?'correct':'wrong')})})})();</script></div>`;
+    }
+
+    case 'revealCards': {
+      type Card = { id: string; front: string; back: string };
+      let p: { columns?: number; cards?: Card[] } = {};
+      try { p = JSON.parse(c) as typeof p; } catch { /* */ }
+      const cards = p.cards ?? [];
+      const cols = p.columns ?? 3;
+      const html = cards.map((cd) => `<button type="button" class="prism-rc-card" data-front="${escapeHtml(cd.front)}" data-back="${escapeHtml(cd.back)}"><span class="prism-rc-text">${escapeHtml(cd.front)}</span><span class="prism-rc-hint">Tap to reveal</span></button>`).join('');
+      return `<div class="prism-reveal-cards" style="grid-template-columns:repeat(${cols},minmax(0,1fr))">${html}<script>(function(){var r=document.currentScript.parentElement;r.querySelectorAll('.prism-rc-card').forEach(function(b){var flipped=false;b.addEventListener('click',function(){flipped=!flipped;b.classList.toggle('flipped',flipped);b.querySelector('.prism-rc-text').textContent=flipped?b.getAttribute('data-back'):b.getAttribute('data-front');b.querySelector('.prism-rc-hint').textContent=flipped?'Back':'Tap to reveal'})})})();</script></div>`;
+    }
+
+    case 'matching': {
+      type Pair = { id: string; term: string; definition: string };
+      let p: { pairs?: Pair[] } = {};
+      try { p = JSON.parse(c) as typeof p; } catch { /* */ }
+      const pairs = p.pairs ?? [];
+      if (pairs.length === 0) return '';
+      // shuffle deterministically (server has no Date.now sensitive concerns; client will see consistent order)
+      const shuffled = [...pairs].sort(() => Math.random() - 0.5);
+      const terms = pairs.map((t) => `<div class="prism-mt-term" data-tid="${escapeHtml(t.id)}"><strong>${escapeHtml(t.term)}</strong><div class="prism-mt-slot">Drop here</div></div>`).join('');
+      const defs = shuffled.map((d) => `<div class="prism-mt-def" draggable="true" data-did="${escapeHtml(d.id)}">${escapeHtml(d.definition)}</div>`).join('');
+      return `<div class="prism-matching"><div class="prism-mt-cols"><div class="prism-mt-terms">${terms}</div><div class="prism-mt-defs">${defs}</div></div><button type="button" class="prism-mt-check">Check</button><script>(function(){var r=document.currentScript.parentElement,drag=null;r.querySelectorAll('.prism-mt-def').forEach(function(d){d.addEventListener('dragstart',function(){drag=d});d.addEventListener('dragend',function(){drag=null})});r.querySelectorAll('.prism-mt-term').forEach(function(t){t.addEventListener('dragover',function(e){e.preventDefault()});t.addEventListener('drop',function(e){e.preventDefault();if(!drag)return;var slot=t.querySelector('.prism-mt-slot');slot.textContent=drag.textContent;slot.setAttribute('data-did',drag.getAttribute('data-did'));drag.style.display='none'})});r.querySelector('.prism-mt-check').addEventListener('click',function(){r.querySelectorAll('.prism-mt-term').forEach(function(t){var slot=t.querySelector('.prism-mt-slot');var ok=slot.getAttribute('data-did')===t.getAttribute('data-tid');t.classList.remove('correct','wrong');t.classList.add(ok?'correct':'wrong')})})})();</script></div>`;
+    }
+
+    case 'sorting': {
+      type Item = { id: string; text: string };
+      let p: { prompt?: string; items?: Item[] } = {};
+      try { p = JSON.parse(c) as typeof p; } catch { /* */ }
+      const items = p.items ?? [];
+      if (items.length === 0) return '';
+      const shuffled = [...items].sort(() => Math.random() - 0.5);
+      const order = JSON.stringify(items.map((x) => x.id));
+      const list = shuffled.map((it) => `<div class="prism-sort-item" draggable="true" data-id="${escapeHtml(it.id)}"><span class="prism-sort-num"></span><span class="prism-sort-text">${escapeHtml(it.text)}</span></div>`).join('');
+      return `<div class="prism-sorting">${p.prompt ? `<p class="prism-sort-prompt">${escapeHtml(p.prompt)}</p>` : ''}<div class="prism-sort-list">${list}</div><button type="button" class="prism-sort-check">Check order</button><script>(function(){var r=document.currentScript.parentElement,list=r.querySelector('.prism-sort-list'),correct=${order},drag=null;function renum(){list.querySelectorAll('.prism-sort-item').forEach(function(it,i){it.querySelector('.prism-sort-num').textContent=(i+1)})}renum();list.querySelectorAll('.prism-sort-item').forEach(function(it){it.addEventListener('dragstart',function(){drag=it});it.addEventListener('dragover',function(e){e.preventDefault()});it.addEventListener('drop',function(e){e.preventDefault();if(!drag||drag===it)return;var rect=it.getBoundingClientRect(),before=(e.clientY-rect.top)<rect.height/2;list.insertBefore(drag,before?it:it.nextSibling);renum()})});r.querySelector('.prism-sort-check').addEventListener('click',function(){var cur=Array.from(list.querySelectorAll('.prism-sort-item')).map(function(x){return x.getAttribute('data-id')});cur.forEach(function(id,i){var el=list.querySelector('[data-id=\"'+id+'\"]');el.classList.remove('correct','wrong');el.classList.add(id===correct[i]?'correct':'wrong')})})})();</script></div>`;
+    }
+
+    case 'scenario': {
+      type Choice = { id: string; label: string; nextNodeId: string | null };
+      type Node = { id: string; title: string; body: string; choices: Choice[]; isEnding: boolean };
+      let p: { startNodeId?: string; nodes?: Node[] } = {};
+      try { p = JSON.parse(c) as typeof p; } catch { /* */ }
+      if (!p.startNodeId || !p.nodes) return '';
+      const data = JSON.stringify(p);
+      return `<div class="prism-scenario" data-scenario='${data.replace(/'/g, '&#39;')}'><div class="prism-sc-header"><span class="prism-sc-step">Step 1</span><span class="prism-sc-title"></span></div><div class="prism-sc-body"><p class="prism-sc-text"></p><div class="prism-sc-choices"></div></div><script>(function(){var r=document.currentScript.parentElement,d=JSON.parse(r.getAttribute('data-scenario')),cur=d.startNodeId,step=1;function render(){var n=d.nodes.find(function(x){return x.id===cur});if(!n)return;r.querySelector('.prism-sc-step').textContent=n.isEnding?'🏁 Complete':'Step '+step;r.querySelector('.prism-sc-title').textContent=n.title;r.querySelector('.prism-sc-text').textContent=n.body;var ch=r.querySelector('.prism-sc-choices');ch.innerHTML='';if(n.isEnding){var b=document.createElement('button');b.type='button';b.className='prism-sc-restart';b.textContent='Restart';b.onclick=function(){cur=d.startNodeId;step=1;render()};ch.appendChild(b)}else{n.choices.forEach(function(c){var b=document.createElement('button');b.type='button';b.className='prism-sc-choice';b.textContent='→ '+c.label;b.disabled=!c.nextNodeId;b.onclick=function(){if(c.nextNodeId){cur=c.nextNodeId;step++;render()}};ch.appendChild(b)})}}render()})();</script></div>`;
+    }
+
     default:
       return '';
   }
@@ -445,6 +561,99 @@ h1{font-family:var(--prism-font-heading);font-size:1.25rem;line-height:1.25;font
 .prism-btn--outline{background:transparent;color:var(--prism-primary);border:2px solid var(--prism-primary)}
 .prism-btn--ghost{background:transparent;color:var(--prism-primary);border:none;text-decoration:underline}
 .prism-custom-html{margin:1.5rem 0}
+/* ── Hotspots ── */
+.prism-hotspots{position:relative;border-radius:12px;overflow:hidden;margin:1.5rem 0}
+.prism-hotspots img{width:100%;display:block}
+.prism-hs-dot{position:absolute;transform:translate(-50%,-50%);width:36px;height:36px;border-radius:50%;background:var(--prism-accent);color:#fff;border:none;cursor:pointer;font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 6px rgba(0,0,0,.1),0 4px 12px rgba(0,0,0,.3);animation:prism-hs-pulse 2s ease-in-out infinite}
+@keyframes prism-hs-pulse{0%,100%{box-shadow:0 0 0 6px rgba(0,0,0,.1),0 4px 12px rgba(0,0,0,.3)}50%{box-shadow:0 0 0 12px rgba(0,0,0,.05),0 4px 12px rgba(0,0,0,.3)}}
+.prism-hs-pop{position:absolute;max-width:280px;min-width:200px;background:#fff;color:#1a1a2e;border-radius:12px;padding:16px;box-shadow:0 10px 30px rgba(0,0,0,.25);display:none;z-index:5}
+.prism-hs-pop-h{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.prism-hs-pop-h strong{font-size:14px;color:var(--prism-accent)}
+.prism-hs-close{background:none;border:none;cursor:pointer;color:#999;font-size:18px;line-height:1}
+.prism-hs-pop p{margin:8px 0 0;font-size:13px;line-height:1.5}
+/* ── Gallery ── */
+.prism-gallery{margin:1.5rem 0;position:relative}
+.prism-g-slides{border-radius:12px;overflow:hidden;background:#000}
+.prism-g-slide{display:none}
+.prism-g-slide.active{display:block}
+.prism-g-slide img{width:100%;display:block;max-height:500px;object-fit:contain}
+.prism-g-slide p{text-align:center;font-size:13px;opacity:.75;margin:8px 0 0;color:#475569}
+.prism-g-controls{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:12px}
+.prism-g-prev,.prism-g-next{background:var(--prism-accent);color:#fff;border:none;border-radius:999px;width:36px;height:36px;cursor:pointer;font-size:18px}
+.prism-g-dots{display:flex;gap:6px}
+.prism-g-dot{width:8px;height:8px;border-radius:4px;background:#ccc;border:none;cursor:pointer;transition:all .2s;padding:0}
+.prism-g-dot.active{width:24px;background:var(--prism-accent)}
+.prism-gallery-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:1.5rem 0}
+.prism-gallery-grid figure{margin:0}
+.prism-gallery-grid img{width:100%;border-radius:12px;display:block}
+.prism-gallery-grid figcaption{margin-top:6px;font-size:12px;text-align:center;opacity:.7}
+/* ── Compare ── */
+.prism-compare{position:relative;border-radius:12px;overflow:hidden;user-select:none;touch-action:none;cursor:ew-resize;background:#000;margin:1.5rem 0}
+.prism-cmp-after{width:100%;display:block}
+.prism-cmp-clip{position:absolute;inset:0;width:50%;overflow:hidden}
+.prism-cmp-clip img{width:200%;max-width:none;display:block}
+.prism-cmp-divider{position:absolute;top:0;bottom:0;left:50%;width:3px;background:#fff;box-shadow:0 0 12px rgba(0,0,0,.5)}
+.prism-cmp-handle{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:44px;height:44px;border-radius:50%;background:var(--prism-accent);border:3px solid #fff;box-shadow:0 4px 12px rgba(0,0,0,.3);display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px;font-weight:700}
+.prism-cmp-label{position:absolute;top:12px;background:rgba(0,0,0,.6);color:#fff;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:600}
+.prism-cmp-lbefore{left:12px}
+.prism-cmp-lafter{right:12px}
+/* ── Audio ── */
+.prism-audio{border:2px solid rgba(0,0,0,.08);border-radius:12px;overflow:hidden;margin:1.5rem 0}
+.prism-audio-title{padding:12px 16px;font-size:14px;font-weight:700;color:var(--prism-accent);border-bottom:1px solid rgba(0,0,0,.06)}
+.prism-audio audio{width:100%;display:block;margin:16px}
+.prism-audio audio{width:calc(100% - 32px)}
+.prism-audio details{padding:0 16px 16px}
+.prism-audio summary{cursor:pointer;font-size:13px;font-weight:600;opacity:.75}
+.prism-audio details p{margin-top:8px;font-size:13px;line-height:1.6;white-space:pre-wrap}
+/* ── Labeled Graphic ── */
+.prism-labeled-graphic{position:relative;border-radius:12px;overflow:hidden;margin:1.5rem 0}
+.prism-labeled-graphic img{width:100%;display:block}
+.prism-lg-label{position:absolute;transform:translate(-50%,-50%);background:#fff;color:#1a1a2e;padding:6px 14px;border-radius:999px;font-size:12px;font-weight:700;box-shadow:0 4px 12px rgba(0,0,0,.25);border:2px solid var(--prism-accent);display:flex;align-items:center;gap:6px;white-space:nowrap}
+.prism-lg-dot{width:6px;height:6px;border-radius:50%;background:var(--prism-accent)}
+/* ── Fill Blanks ── */
+.prism-fill-blanks{border:2px solid rgba(0,0,0,.08);border-radius:12px;padding:20px;margin:1.5rem 0;background:rgba(0,0,0,.02)}
+.prism-fill-blanks p{font-size:16px;line-height:2;margin:0;color:#1e293b}
+.prism-fb-input{display:inline-block;width:120px;padding:4px 10px;margin:0 4px;border:2px solid var(--prism-accent);border-radius:6px;background:#fff;color:#1a1a2e;font-size:15px;font-weight:600}
+.prism-fb-input.correct{border-color:#10b981}
+.prism-fb-input.wrong{border-color:#ef4444}
+.prism-fb-actions{display:flex;justify-content:flex-end;margin-top:16px}
+.prism-fb-check{padding:8px 20px;border-radius:8px;border:none;background:var(--prism-accent);color:#fff;font-weight:700;cursor:pointer}
+/* ── Reveal Cards ── */
+.prism-reveal-cards{display:grid;gap:12px;margin:1.5rem 0}
+.prism-rc-card{position:relative;min-height:140px;border:none;border-radius:14px;cursor:pointer;padding:20px;background:#fff;color:#1a1a2e;box-shadow:0 4px 16px rgba(0,0,0,.08);font-size:16px;font-weight:600;transition:all .4s cubic-bezier(.4,0,.2,1);display:flex;align-items:center;justify-content:center;text-align:center}
+.prism-rc-card.flipped{background:var(--prism-accent);color:#fff;transform:scale(1.02)}
+.prism-rc-hint{position:absolute;bottom:8px;right:10px;font-size:10px;font-weight:700;opacity:.5;text-transform:uppercase;letter-spacing:1px}
+/* ── Matching ── */
+.prism-matching{border:2px solid rgba(0,0,0,.08);border-radius:12px;padding:16px;margin:1.5rem 0;background:rgba(0,0,0,.02)}
+.prism-mt-cols{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.prism-mt-term{background:#fff;color:#1a1a2e;border-radius:10px;padding:12px;margin-bottom:8px;border:2px solid #e2e8f0;display:flex;align-items:center;gap:12px;min-height:60px}
+.prism-mt-term.correct{border-color:#10b981}
+.prism-mt-term.wrong{border-color:#ef4444}
+.prism-mt-term strong{font-size:14px;flex-shrink:0}
+.prism-mt-slot{flex:1;font-size:13px;padding:6px 10px;border-radius:6px;border:1px dashed #cbd5e1;text-align:center;color:#94a3b8}
+.prism-mt-slot[data-did]{background:rgba(0,0,0,.05);border:none;color:#1a1a2e}
+.prism-mt-def{background:var(--prism-accent);color:#fff;border-radius:10px;padding:12px;margin-bottom:8px;cursor:grab;font-size:13px;font-weight:500;box-shadow:0 2px 6px rgba(0,0,0,.12)}
+.prism-mt-check{padding:8px 20px;border-radius:8px;border:none;background:var(--prism-accent);color:#fff;font-weight:700;cursor:pointer;margin-top:12px;float:right}
+/* ── Sorting ── */
+.prism-sorting{border:2px solid rgba(0,0,0,.08);border-radius:12px;padding:16px;margin:1.5rem 0;background:rgba(0,0,0,.02)}
+.prism-sort-prompt{font-size:15px;font-weight:600;margin:0 0 12px;color:#1e293b}
+.prism-sort-item{display:flex;align-items:center;gap:12px;background:#fff;color:#1a1a2e;border-radius:10px;padding:12px;margin-bottom:8px;border:2px solid #e2e8f0;cursor:grab;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.prism-sort-item.correct{border-color:#10b981}
+.prism-sort-item.wrong{border-color:#ef4444}
+.prism-sort-num{width:28px;height:28px;border-radius:8px;background:var(--prism-accent);color:#fff;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center}
+.prism-sort-text{flex:1;font-size:14px}
+.prism-sort-check{padding:8px 20px;border-radius:8px;border:none;background:var(--prism-accent);color:#fff;font-weight:700;cursor:pointer;margin-top:8px;float:right}
+/* ── Scenario ── */
+.prism-scenario{border:2px solid rgba(0,0,0,.08);border-radius:12px;overflow:hidden;background:rgba(0,0,0,.02);margin:1.5rem 0}
+.prism-sc-header{background:var(--prism-accent);color:#fff;padding:10px 16px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;display:flex;justify-content:space-between;align-items:center}
+.prism-sc-title{opacity:.7}
+.prism-sc-body{padding:20px}
+.prism-sc-text{font-size:15px;line-height:1.7;margin:0;white-space:pre-wrap;color:#1e293b}
+.prism-sc-choices{margin-top:20px;display:flex;flex-direction:column;gap:8px}
+.prism-sc-choice,.prism-sc-restart{text-align:left;background:#fff;color:#1a1a2e;border:2px solid rgba(0,0,0,.1);border-radius:10px;padding:12px 16px;font-size:14px;font-weight:600;cursor:pointer;transition:border-color .15s}
+.prism-sc-choice:hover:not(:disabled),.prism-sc-restart:hover{border-color:var(--prism-accent)}
+.prism-sc-choice:disabled{opacity:.5;cursor:not-allowed}
+.prism-sc-restart{background:var(--prism-accent);color:#fff;border:none;text-align:center;font-weight:700}
 /* ── Image lightbox ── */
 .prism-img img{cursor:zoom-in}
 .prism-lightbox{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.88);cursor:zoom-out;animation:prism-lb-in .18s ease both}

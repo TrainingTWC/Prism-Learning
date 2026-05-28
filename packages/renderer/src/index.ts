@@ -14,6 +14,16 @@ export { ProcessBlockRenderer } from './ProcessBlockRenderer';
 export { TabsBlockRenderer } from './TabsBlockRenderer';
 export { ButtonBlockRenderer } from './ButtonBlockRenderer';
 export { CustomHtmlBlockRenderer } from './CustomHtmlBlockRenderer';
+export { HotspotsBlockRenderer } from './HotspotsBlockRenderer';
+export { GalleryBlockRenderer } from './GalleryBlockRenderer';
+export { CompareBlockRenderer } from './CompareBlockRenderer';
+export { AudioBlockRenderer } from './AudioBlockRenderer';
+export { LabeledGraphicBlockRenderer } from './LabeledGraphicBlockRenderer';
+export { FillBlanksBlockRenderer } from './FillBlanksBlockRenderer';
+export { RevealCardsBlockRenderer } from './RevealCardsBlockRenderer';
+export { MatchingBlockRenderer } from './MatchingBlockRenderer';
+export { SortingBlockRenderer } from './SortingBlockRenderer';
+export { ScenarioBlockRenderer } from './ScenarioBlockRenderer';
 export { tokensToCss } from './tokensToCss';
 export type {
   Block,
@@ -32,6 +42,16 @@ export type {
   TabsBlock,
   ButtonBlock,
   CustomHtmlBlock,
+  HotspotsBlock,
+  GalleryBlock,
+  CompareBlock,
+  AudioBlock,
+  LabeledGraphicBlock,
+  FillBlanksBlock,
+  RevealCardsBlock,
+  MatchingBlock,
+  SortingBlock,
+  ScenarioBlock,
   Theme,
   ModuleProps,
   ResolveAsset,

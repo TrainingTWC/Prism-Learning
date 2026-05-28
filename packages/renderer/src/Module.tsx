@@ -15,6 +15,16 @@ import { ProcessBlockRenderer } from './ProcessBlockRenderer';
 import { TabsBlockRenderer } from './TabsBlockRenderer';
 import { ButtonBlockRenderer } from './ButtonBlockRenderer';
 import { CustomHtmlBlockRenderer } from './CustomHtmlBlockRenderer';
+import { HotspotsBlockRenderer } from './HotspotsBlockRenderer';
+import { GalleryBlockRenderer } from './GalleryBlockRenderer';
+import { CompareBlockRenderer } from './CompareBlockRenderer';
+import { AudioBlockRenderer } from './AudioBlockRenderer';
+import { LabeledGraphicBlockRenderer } from './LabeledGraphicBlockRenderer';
+import { FillBlanksBlockRenderer } from './FillBlanksBlockRenderer';
+import { RevealCardsBlockRenderer } from './RevealCardsBlockRenderer';
+import { MatchingBlockRenderer } from './MatchingBlockRenderer';
+import { SortingBlockRenderer } from './SortingBlockRenderer';
+import { ScenarioBlockRenderer } from './ScenarioBlockRenderer';
 
 /**
  * Pure module renderer. Same component drives:
@@ -75,6 +85,36 @@ export function Module({ blocks, theme, resolveAsset }: ModuleProps) {
             break;
           case 'custom-html':
             rendered = <CustomHtmlBlockRenderer block={block} />;
+            break;
+          case 'hotspots':
+            rendered = <HotspotsBlockRenderer block={block} resolveAsset={resolveAsset} theme={theme} />;
+            break;
+          case 'gallery':
+            rendered = <GalleryBlockRenderer block={block} resolveAsset={resolveAsset} theme={theme} />;
+            break;
+          case 'compare':
+            rendered = <CompareBlockRenderer block={block} resolveAsset={resolveAsset} theme={theme} />;
+            break;
+          case 'audio':
+            rendered = <AudioBlockRenderer block={block} resolveAsset={resolveAsset} theme={theme} />;
+            break;
+          case 'labeled-graphic':
+            rendered = <LabeledGraphicBlockRenderer block={block} resolveAsset={resolveAsset} theme={theme} />;
+            break;
+          case 'fill-blanks':
+            rendered = <FillBlanksBlockRenderer block={block} theme={theme} />;
+            break;
+          case 'reveal-cards':
+            rendered = <RevealCardsBlockRenderer block={block} theme={theme} />;
+            break;
+          case 'matching':
+            rendered = <MatchingBlockRenderer block={block} theme={theme} />;
+            break;
+          case 'sorting':
+            rendered = <SortingBlockRenderer block={block} theme={theme} />;
+            break;
+          case 'scenario':
+            rendered = <ScenarioBlockRenderer block={block} theme={theme} />;
             break;
           default: {
             const _exhaustive: never = block;
