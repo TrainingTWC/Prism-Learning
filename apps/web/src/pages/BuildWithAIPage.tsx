@@ -230,7 +230,7 @@ export function BuildWithAIPage() {
       <div className="prism-brand-screen flex min-h-screen flex-col items-center justify-center px-6">
         <div className="w-full max-w-xs text-center">
           <div className="relative mx-auto mb-6 flex h-20 w-20 items-center justify-center">
-            <div className="absolute inset-0 rounded-2xl bg-[rgba(13,140,99,0.15)] animate-pulse" />
+            <div className="absolute inset-0 rounded-2xl bg-[rgba(140,67,208,0.15)] animate-pulse" />
             <Sparkles className="relative size-9 text-[var(--ember-400)]" />
           </div>
 
@@ -294,7 +294,7 @@ export function BuildWithAIPage() {
                     wizardStep === s.id
                       ? 'bg-[var(--ember-400)] text-white'
                       : s.id < wizardStep
-                      ? 'bg-[rgba(13,140,99,0.15)] text-[var(--ember-400)]'
+                      ? 'bg-[rgba(140,67,208,0.15)] text-[var(--ember-400)]'
                       : 'bg-[var(--card-bg-hover)] text-[var(--text-muted)]'
                   }`}
                 >
@@ -385,8 +385,8 @@ export function BuildWithAIPage() {
                   onClick={() => setType('microLearning')}
                   className={`flex flex-col gap-2 rounded-xl border-2 px-4 py-4 text-left transition ${
                     type === 'microLearning'
-                      ? 'border-[var(--ember-400)] bg-[rgba(13,140,99,0.1)]'
-                      : 'border-[var(--border-primary)] bg-white/[0.02] hover:border-[rgba(16,179,125,0.28)] hover:bg-[var(--card-bg-hover)]'
+                      ? 'border-[var(--ember-400)] bg-[rgba(140,67,208,0.1)]'
+                      : 'border-[var(--border-primary)] bg-white/[0.02] hover:border-[rgba(170,117,221,0.28)] hover:bg-[var(--card-bg-hover)]'
                   }`}
                 >
                   <Zap
@@ -407,8 +407,8 @@ export function BuildWithAIPage() {
                   onClick={() => setType('course')}
                   className={`flex flex-col gap-2 rounded-xl border-2 px-4 py-4 text-left transition ${
                     type === 'course'
-                      ? 'border-[var(--ember-400)] bg-[rgba(13,140,99,0.1)]'
-                      : 'border-[var(--border-primary)] bg-white/[0.02] hover:border-[rgba(16,179,125,0.28)] hover:bg-[var(--card-bg-hover)]'
+                      ? 'border-[var(--ember-400)] bg-[rgba(140,67,208,0.1)]'
+                      : 'border-[var(--border-primary)] bg-white/[0.02] hover:border-[rgba(170,117,221,0.28)] hover:bg-[var(--card-bg-hover)]'
                   }`}
                 >
                   <BookOpen
@@ -455,8 +455,8 @@ export function BuildWithAIPage() {
                 onClick={() => setSourceMode('describe')}
                 className={`flex items-start gap-3 rounded-xl border-2 px-4 py-3.5 text-left transition ${
                   sourceMode === 'describe'
-                    ? 'border-[var(--ember-400)] bg-[rgba(13,140,99,0.1)]'
-                    : 'border-[var(--border-primary)] bg-white/[0.02] hover:border-[rgba(16,179,125,0.28)] hover:bg-[var(--card-bg-hover)]'
+                    ? 'border-[var(--ember-400)] bg-[rgba(140,67,208,0.1)]'
+                    : 'border-[var(--border-primary)] bg-white/[0.02] hover:border-[rgba(170,117,221,0.28)] hover:bg-[var(--card-bg-hover)]'
                 }`}
               >
                 <PenLine className={`mt-0.5 size-4 shrink-0 ${sourceMode === 'describe' ? 'text-[var(--ember-400)]' : 'text-[var(--text-muted)]'}`} />
@@ -474,8 +474,8 @@ export function BuildWithAIPage() {
                 onClick={() => setSourceMode('upload')}
                 className={`flex items-start gap-3 rounded-xl border-2 px-4 py-3.5 text-left transition ${
                   sourceMode === 'upload'
-                    ? 'border-[var(--ember-400)] bg-[rgba(13,140,99,0.1)]'
-                    : 'border-[var(--border-primary)] bg-white/[0.02] hover:border-[rgba(16,179,125,0.28)] hover:bg-[var(--card-bg-hover)]'
+                    ? 'border-[var(--ember-400)] bg-[rgba(140,67,208,0.1)]'
+                    : 'border-[var(--border-primary)] bg-white/[0.02] hover:border-[rgba(170,117,221,0.28)] hover:bg-[var(--card-bg-hover)]'
                 }`}
               >
                 <FolderOpen className={`mt-0.5 size-4 shrink-0 ${sourceMode === 'upload' ? 'text-[var(--ember-400)]' : 'text-[var(--text-muted)]'}`} />
@@ -517,7 +517,7 @@ export function BuildWithAIPage() {
             {sourceMode === 'upload' && (
               <div>
                 {sourceFile ? (
-                  <div className="flex items-center justify-between gap-3 rounded-xl border border-[rgba(16,179,125,0.24)] bg-[rgba(13,140,99,0.1)] px-4 py-3.5">
+                  <div className="flex items-center justify-between gap-3 rounded-xl border border-[rgba(170,117,221,0.24)] bg-[rgba(140,67,208,0.1)] px-4 py-3.5">
                     <div className="flex min-w-0 items-center gap-3">
                       <div className="prism-icon-tile flex size-10 shrink-0 items-center justify-center rounded-full">
                         <FileText className="size-5" />
@@ -554,8 +554,8 @@ export function BuildWithAIPage() {
                     }}
                     className={`flex min-h-44 cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed px-6 text-center transition-colors ${
                       dragOverSource
-                        ? 'border-[var(--ember-400)] bg-[rgba(13,140,99,0.1)]'
-                        : 'border-[var(--border-primary)] bg-white/[0.02] hover:border-[rgba(16,179,125,0.3)] hover:bg-[rgba(13,140,99,0.06)]'
+                        ? 'border-[var(--ember-400)] bg-[rgba(140,67,208,0.1)]'
+                        : 'border-[var(--border-primary)] bg-white/[0.02] hover:border-[rgba(170,117,221,0.3)] hover:bg-[rgba(140,67,208,0.06)]'
                     }`}
                   >
                     {uploadingSource ? (

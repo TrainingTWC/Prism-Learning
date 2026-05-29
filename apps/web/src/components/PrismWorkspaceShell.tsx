@@ -78,7 +78,7 @@ export function PrismWorkspaceShell({
           </Link>
           <p className="prism-sidebar-label truncate text-lg font-bold tracking-tight text-[var(--text-primary)]">{resolvedWorkspaceName}</p>
           {workspaceRole && (
-            <span className="badge-pill prism-sidebar-label mt-3 bg-[rgba(13,140,99,0.1)] text-[var(--ember-400)]">
+            <span className="badge-pill prism-sidebar-label mt-3 bg-[rgba(140,67,208,0.1)] text-[var(--ember-400)]">
               <span className="size-1.5 rounded-full bg-[var(--ember-400)]" />
               {workspaceRole}
             </span>
@@ -121,7 +121,7 @@ export function PrismWorkspaceShell({
             <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--text-muted)]">SCORM readiness</p>
             <div className="mt-3 flex items-end justify-between">
               <span className="font-mono-value text-2xl font-bold text-[var(--obsidian-50)]">1.2</span>
-              <span className="badge-pill bg-[rgba(34,197,94,0.08)] text-[var(--semantic-success)]">Ready</span>
+              <span className="badge-pill bg-[rgba(170,117,221,0.12)] text-[var(--ember-400)]">Ready</span>
             </div>
           </div>
           <button
@@ -163,7 +163,7 @@ export function PrismWorkspaceShell({
             </button>
             <span className="mx-1.5 h-5 w-px bg-[var(--border-subtle)]" />
             <div className="flex items-center gap-2.5">
-              <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[rgba(13,140,99,0.16)] text-xs font-bold text-[var(--ember-400)]">{initials}</div>
+              <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[rgba(140,67,208,0.16)] text-xs font-bold text-[var(--ember-400)]">{initials}</div>
               <div className="hidden flex-col sm:flex">
                 <p className="text-xs font-semibold leading-none text-[var(--text-primary)]">{displayName}</p>
                 {workspaceRole && (

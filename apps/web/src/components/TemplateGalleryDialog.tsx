@@ -124,7 +124,7 @@ export function TemplateGalleryDialog({
               </div>
               <div className="flex flex-1 flex-col gap-2 p-4">
                 <div className="flex items-center gap-2">
-                  <span className="badge-pill bg-[rgba(16,179,125,0.1)] text-[var(--ember-400)]">
+                  <span className="badge-pill bg-[rgba(170,117,221,0.1)] text-[var(--ember-400)]">
                     {tpl.category}
                   </span>
                   <span className="text-xs text-[var(--text-muted)]">

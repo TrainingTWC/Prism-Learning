@@ -45,7 +45,7 @@ export function AppLayout() {
           {joinedWorkspaces.map((name) => (
             <div
               key={name}
-              className="flex items-start gap-3 rounded-xl border border-[rgba(16,179,125,0.25)] bg-[var(--card-bg)] px-4 py-3 shadow-xl"
+              className="flex items-start gap-3 rounded-xl border border-[rgba(170,117,221,0.25)] bg-[var(--card-bg)] px-4 py-3 shadow-xl"
             >
               <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-[var(--ember-400)]" />
               <p className="flex-1 text-sm text-[var(--text-primary)]">

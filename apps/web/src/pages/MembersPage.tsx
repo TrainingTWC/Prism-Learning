@@ -165,7 +165,7 @@ export function MembersPage() {
             )}
 
             {invitedEmail && (
-              <div className="mt-3 flex items-center gap-2 rounded-lg border border-[rgba(16,179,125,0.2)] bg-[rgba(13,140,99,0.08)] px-3.5 py-2.5 text-sm text-[var(--ember-400)]">
+              <div className="mt-3 flex items-center gap-2 rounded-lg border border-[rgba(170,117,221,0.2)] bg-[rgba(140,67,208,0.08)] px-3.5 py-2.5 text-sm text-[var(--ember-400)]">
                 <Check className="size-4 shrink-0" />
                 Invite sent to <span className="font-semibold">{invitedEmail}</span>. They'll receive an email with a sign-in link.
               </div>
@@ -190,7 +190,7 @@ export function MembersPage() {
               return (
                 <li key={m._id} className="flex items-center justify-between gap-4 px-5 py-3.5">
                   <div className="flex items-center gap-3">
-                    <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[rgba(13,140,99,0.12)] text-xs font-bold text-[var(--ember-400)]">
+                    <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[rgba(140,67,208,0.12)] text-xs font-bold text-[var(--ember-400)]">
                       {getInitials(label)}
                     </div>
                     <div>
@@ -204,7 +204,7 @@ export function MembersPage() {
                     <span
                       className={`badge-pill ${
                         m.role === 'owner'
-                          ? 'bg-[rgba(13,140,99,0.1)] text-[var(--ember-400)]'
+                          ? 'bg-[rgba(140,67,208,0.1)] text-[var(--ember-400)]'
                           : 'bg-white/[0.04] text-[var(--text-tertiary)]'
                       }`}
                     >

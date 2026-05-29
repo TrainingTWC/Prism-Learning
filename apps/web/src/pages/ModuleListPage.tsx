@@ -86,7 +86,7 @@ export function ModuleListPage() {
           <Link
             to="/w/$workspaceId/build-with-ai"
             params={{ workspaceId }}
-            className="flex items-center gap-1.5 rounded-lg border border-[rgba(16,179,125,0.22)] bg-[rgba(16,179,125,0.08)] px-3 py-2 text-sm font-bold text-[var(--ember-400)] transition hover:bg-[rgba(16,179,125,0.12)]"
+            className="flex items-center gap-1.5 rounded-lg border border-[rgba(170,117,221,0.22)] bg-[rgba(170,117,221,0.08)] px-3 py-2 text-sm font-bold text-[var(--ember-400)] transition hover:bg-[rgba(170,117,221,0.12)]"
           >
             <Sparkles className="size-4" />
             Build with AI

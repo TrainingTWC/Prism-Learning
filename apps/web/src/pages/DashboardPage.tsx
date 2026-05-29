@@ -193,7 +193,7 @@ export function DashboardPage() {
                     <span
                       className={`badge-pill ${
                         ws.role === 'owner'
-                          ? 'bg-[rgba(13,140,99,0.1)] text-[var(--ember-400)]'
+                          ? 'bg-[rgba(140,67,208,0.1)] text-[var(--ember-400)]'
                           : 'bg-white/[0.04] text-[var(--text-tertiary)]'
                       }`}
                     >
