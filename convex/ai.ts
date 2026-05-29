@@ -1,4 +1,5 @@
 import { v } from 'convex/values';
+import { ConvexError } from 'convex/values';
 import { action, internalMutation, internalQuery } from './_generated/server';
 import type { ActionCtx } from './_generated/server';
 import type { Id } from './_generated/dataModel';
@@ -671,7 +672,15 @@ export const generateImage = action({
 
     if (!res.ok) {
       const errText = await res.text();
-      throw new Error(`Image API error ${res.status}: ${errText.slice(0, 300)}`);
+      if (res.status === 429) {
+        throw new ConvexError(
+          'Gemini image quota exceeded. Image generation (nano banana) is not available on the free tier — enable billing on your Gemini API key, or switch to a free image provider.',
+        );
+      }
+      if (res.status === 400 && /API key/i.test(errText)) {
+        throw new ConvexError('Invalid GEMINI_API_KEY — check the key in your Convex dashboard.');
+      }
+      throw new ConvexError(`Image generation failed (${res.status}). ${errText.slice(0, 200)}`);
     }
 
     const data = (await res.json()) as {

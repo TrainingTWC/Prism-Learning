@@ -163,7 +163,14 @@ export function ImageBlockEditor({
       const { storageId: newId } = await generateImage({ moduleId, prompt: prompt.trim() });
       save(newId, altText || prompt.trim().slice(0, 120), caption);
     } catch (e) {
-      setGenError(e instanceof Error ? e.message : 'Generation failed');
+      const data = (e as { data?: unknown })?.data;
+      setGenError(
+        typeof data === 'string'
+          ? data
+          : e instanceof Error
+            ? e.message
+            : 'Generation failed',
+      );
     } finally {
       setGenerating(false);
     }
