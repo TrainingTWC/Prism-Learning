@@ -240,12 +240,9 @@ export function PrismWorkspaceShell({
               >
                 <Bell className="size-4" />
                 {!!notificationFeed?.unreadCount && (
-                  <>
-                    <span className="absolute right-1.5 top-1.5 size-2 rounded-full bg-[var(--ember-400)]" />
-                    <span className="absolute -right-1 -top-1 flex min-w-4 items-center justify-center rounded-full bg-[var(--ember-400)] px-1 text-[10px] font-bold leading-4 text-white">
-                      {notificationFeed.unreadCount > 9 ? '9+' : notificationFeed.unreadCount}
-                    </span>
-                  </>
+                  <span className="absolute -right-1 -top-1 flex min-w-4 items-center justify-center rounded-full bg-[var(--ember-400)] px-1 text-[10px] font-bold leading-4 text-white">
+                    {notificationFeed.unreadCount > 9 ? '9+' : notificationFeed.unreadCount}
+                  </span>
                 )}
               </button>
 

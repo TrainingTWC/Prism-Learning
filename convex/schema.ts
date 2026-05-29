@@ -82,6 +82,8 @@ export default defineSchema({
     status: v.union(v.literal('draft'), v.literal('published')),
     /** Soft-delete: present means deleted */
     deletedAt: v.optional(v.number()),
+    /** Convex storage id of the per-module AI image style reference, if set */
+    styleReferenceStorageId: v.optional(v.string()),
     createdAt: v.number(),
     updatedAt: v.number(),
     lastEditedBy: v.id('users'),

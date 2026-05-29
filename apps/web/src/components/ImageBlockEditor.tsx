@@ -1,8 +1,8 @@
 import { useRef, useState, useCallback } from 'react';
-import { useMutation, useQuery } from 'convex/react';
+import { useAction, useMutation, useQuery } from 'convex/react';
 import { api } from '~convex/_generated/api';
 import type { Id } from '~convex/_generated/dataModel';
-import { ImageIcon, Loader2, Upload, X } from 'lucide-react';
+import { ImageIcon, Loader2, Sparkles, Upload, Wand2, X } from 'lucide-react';
 
 // ── Payload type stored as JSON in block.content ───────────────────────────
 export type ImagePayload = {
@@ -70,10 +70,12 @@ function ImageDisplay({
 // ── Main component ─────────────────────────────────────────────────────────
 export function ImageBlockEditor({
   blockId,
+  moduleId,
   initialContent,
   onSave,
 }: {
   blockId: Id<'blocks'>;
+  moduleId?: Id<'modules'>;
   initialContent?: string;
   onSave: (content: string) => void;
 }) {
@@ -82,9 +84,19 @@ export function ImageBlockEditor({
   const [caption, setCaption] = useState(payload?.caption ?? '');
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
+  const [mode, setMode] = useState<'upload' | 'generate'>('upload');
+  const [prompt, setPrompt] = useState('');
+  const [generating, setGenerating] = useState(false);
+  const [genError, setGenError] = useState('');
+  const [savingRef, setSavingRef] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const styleRefInputRef = useRef<HTMLInputElement>(null);
   const generateUploadUrl = useMutation(api.files.generateUploadUrl);
   const deleteFile = useMutation(api.files.deleteFile);
+  const generateImage = useAction(api.ai.generateImage);
+  const setStyleReference = useMutation(api.modules.setStyleReference);
+  const moduleDoc = useQuery(api.modules.getById, moduleId ? { moduleId } : 'skip');
+  const styleRefStorageId = moduleDoc?.styleReferenceStorageId ?? null;
 
   const storageId = payload?.storageId ?? null;
 
@@ -143,6 +155,48 @@ export function ImageBlockEditor({
     setCaption('');
   };
 
+  const handleGenerate = useCallback(async () => {
+    if (!moduleId || !prompt.trim()) return;
+    setGenerating(true);
+    setGenError('');
+    try {
+      const { storageId: newId } = await generateImage({ moduleId, prompt: prompt.trim() });
+      save(newId, altText || prompt.trim().slice(0, 120), caption);
+    } catch (e) {
+      setGenError(e instanceof Error ? e.message : 'Generation failed');
+    } finally {
+      setGenerating(false);
+    }
+  }, [moduleId, prompt, generateImage, save, altText, caption]);
+
+  const handleStyleRefFile = useCallback(
+    async (file: File) => {
+      if (!moduleId || !file.type.startsWith('image/')) return;
+      setSavingRef(true);
+      try {
+        const uploadUrl = await generateUploadUrl();
+        const res = await fetch(uploadUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': file.type },
+          body: file,
+        });
+        if (!res.ok) throw new Error('Upload failed');
+        const { storageId: newId } = (await res.json()) as { storageId: string };
+        if (styleRefStorageId) await deleteFile({ storageId: styleRefStorageId });
+        await setStyleReference({ moduleId, storageId: newId });
+      } finally {
+        setSavingRef(false);
+      }
+    },
+    [moduleId, generateUploadUrl, deleteFile, setStyleReference, styleRefStorageId],
+  );
+
+  const handleClearStyleRef = useCallback(async () => {
+    if (!moduleId) return;
+    if (styleRefStorageId) await deleteFile({ storageId: styleRefStorageId });
+    await setStyleReference({ moduleId, storageId: null });
+  }, [moduleId, styleRefStorageId, deleteFile, setStyleReference]);
+
   // ── Image already uploaded ─────────────────────────────────────────────
   if (storageId) {
     return (
@@ -179,42 +233,154 @@ export function ImageBlockEditor({
     );
   }
 
-  // ── Upload zone ────────────────────────────────────────────────────────
+  // ── Empty state: Upload / Generate tabs ─────────────────────────────────
+  const canGenerate = !!moduleId;
+
   return (
-    <div
-      role="button"
-      tabIndex={0}
-      onClick={() => !uploading && fileInputRef.current?.click()}
-      onKeyDown={(e) => e.key === 'Enter' && fileInputRef.current?.click()}
-      onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-      onDragLeave={() => setDragOver(false)}
-      onDrop={(e) => void handleDrop(e)}
-      className={`flex min-h-36 cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed transition-colors ${
-        dragOver
-          ? 'border-indigo-400 bg-indigo-50'
-          : 'border-slate-200 bg-slate-50 hover:border-indigo-300 hover:bg-indigo-50/40'
-      }`}
-    >
-      {uploading ? (
-        <Loader2 className="size-6 animate-spin text-indigo-500" />
-      ) : (
-        <>
-          <div className="flex size-10 items-center justify-center rounded-full bg-white shadow-sm border border-slate-200">
-            {dragOver ? <Upload className="size-5 text-indigo-500" /> : <ImageIcon className="size-5 text-slate-400" />}
-          </div>
-          <p className="text-sm font-medium text-slate-600">
-            {dragOver ? 'Drop to upload' : 'Click or drag an image'}
-          </p>
-          <p className="text-xs text-slate-400">PNG, JPG, GIF, WebP</p>
-        </>
+    <div className="rounded-xl border border-slate-200 bg-white p-3">
+      {canGenerate && (
+        <div className="mb-3 flex gap-1 rounded-lg bg-slate-100 p-1">
+          <button
+            type="button"
+            onClick={() => setMode('upload')}
+            className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
+              mode === 'upload' ? 'bg-white text-slate-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            <Upload className="size-3.5" /> Upload
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode('generate')}
+            className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
+              mode === 'generate' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            <Sparkles className="size-3.5" /> Generate with AI
+          </button>
+        </div>
       )}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        className="sr-only"
-        onChange={handleInputChange}
-      />
+
+      {mode === 'upload' || !canGenerate ? (
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={() => !uploading && fileInputRef.current?.click()}
+          onKeyDown={(e) => e.key === 'Enter' && fileInputRef.current?.click()}
+          onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+          onDragLeave={() => setDragOver(false)}
+          onDrop={(e) => void handleDrop(e)}
+          className={`flex min-h-36 cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed transition-colors ${
+            dragOver
+              ? 'border-indigo-400 bg-indigo-50'
+              : 'border-slate-200 bg-slate-50 hover:border-indigo-300 hover:bg-indigo-50/40'
+          }`}
+        >
+          {uploading ? (
+            <Loader2 className="size-6 animate-spin text-indigo-500" />
+          ) : (
+            <>
+              <div className="flex size-10 items-center justify-center rounded-full bg-white shadow-sm border border-slate-200">
+                {dragOver ? <Upload className="size-5 text-indigo-500" /> : <ImageIcon className="size-5 text-slate-400" />}
+              </div>
+              <p className="text-sm font-medium text-slate-600">
+                {dragOver ? 'Drop to upload' : 'Click or drag an image'}
+              </p>
+              <p className="text-xs text-slate-400">PNG, JPG, GIF, WebP</p>
+            </>
+          )}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="sr-only"
+            onChange={handleInputChange}
+          />
+        </div>
+      ) : (
+        <div className="space-y-3">
+          <textarea
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+            rows={3}
+            placeholder="Describe the image to generate (e.g. 'a barista steaming milk at a modern espresso machine, warm tones')"
+            className="w-full resize-none rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 placeholder-slate-400 outline-none focus:border-indigo-300 focus:ring-1 focus:ring-indigo-200"
+          />
+
+          {/* Module style reference */}
+          <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 p-2">
+            {styleRefStorageId ? (
+              <StyleRefThumb storageId={styleRefStorageId} />
+            ) : (
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-md bg-white text-slate-300">
+                <ImageIcon className="size-4" />
+              </div>
+            )}
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-semibold text-slate-600">Module style reference</p>
+              <p className="text-[11px] text-slate-400">
+                {styleRefStorageId ? 'All generated images match this style' : 'Optional — set a style for the whole module'}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => styleRefInputRef.current?.click()}
+              disabled={savingRef}
+              className="rounded-md border border-slate-200 px-2 py-1 text-[11px] font-semibold text-slate-600 hover:bg-white disabled:opacity-50"
+            >
+              {savingRef ? <Loader2 className="size-3 animate-spin" /> : styleRefStorageId ? 'Change' : 'Set'}
+            </button>
+            {styleRefStorageId && (
+              <button
+                type="button"
+                onClick={() => void handleClearStyleRef()}
+                disabled={savingRef}
+                className="rounded-md border border-slate-200 px-2 py-1 text-[11px] font-semibold text-slate-500 hover:bg-white disabled:opacity-50"
+              >
+                Clear
+              </button>
+            )}
+            <input
+              ref={styleRefInputRef}
+              type="file"
+              accept="image/*"
+              className="sr-only"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) void handleStyleRefFile(f);
+                e.target.value = '';
+              }}
+            />
+          </div>
+
+          {genError && (
+            <p className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-500">{genError}</p>
+          )}
+
+          <button
+            type="button"
+            onClick={() => void handleGenerate()}
+            disabled={generating || !prompt.trim()}
+            className="flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-indigo-500 disabled:opacity-50"
+          >
+            {generating ? <Loader2 className="size-4 animate-spin" /> : <Wand2 className="size-4" />}
+            {generating ? 'Generating…' : 'Generate image'}
+          </button>
+        </div>
+      )}
     </div>
   );
+}
+
+// ── Sub-component: style reference thumbnail ────────────────────────────────
+function StyleRefThumb({ storageId }: { storageId: string }) {
+  const url = useQuery(api.files.getFileUrl, { storageId });
+  if (!url) {
+    return (
+      <div className="flex size-10 shrink-0 items-center justify-center rounded-md bg-white">
+        <Loader2 className="size-3.5 animate-spin text-slate-300" />
+      </div>
+    );
+  }
+  return <img src={url} alt="Style reference" className="size-10 shrink-0 rounded-md object-cover" />;
 }

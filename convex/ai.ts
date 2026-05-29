@@ -562,3 +562,144 @@ Output only the JSON structure. Begin now.`;
     return moduleId as string;
   },
 });
+
+// ── AI image generation (Gemini 2.5 Flash Image / "nano banana") ────────────
+
+/** Internal: fetch a module's workspace + style reference for image gen. */
+export const getModuleForImage = internalQuery({
+  args: { moduleId: v.id('modules') },
+  handler: async (ctx, { moduleId }) => {
+    const mod = await ctx.db.get(moduleId);
+    if (!mod || mod.deletedAt) return null;
+    return {
+      workspaceId: mod.workspaceId,
+      styleReferenceStorageId: mod.styleReferenceStorageId ?? null,
+    };
+  },
+});
+
+function arrayBufferToBase64(buf: ArrayBuffer): string {
+  const bytes = new Uint8Array(buf);
+  let binary = '';
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+  }
+  return btoa(binary);
+}
+
+function base64ToUint8Array(b64: string): Uint8Array {
+  const binary = atob(b64);
+  const len = binary.length;
+  const bytes = new Uint8Array(len);
+  for (let i = 0; i < len; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes;
+}
+
+/**
+ * Generate an image with Gemini 2.5 Flash Image ("nano banana"), optionally
+ * conditioned on the module's style reference image. Stores the result in
+ * Convex storage and returns its storageId.
+ * Requires GEMINI_API_KEY set in the Convex dashboard.
+ */
+export const generateImage = action({
+  args: {
+    moduleId: v.id('modules'),
+    prompt: v.string(),
+    useStyleReference: v.optional(v.boolean()),
+  },
+  handler: async (ctx, { moduleId, prompt, useStyleReference }): Promise<{ storageId: string }> => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error('Unauthenticated');
+
+    const promptText = prompt.trim();
+    if (!promptText) throw new Error('Describe the image you want to generate');
+
+    const mod = await ctx.runQuery(internal.ai.getModuleForImage, { moduleId });
+    if (!mod) throw new Error('Module not found');
+
+    const membership = await ctx.runQuery(internal.ai.checkMembership, {
+      workspaceId: mod.workspaceId,
+      userId,
+    });
+    if (!membership) throw new Error('Forbidden');
+
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      throw new Error('Image generation not configured — set GEMINI_API_KEY in the Convex dashboard');
+    }
+
+    const model = process.env.GEMINI_IMAGE_MODEL ?? 'gemini-2.5-flash-image';
+
+    const parts: Array<Record<string, unknown>> = [
+      {
+        text:
+          `Create a single high-quality illustration for an e-learning course module. ` +
+          `${promptText}. The image should be clean, professional, and suitable for a ` +
+          `learning module. Do not include any text, watermarks, or captions in the image.`,
+      },
+    ];
+
+    // Attach the module style reference, if requested and available.
+    if (useStyleReference !== false && mod.styleReferenceStorageId) {
+      const refBlob = await ctx.storage.get(
+        mod.styleReferenceStorageId as Parameters<typeof ctx.storage.get>[0],
+      );
+      if (refBlob) {
+        const refBuf = await refBlob.arrayBuffer();
+        parts.unshift({
+          text: 'Match the visual style, color palette, and overall look of this reference image:',
+        });
+        parts.push({
+          inlineData: {
+            mimeType: refBlob.type || 'image/png',
+            data: arrayBufferToBase64(refBuf),
+          },
+        });
+      }
+    }
+
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+    const res = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': apiKey,
+      },
+      body: JSON.stringify({ contents: [{ role: 'user', parts }] }),
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(`Image API error ${res.status}: ${errText.slice(0, 300)}`);
+    }
+
+    const data = (await res.json()) as {
+      candidates?: Array<{
+        content?: { parts?: Array<{ inlineData?: { mimeType?: string; data?: string }; text?: string }> };
+        finishReason?: string;
+      }>;
+      promptFeedback?: { blockReason?: string };
+      error?: { message?: string };
+    };
+
+    if (data.error?.message) throw new Error(`Image error: ${data.error.message}`);
+    if (data.promptFeedback?.blockReason) {
+      throw new Error(`Image request blocked: ${data.promptFeedback.blockReason}`);
+    }
+
+    const responseParts = data.candidates?.[0]?.content?.parts ?? [];
+    const imagePart = responseParts.find((p) => p.inlineData?.data);
+    if (!imagePart?.inlineData?.data) {
+      throw new Error('The model did not return an image — try rephrasing your prompt');
+    }
+
+    const mimeType = imagePart.inlineData.mimeType || 'image/png';
+    const bytes = base64ToUint8Array(imagePart.inlineData.data);
+    const storageId = await ctx.storage.store(
+      new Blob([bytes as unknown as BlobPart], { type: mimeType }),
+    );
+
+    return { storageId: storageId as string };
+  },
+});

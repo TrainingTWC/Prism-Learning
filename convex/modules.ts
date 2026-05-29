@@ -114,6 +114,21 @@ export const rename = mutation({
   },
 });
 
+/** Set (or clear) the per-module AI image style reference. */
+export const setStyleReference = mutation({
+  args: { moduleId: v.id('modules'), storageId: v.union(v.string(), v.null()) },
+  handler: async (ctx, { moduleId, storageId }) => {
+    const mod = await ctx.db.get(moduleId);
+    if (!mod || mod.deletedAt) throw new Error('Not found');
+    const userId = await requireMember(ctx, mod.workspaceId);
+    await ctx.db.patch(moduleId, {
+      styleReferenceStorageId: storageId ?? undefined,
+      updatedAt: Date.now(),
+      lastEditedBy: userId,
+    });
+  },
+});
+
 /** Duplicate a module (deep copy lessons + blocks). */
 export const duplicate = mutation({
   args: { moduleId: v.id('modules') },

@@ -814,6 +814,7 @@ function SortableBlock({
         {block.type === 'image' && (
           <ImageBlockEditor
             blockId={block._id}
+            moduleId={block.moduleId}
             initialContent={block.content}
             onSave={onSave}
           />
