@@ -4,7 +4,7 @@ import { Link, useParams } from '@tanstack/react-router';
 import { api } from '~convex/_generated/api';
 import type { Id } from '~convex/_generated/dataModel';
 import { buildScormPackage, downloadBlob } from '../lib/scormExport';
-import type { ExportTheme } from '../lib/scormExport';
+import type { ExportTheme, ExportOptions } from '../lib/scormExport';
 import {
   DndContext,
   closestCenter,
@@ -178,6 +178,8 @@ export function ModuleEditorPage() {
   const [renameModuleValue, setRenameModuleValue] = useState('');
   const [addBlockMenuOpen, setAddBlockMenuOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [exportOptions, setExportOptions] = useState<ExportOptions>({ passingScore: 80, completionCriteria: 'completed' });
   const [theme, setTheme] = useState<'dark' | 'light'>(
     () => localStorage.getItem('prism-theme') === 'light' ? 'light' : 'dark'
   );
@@ -185,11 +187,10 @@ export function ModuleEditorPage() {
   useEffect(() => {
     document.documentElement.classList.toggle('light', theme === 'light');
     localStorage.setItem('prism-theme', theme);
-  }, [theme]);
-
-  const handleExportScorm = useCallback(async () => {
+  }, [theme]);opts: ExportOptions) => {
     if (!content) return;
     setExporting(true);
+    setExportDialogOpen(false);
     try {
       const theme: ExportTheme = workspace?.theme ?? {
         primary: '#4f46e5', accent: '#aa75dd', headingFont: 'Inter', bodyFont: 'Inter',
@@ -206,6 +207,9 @@ export function ModuleEditorPage() {
               .sort((a, b) => a.order - b.order)
               .map((b) => ({ id: b._id, type: b.type, content: b.content })),
           })),
+        },
+        theme,
+        opts,
         },
         theme,
         async (storageId) => {
@@ -405,7 +409,7 @@ export function ModuleEditorPage() {
             className="rounded-lg p-2 text-[var(--text-tertiary)] hover:bg-[var(--card-bg-hover)] hover:text-[var(--text-primary)] transition-colors"
             aria-label={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
           >
-            {theme === 'light' ? <Moon className="size-4" /> : <Sun className="size-4" />}
+            {theme === 'ligsetExportDialogOpen(truesize-4" /> : <Sun className="size-4" />}
           </button>
           <button
             type="button"

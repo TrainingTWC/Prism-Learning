@@ -37,6 +37,13 @@ export interface ExportModule {
   lessons: ExportLesson[];
 }
 
+export interface ExportOptions {
+  /** 0–100; quiz score needed to report "passed" (default 80) */
+  passingScore: number;
+  /** 'completed': finish last lesson; 'passed': score ≥ passingScore */
+  completionCriteria: 'completed' | 'passed';
+}
+
 // ── Helpers ────────────────────────────────────────────────────────────────
 
 function escapeXml(s: string) {
@@ -390,14 +397,22 @@ function renderBlock(block: ExportBlock, assetMap: Record<string, string>): stri
 
 function buildManifest(mod: ExportModule): string {
   const id = `prism_${mod.id.replace(/[^a-z0-9]/gi, '_')}`;
-  const items = mod.lessons
+  const welcomeItem = `      <item identifier="item_welcome" identifierref="res_welcome">
+        <title>Welcome</title>
+      </item>`;
+  const lessonItems = mod.lessons
     .map(
       (l, i) => `      <item identifier="item_${i}" identifierref="res_${i}">
         <title>${escapeXml(l.title)}</title>
       </item>`,
     )
     .join('\n');
-  const resources = mod.lessons
+  const items = welcomeItem + '\n' + lessonItems;
+  const welcomeResource = `    <resource identifier="res_welcome" type="webcontent" adlcp:scormtype="sco"
+      href="welcome.html">
+      <file href="welcome.html"/>
+    </resource>`;
+  const resources = welcomeResource + '\n' + mod.lessons
     .map(
       (l, i) => `    <resource identifier="res_${i}" type="webcontent" adlcp:scormtype="sco"
       href="lesson_${i}.html">
@@ -495,6 +510,7 @@ body::before{content:'';position:fixed;inset:0;background:var(--prism-bg-grad);z
 .prism-toolbar{position:sticky;top:0;z-index:40;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 28px;background:color-mix(in srgb, var(--prism-surface) 92%, transparent);backdrop-filter:saturate(180%) blur(14px);-webkit-backdrop-filter:saturate(180%) blur(14px);border-bottom:1px solid var(--prism-border-subtle)}
 .prism-brand{display:flex;align-items:center;gap:12px;font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--prism-text-2)}
 .prism-brand-mark{width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,var(--prism-primary),var(--prism-accent));box-shadow:0 6px 18px -6px var(--prism-primary);flex-shrink:0}
+.prism-brand-logo{width:30px;height:30px;object-fit:contain;border-radius:8px;flex-shrink:0}
 .prism-brand-name{opacity:.85;max-width:42ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .prism-tools{display:flex;align-items:center;gap:8px}
 .prism-tool{appearance:none;border:1px solid transparent;background:transparent;color:var(--prism-text-2);width:42px;height:42px;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;transition:all var(--prism-motion-fast) var(--prism-ease-standard)}
@@ -589,7 +605,7 @@ h1{font-family:var(--prism-font-heading);font-size:2.5rem;line-height:1.12;font-
 .prism-complete-row .primary{background:linear-gradient(135deg,var(--prism-primary),var(--prism-accent));color:#fff;border-color:transparent;box-shadow:0 10px 22px -10px var(--prism-primary)}
 
 /* ── Confetti ── */
-.prism-confetti{position:fixed;inset:0;z-index:55;pointer-events:none;overflow:hidden}
+.prism-confetti{position:fixed;inset:0;z-index:70;pointer-events:none;overflow:hidden}
 .prism-confetti i{position:absolute;top:-12px;width:8px;height:14px;border-radius:2px;opacity:.9;animation:prism-confetti-fall linear forwards}
 @keyframes prism-confetti-fall{to{transform:translateY(110vh) rotate(720deg)}}
 
@@ -834,7 +850,7 @@ html[data-theme="dark"] .prism-callout--tip{color:#d8b4fe}
 .prism-img img{cursor:zoom-in}
 .prism-lightbox{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.88);cursor:zoom-out;animation:prism-lb-in .18s ease both}
 @keyframes prism-lb-in{from{opacity:0}to{opacity:1}}
-.prism-lightbox img{max-width:min(96vw,1200px);max-height:92vh;object-fit:contain;border-radius:12px;cursor:default;box-shadow:0 8px 48px rgba(0,0,0,.6)}
+.prism-lightbox img{max-width:100vw;max-height:100vh;width:100%;height:100%;object-fit:contain;border-radius:0;cursor:default}
 .prism-lb-close{position:absolute;top:1rem;right:1rem;width:2.5rem;height:2.5rem;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.15);border:none;border-radius:50%;color:#fff;font-size:1.25rem;cursor:pointer;line-height:1}
 `;
 }
@@ -880,9 +896,11 @@ document.querySelectorAll('.prism-mcq').forEach(function(el){
     else{opts.forEach(function(btn){if(btn.classList.contains('wrong')){btn.classList.remove('prism-shake');void btn.offsetWidth;btn.classList.add('prism-shake');}});}
     submit.style.display='none';
     retry.style.display='inline';
+    window.__prismTotal=(window.__prismTotal||0)+1;
+    if(allOk)window.__prismCorrect=(window.__prismCorrect||0)+1;
     // SCORM score
     if(typeof API!=='undefined'){
-      try{API.LMSSetValue('cmi.core.score.raw',allOk?'100':'0');API.LMSSetValue('cmi.core.score.min','0');API.LMSSetValue('cmi.core.score.max','100');API.LMSSetValue('cmi.core.lesson_status',allOk?'passed':'failed');API.LMSCommit('');}catch(e){}
+      try{API.LMSSetValue('cmi.core.score.raw',allOk?'100':'0');API.LMSSetValue('cmi.core.score.min','0');API.LMSSetValue('cmi.core.score.max','100');API.LMSCommit('');}catch(e){}
     }
   });
   retry.addEventListener('click',function(){
@@ -909,7 +927,9 @@ document.querySelectorAll('.prism-tf').forEach(function(el){
       else{btn.classList.remove('prism-shake');void btn.offsetWidth;btn.classList.add('prism-shake');}
       if(res){res.textContent=(ok?'✓ Got it! ':'✗ Not this time. ')+(answer?tf:ff);res.style.display='';}}
       if(retry)retry.style.display='inline';
-      if(typeof API!=='undefined'){try{API.LMSSetValue('cmi.core.lesson_status',ok?'passed':'failed');API.LMSCommit('');}catch(e){}}
+      window.__prismTotal=(window.__prismTotal||0)+1;
+      if(ok)window.__prismCorrect=(window.__prismCorrect||0)+1;
+      if(typeof API!=='undefined'){try{API.LMSCommit('');}catch(e){}}
     });
   });
   if(retry)retry.addEventListener('click',function(){
@@ -1012,6 +1032,110 @@ document.querySelectorAll('.prism-img img').forEach(function(img){
 })();`;
 }
 
+// ── Welcome page (Rise-360-style cover) ───────────────────────────────────
+
+function buildWelcomePage(mod: ExportModule, _theme: ExportTheme, hasLogo: boolean): string {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<title>${escapeHtml(mod.title)}</title>
+<link rel="stylesheet" href="styles.css"/>
+<script>(function(){try{var t=localStorage.getItem('prism-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);else if(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();</script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+.prism-welcome{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:48px 24px;position:relative;overflow:hidden}
+.prism-welcome::before{content:'';position:fixed;inset:0;background:var(--prism-bg-grad);z-index:0;pointer-events:none}
+.prism-welcome-inner{position:relative;z-index:1;max-width:560px;width:100%}
+.prism-welcome-logo-wrap{width:88px;height:88px;border-radius:22px;background:linear-gradient(135deg,var(--prism-primary),var(--prism-accent));display:flex;align-items:center;justify-content:center;margin:0 auto 36px;box-shadow:0 24px 56px -16px var(--prism-primary)}
+.prism-welcome-logo-wrap img{width:60px;height:60px;object-fit:contain;border-radius:12px}
+.prism-welcome-kicker{font-size:11px;font-weight:800;letter-spacing:.2em;text-transform:uppercase;color:var(--prism-primary);margin-bottom:18px;display:flex;align-items:center;justify-content:center;gap:10px}
+.prism-welcome-kicker::before,.prism-welcome-kicker::after{content:'';width:28px;height:2px;border-radius:2px;background:currentColor}
+.prism-welcome h1{font-family:var(--prism-font-heading);font-size:clamp(2rem,6vw,3.5rem);font-weight:800;color:var(--prism-text);letter-spacing:-.025em;line-height:1.1;margin-bottom:20px}
+.prism-welcome-meta{font-size:14px;color:var(--prism-text-muted);margin-bottom:52px;line-height:1.8}
+.prism-welcome-meta span{display:inline-flex;align-items:center;gap:6px;margin:0 12px;font-weight:600}
+.prism-welcome-start{display:inline-flex;align-items:center;gap:12px;padding:17px 44px;background:linear-gradient(135deg,var(--prism-primary),var(--prism-accent));color:#fff;font-weight:800;font-size:16px;letter-spacing:.05em;border-radius:16px;text-decoration:none;box-shadow:0 18px 44px -14px var(--prism-primary);transition:transform .18s ease,box-shadow .18s ease;cursor:pointer;border:none}
+.prism-welcome-start:hover{transform:translateY(-2px);box-shadow:0 24px 52px -14px var(--prism-primary)}
+.prism-welcome-start svg{flex-shrink:0}
+</style>
+</head>
+<body>
+<div class="prism-shell">
+  <div class="prism-welcome">
+    <div class="prism-welcome-inner">
+      <div class="prism-welcome-logo-wrap">
+        ${hasLogo ? '<img src="assets/logo.png" alt=""/>' : ''}
+      </div>
+      <div class="prism-welcome-kicker">Course</div>
+      <h1>${escapeHtml(mod.title)}</h1>
+      <p class="prism-welcome-meta">
+        <span>&#128218; ${mod.lessons.length} lesson${mod.lessons.length !== 1 ? 's' : ''}</span>
+      </p>
+      <button class="prism-welcome-start" id="startBtn">
+        Start course
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+      </button>
+    </div>
+  </div>
+</div>
+<script src="assets/scorm12.min.js"></script>
+<script>
+(function(){
+  var api=(typeof API!=='undefined')?API:(window.parent&&window.parent.API)||(window.top&&window.top.API)||null;
+  if(api){try{api.LMSInitialize('');api.LMSSetValue('cmi.core.lesson_status','not attempted');api.LMSCommit('');}catch(e){}}
+  document.getElementById('startBtn').addEventListener('click',function(){
+    var inner=document.querySelector('.prism-welcome-inner');
+    if(inner){inner.style.transition='opacity .22s ease,transform .22s ease';inner.style.opacity='0';inner.style.transform='scale(.97) translateY(8px)';}
+    setTimeout(function(){window.location.href='lesson_0.html';},220);
+  });
+})();
+</script>
+</body>
+</html>`;
+}
+
+// ── Goodbye page (shown after exit) ───────────────────────────────────────
+
+function buildGoodbyePage(_theme: ExportTheme): string {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<title>Course closed</title>
+<link rel="stylesheet" href="styles.css"/>
+<script>(function(){try{var t=localStorage.getItem('prism-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+.prism-bye{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:48px 24px;position:relative}
+.prism-bye::before{content:'';position:fixed;inset:0;background:var(--prism-bg-grad);z-index:0;pointer-events:none}
+.prism-bye-inner{position:relative;z-index:1;max-width:480px;width:100%}
+.prism-bye-icon{width:88px;height:88px;border-radius:50%;background:linear-gradient(135deg,var(--prism-primary),var(--prism-accent));display:flex;align-items:center;justify-content:center;margin:0 auto 32px;font-size:40px;line-height:1;box-shadow:0 20px 52px -14px var(--prism-primary);animation:prism-bye-pop .65s cubic-bezier(.2,.8,.2,1) both}
+@keyframes prism-bye-pop{0%{transform:scale(.4);opacity:0}60%{transform:scale(1.12)}100%{transform:scale(1);opacity:1}}
+.prism-bye h1{font-family:var(--prism-font-heading);font-size:2.5rem;font-weight:800;color:var(--prism-text);letter-spacing:-.025em;margin-bottom:16px}
+.prism-bye p{font-size:16px;color:var(--prism-text-muted);line-height:1.75}
+</style>
+</head>
+<body>
+<div class="prism-bye">
+  <div class="prism-bye-inner">
+    <div class="prism-bye-icon">&#128075;</div>
+    <h1>Thank you!</h1>
+    <p>You can now close this course.</p>
+  </div>
+</div>
+<script src="assets/scorm12.min.js"></script>
+<script>
+(function(){
+  var api=(typeof API!=='undefined')?API:(window.parent&&window.parent.API)||(window.top&&window.top.API)||null;
+  if(api){try{api.LMSCommit('');api.LMSFinish('');}catch(e){}}
+})();
+</script>
+</body>
+</html>`;
+}
+
 // ── Lesson HTML page ───────────────────────────────────────────────────────
 
 function buildLessonPage(
@@ -1019,6 +1143,8 @@ function buildLessonPage(
   lessonIdx: number,
   assetMap: Record<string, string>,
   _theme: ExportTheme,
+  options: ExportOptions,
+  logoPath: string,
 ): string {
   const lesson = mod.lessons[lessonIdx]!;
   const total = mod.lessons.length;
@@ -1062,12 +1188,12 @@ function buildLessonPage(
 <link rel="stylesheet" href="styles.css"/>
 <script>(function(){try{var t=localStorage.getItem('prism-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);else if(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();</script>
 </head>
-<body>
+<body data-criteria="${options.completionCriteria}" data-passing="${options.passingScore}">
 <div class="prism-shell">
   <div class="prism-stage">
     <div class="prism-toolbar">
       <div class="prism-brand">
-        <span class="prism-brand-mark" aria-hidden="true"></span>
+        ${logoPath ? `<img src="${logoPath}" class="prism-brand-logo" alt="" aria-hidden="true"/>` : '<span class="prism-brand-mark" aria-hidden="true"></span>'}
         <span class="prism-brand-name">${escapeHtml(mod.title)}</span>
       </div>
       <div class="prism-tools">
@@ -1121,7 +1247,8 @@ function buildLessonPage(
 (function(){
   var api=(typeof API!=='undefined')?API:(window.parent&&window.parent.API)||(window.top&&window.top.API)||null;
   window.__prismAPI=api;
-  if(api){try{api.LMSInitialize('');api.LMSSetValue('cmi.core.lesson_status', ${isLast ? "'completed'" : "'incomplete'"});api.LMSCommit('');}catch(e){}}
+  window.__prismCorrect=0;window.__prismTotal=0;
+  if(api){try{api.LMSInitialize('');api.LMSSetValue('cmi.core.lesson_status','incomplete');api.LMSCommit('');}catch(e){}}
 })();
 </script>
 <script>
@@ -1142,7 +1269,7 @@ function buildLessonPage(
 
   // Exit course
   var exitBtn=document.querySelector('[data-prism-exit]');
-  if(exitBtn)exitBtn.addEventListener('click',function(){var api=window.__prismAPI;if(api){try{api.LMSCommit('');api.LMSFinish('');}catch(e){}}try{if(window.parent&&window.parent!==window)window.parent.postMessage({prism:'exit'},'*');}catch(e){}});
+  if(exitBtn)exitBtn.addEventListener('click',function(){var api=window.__prismAPI;if(api){try{api.LMSCommit('');api.LMSFinish('');}catch(e){}}window.location.href='goodbye.html';});
 
   // Keyboard nav
   document.addEventListener('keydown',function(e){
@@ -1159,7 +1286,11 @@ function buildLessonPage(
     if(!complete)return;
     complete.classList.add('show');complete.setAttribute('aria-hidden','false');
     fireConfetti();
-    var api=window.__prismAPI;if(api){try{api.LMSSetValue('cmi.core.lesson_status','completed');api.LMSSetValue('cmi.core.score.raw','100');api.LMSCommit('');}catch(e){}}
+    var crit=document.body.dataset.criteria||'completed';
+    var passing=parseInt(document.body.dataset.passing||'80',10);
+    var score=window.__prismTotal>0?Math.round(window.__prismCorrect/window.__prismTotal*100):100;
+    var status=crit==='completed'?'completed':(score>=passing?'passed':'failed');
+    var api=window.__prismAPI;if(api){try{if(window.__prismTotal>0){api.LMSSetValue('cmi.core.score.raw',String(score));api.LMSSetValue('cmi.core.score.min','0');api.LMSSetValue('cmi.core.score.max','100');}api.LMSSetValue('cmi.core.lesson_status',status);api.LMSCommit('');}catch(e){}}
   }
   function fireConfetti(){
     var wrap=document.createElement('div');wrap.className='prism-confetti';document.body.appendChild(wrap);
@@ -1256,6 +1387,7 @@ function buildLessonPage(
 export async function buildScormPackage(
   mod: ExportModule,
   theme: ExportTheme,
+  options: ExportOptions,
   /** Map of storageId → resolved URL for assets used in the module */
   resolveAssetUrl: (storageId: string) => Promise<string>,
 ): Promise<Blob> {
@@ -1277,6 +1409,17 @@ export async function buildScormPackage(
   // Resolve + download all assets into zip/assets/
   const assetMap: Record<string, string> = {};
   const assetsFolder = zip.folder('assets')!;
+
+  // Try to bundle the app logo
+  let logoPath = '';
+  try {
+    const logoRes = await fetch(window.location.origin + '/prism-logo.png');
+    if (logoRes.ok) {
+      const logoBlob = await logoRes.blob();
+      assetsFolder.file('logo.png', logoBlob);
+      logoPath = 'assets/logo.png';
+    }
+  } catch { /* skip */ }
 
   await Promise.all(
     [...storageIds].map(async (id) => {
@@ -1324,9 +1467,13 @@ export async function buildScormPackage(
   // imsmanifest.xml
   zip.file('imsmanifest.xml', buildManifest(mod));
 
+  // Welcome and goodbye pages
+  zip.file('welcome.html', buildWelcomePage(mod, theme, logoPath !== ''));
+  zip.file('goodbye.html', buildGoodbyePage(theme));
+
   // One HTML page per lesson
   for (let i = 0; i < mod.lessons.length; i++) {
-    zip.file(`lesson_${i}.html`, buildLessonPage(mod, i, assetMap, theme));
+    zip.file(`lesson_${i}.html`, buildLessonPage(mod, i, assetMap, theme, options, logoPath));
   }
 
   return zip.generateAsync({ type: 'blob', compression: 'DEFLATE' });
