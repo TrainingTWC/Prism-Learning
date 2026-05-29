@@ -18,8 +18,8 @@
 }
 
 @theme {
-  --color-prism-primary: #0d8c63;
-  --color-prism-accent: #10b37d;
+  --color-prism-primary: #8c43d0;
+  --color-prism-accent: #aa75dd;
   --color-obsidian-950: var(--obsidian-950);
   --color-obsidian-900: var(--obsidian-900);
   --color-obsidian-800: var(--obsidian-800);
@@ -30,10 +30,10 @@
   --color-obsidian-200: var(--obsidian-200);
   --color-obsidian-100: var(--obsidian-100);
   --color-obsidian-50: var(--obsidian-50);
-  --color-ember-600: #087a56;
-  --color-ember-500: #0d8c63;
-  --color-ember-400: #10b37d;
-  --color-ember-300: #34d399;
+  --color-ember-600: #6d2bab;
+  --color-ember-500: #8c43d0;
+  --color-ember-400: #aa75dd;
+  --color-ember-300: #c5a1e8;
   --font-sans:
     'JetBrains Mono', var(--font-jb), 'SF Mono', 'Fira Code', ui-monospace, monospace;
   --font-mono:
@@ -51,12 +51,12 @@
   --obsidian-200: #a1a1ae;
   --obsidian-100: #e4e4e9;
   --obsidian-50: #fafafa;
-  --ember-600: #087a56;
-  --ember-500: #0d8c63;
-  --ember-400: #10b37d;
-  --ember-300: #34d399;
-  --ember-200: #fdba74;
-  --ember-100: #fff7ed;
+  --ember-600: #6d2bab;
+  --ember-500: #8c43d0;
+  --ember-400: #aa75dd;
+  --ember-300: #c5a1e8;
+  --ember-200: #decaf2;
+  --ember-100: #f0eafd;
   --semantic-success: #22c55e;
   --semantic-danger: #ef4444;
   --semantic-warning: #eab308;
@@ -142,7 +142,7 @@ h1, h2, h3 {
 }
 
 ::selection {
-  background: rgba(13, 140, 99, 0.25);
+  background: rgba(140, 67, 208, 0.25);
   color: var(--obsidian-50);
 }
 
@@ -153,7 +153,7 @@ h1, h2, h3 {
 
 *:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px rgba(13, 140, 99, 0.25);
+  box-shadow: 0 0 0 3px rgba(140, 67, 208, 0.25);
 }
 
 .prism-brand-screen {
@@ -161,8 +161,8 @@ h1, h2, h3 {
   position: relative;
   overflow-x: hidden;
   background:
-    radial-gradient(circle at 16% 8%, rgba(16, 179, 125, 0.08), transparent 30rem),
-    radial-gradient(circle at 92% 82%, rgba(13, 140, 99, 0.06), transparent 34rem),
+    radial-gradient(circle at 16% 8%, rgba(170, 117, 221, 0.08), transparent 30rem),
+    radial-gradient(circle at 92% 82%, rgba(140, 67, 208, 0.06), transparent 34rem),
     var(--bg-primary);
   color: var(--text-primary);
   font-family: 'JetBrains Mono', var(--font-jb), 'SF Mono', 'Fira Code', ui-monospace, monospace;
@@ -191,16 +191,16 @@ h1, h2, h3 {
 
 .prism-brand-screen :is(.bg-indigo-600, .bg-indigo-500) {
   background: linear-gradient(135deg, var(--ember-500), var(--ember-400)) !important;
-  color: #06110d !important;
-  box-shadow: 0 4px 14px rgba(13, 140, 99, 0.25);
+  color: #fff !important;
+  box-shadow: 0 4px 14px rgba(140, 67, 208, 0.25);
 }
 
 .prism-brand-screen :is(.bg-indigo-50, .bg-indigo-100) {
-  background-color: rgba(13, 140, 99, 0.12) !important;
+  background-color: rgba(140, 67, 208, 0.12) !important;
 }
 
 .prism-brand-screen :is(.border-indigo-500, .border-indigo-400) {
-  border-color: rgba(16, 179, 125, 0.72) !important;
+  border-color: rgba(170, 117, 221, 0.72) !important;
 }
 
 .prism-brand-screen input:not([type='file']),
@@ -221,7 +221,7 @@ h1, h2, h3 {
 .prism-brand-screen button:focus-visible,
 .prism-brand-screen a:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px rgba(13, 140, 99, 0.25), 0 0 24px rgba(13, 140, 99, 0.08) !important;
+  box-shadow: 0 0 0 3px rgba(140, 67, 208, 0.25), 0 0 24px rgba(140, 67, 208, 0.08) !important;
 }
 
 .glass,
@@ -242,7 +242,7 @@ h1, h2, h3 {
 
 .glass-interactive:hover {
   transform: translateY(-2px);
-  border-color: rgba(13, 140, 99, 0.18);
+  border-color: rgba(140, 67, 208, 0.18);
   background: var(--widget-hover-bg);
   box-shadow:
     0 0 0 0.5px rgba(255, 255, 255, 0.05),
@@ -293,7 +293,7 @@ h1, h2, h3 {
 }
 
 .text-gradient-ember {
-  background: linear-gradient(135deg, #0d8c63, #10b37d, #34d399);
+  background: linear-gradient(135deg, #8c43d0, #aa75dd, #c5a1e8);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -397,7 +397,7 @@ h1, h2, h3 {
 
 .prism-nav-item:hover,
 .prism-nav-item[data-active='true'] {
-  background: rgba(16, 179, 125, 0.1);
+  background: rgba(170, 117, 221, 0.1);
   color: var(--ember-400);
 }
 
@@ -405,20 +405,20 @@ h1, h2, h3 {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid rgba(16, 179, 125, 0.2);
-  background: rgba(16, 179, 125, 0.08);
+  border: 1px solid rgba(170, 117, 221, 0.2);
+  background: rgba(170, 117, 221, 0.08);
   color: var(--ember-400);
-  box-shadow: 0 0 24px rgba(13, 140, 99, 0.06);
+  box-shadow: 0 0 24px rgba(140, 67, 208, 0.06);
 }
 
 .prism-action-primary {
   background: linear-gradient(135deg, var(--ember-500), var(--ember-400));
-  color: #06110d;
-  box-shadow: 0 4px 14px rgba(13, 140, 99, 0.25);
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(140, 67, 208, 0.25);
   transition: transform 150ms var(--ease-spring), box-shadow 150ms var(--ease-out-expo);
 }
 
-.prism-action-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 22px rgba(13, 140, 99, 0.28); }
+.prism-action-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 22px rgba(140, 67, 208, 0.28); }
 .prism-action-primary:active { transform: scale(0.985); }
 
 .animate-fadeInUp {

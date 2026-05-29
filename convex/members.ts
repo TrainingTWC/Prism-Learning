@@ -141,7 +141,7 @@ export const invite = action({
               Click the button below to accept the invitation and sign in.
               This invite expires in 7 days.
             </p>
-            <a href="${inviteLink}" style="display:inline-block;background:#0d8c63;color:#fff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:500;font-size:15px">
+            <a href="${inviteLink}" style="display:inline-block;background:#8c43d0;color:#fff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:500;font-size:15px">
               Accept invitation
             </a>
             <p style="margin:24px 0 0;color:#888;font-size:12px">Or paste this URL: ${inviteLink}</p>

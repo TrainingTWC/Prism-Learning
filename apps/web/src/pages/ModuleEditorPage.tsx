@@ -192,7 +192,7 @@ export function ModuleEditorPage() {
     setExporting(true);
     try {
       const theme: ExportTheme = workspace?.theme ?? {
-        primary: '#4f46e5', accent: '#10b981', headingFont: 'Inter', bodyFont: 'Inter',
+        primary: '#4f46e5', accent: '#aa75dd', headingFont: 'Inter', bodyFont: 'Inter',
       };
       const blob = await buildScormPackage(
         {
@@ -384,7 +384,7 @@ export function ModuleEditorPage() {
           <span
             className={`rounded-full px-2.5 py-1 text-xs font-semibold uppercase tracking-wide ${
               mod.status === 'published'
-                ? 'bg-emerald-50 text-emerald-700'
+                ? 'bg-violet-50 text-violet-700'
                 : 'bg-amber-50 text-amber-700'
             }`}
           >

@@ -19,7 +19,7 @@ import {
 
 const DEFAULT_THEME: Theme = {
   primary: '#4f46e5',
-  accent: '#10b981',
+  accent: '#aa75dd',
   headingFont: 'Inter',
   bodyFont: 'Inter',
 };
@@ -211,7 +211,7 @@ export function PreviewPage() {
             <div className="flex-1 overflow-y-auto bg-slate-50/70 px-5 py-6">
               {showSummary ? (
                 <div className="prism-feedback-enter flex min-h-full flex-col items-center justify-center text-center">
-                  <div className="flex size-20 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 shadow-sm">
+                  <div className="flex size-20 items-center justify-center rounded-full bg-violet-50 text-violet-600 shadow-sm">
                     <CheckCircle2 className="size-10" />
                   </div>
                   <h2 className="mt-5 text-2xl font-bold text-slate-900">Nicely done</h2>

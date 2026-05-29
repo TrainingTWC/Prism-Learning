@@ -39,7 +39,7 @@ const THEME_INDIGO: Theme = {
 
 const THEME_EMERALD: Theme = {
   primary: '#059669',
-  accent: '#6ee7b7',
+  accent: '#aa75dd',
   headingFont: '"Playfair Display", Georgia, serif',
   bodyFont: 'Lato, ui-sans-serif, system-ui, sans-serif',
 };
@@ -144,7 +144,7 @@ export function RendererDemoPage() {
           }}
         >
           <ThemeCard theme={THEME_INDIGO} label="Theme: Indigo / Inter" />
-          <ThemeCard theme={THEME_EMERALD} label="Theme: Emerald / Playfair" />
+          <ThemeCard theme={THEME_EMERALD} label="Theme: Orchid / Playfair" />
         </div>
 
         {/* Token table */}
@@ -173,7 +173,7 @@ export function RendererDemoPage() {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
             <thead>
               <tr style={{ background: '#f1f5f9' }}>
-                {['Property', 'Indigo theme', 'Emerald theme'].map((h) => (
+                {['Property', 'Indigo theme', 'Orchid theme'].map((h) => (
                   <th
                     key={h}
                     style={{ padding: '8px 16px', textAlign: 'left', color: '#475569', fontWeight: 600 }}
