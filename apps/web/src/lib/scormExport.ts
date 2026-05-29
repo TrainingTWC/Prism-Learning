@@ -385,7 +385,7 @@ function renderBlock(block: ExportBlock, assetMap: Record<string, string>): stri
       try { p = JSON.parse(c) as typeof p; } catch { /* */ }
       if (!p.startNodeId || !p.nodes) return '';
       const data = JSON.stringify(p);
-      return `<div class="prism-scenario" data-scenario='${data.replace(/'/g, '&#39;')}'><div class="prism-sc-header"><span class="prism-sc-step">Step 1</span><span class="prism-sc-title"></span></div><div class="prism-sc-body"><p class="prism-sc-text"></p><div class="prism-sc-choices"></div></div><script>(function(){var r=document.currentScript.parentElement,d=JSON.parse(r.getAttribute('data-scenario')),cur=d.startNodeId,step=1;function render(){var n=d.nodes.find(function(x){return x.id===cur});if(!n)return;r.querySelector('.prism-sc-step').textContent=n.isEnding?'🏁 Complete':'Step '+step;r.querySelector('.prism-sc-title').textContent=n.title;r.querySelector('.prism-sc-text').textContent=n.body;var ch=r.querySelector('.prism-sc-choices');ch.innerHTML='';if(n.isEnding){var b=document.createElement('button');b.type='button';b.className='prism-sc-restart';b.textContent='Restart';b.onclick=function(){cur=d.startNodeId;step=1;render()};ch.appendChild(b)}else{n.choices.forEach(function(c){var b=document.createElement('button');b.type='button';b.className='prism-sc-choice';b.textContent='→ '+c.label;b.disabled=!c.nextNodeId;b.onclick=function(){if(c.nextNodeId){cur=c.nextNodeId;step++;render()}};ch.appendChild(b)})}}render()})();</script></div>`;
+      return `<div class="prism-scenario" data-scenario='${data.replace(/'/g, '&#39;')}'><div class="prism-sc-header"><span class="prism-sc-step">Step 1</span><span class="prism-sc-title"></span></div><div class="prism-sc-body"><p class="prism-sc-text"></p><div class="prism-sc-choices"></div></div><script>(function(){var r=document.currentScript.parentElement,d=JSON.parse(r.getAttribute('data-scenario')),cur=d.startNodeId,step=1;function render(){var n=d.nodes.find(function(x){return x.id===cur});if(!n)return;r.querySelector('.prism-sc-step').textContent=n.isEnding?'Complete':'Step '+step;r.querySelector('.prism-sc-title').textContent=n.title;r.querySelector('.prism-sc-text').textContent=n.body;var ch=r.querySelector('.prism-sc-choices');ch.innerHTML='';if(n.isEnding){var b=document.createElement('button');b.type='button';b.className='prism-sc-restart';b.textContent='Restart';b.onclick=function(){cur=d.startNodeId;step=1;render()};ch.appendChild(b)}else{n.choices.forEach(function(c){var b=document.createElement('button');b.type='button';b.className='prism-sc-choice';b.textContent='→ '+c.label;b.disabled=!c.nextNodeId;b.onclick=function(){if(c.nextNodeId){cur=c.nextNodeId;step++;render()}};ch.appendChild(b)})}}render()})();</script></div>`;
     }
 
     default:
@@ -925,7 +925,7 @@ document.querySelectorAll('.prism-tf').forEach(function(el){
       btn.className=ok?'selected-ok':'selected-bad';
       if(ok){btn.classList.remove('prism-correct-pop');void btn.offsetWidth;btn.classList.add('prism-correct-pop');}
       else{btn.classList.remove('prism-shake');void btn.offsetWidth;btn.classList.add('prism-shake');}
-      if(res){res.textContent=(ok?'✓ Got it! ':'✗ Not this time. ')+(answer?tf:ff);res.style.display='';}}
+      if(res){res.textContent=(ok?'Correct! ':'Not quite. ')+(answer?tf:ff);res.style.display='';}
       if(retry)retry.style.display='inline';
       window.__prismTotal=(window.__prismTotal||0)+1;
       if(ok)window.__prismCorrect=(window.__prismCorrect||0)+1;
@@ -1048,8 +1048,9 @@ function buildWelcomePage(mod: ExportModule, _theme: ExportTheme, hasLogo: boole
 .prism-welcome{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:48px 24px;position:relative;overflow:hidden}
 .prism-welcome::before{content:'';position:fixed;inset:0;background:var(--prism-bg-grad);z-index:0;pointer-events:none}
 .prism-welcome-inner{position:relative;z-index:1;max-width:560px;width:100%}
-.prism-welcome-logo-wrap{width:88px;height:88px;border-radius:22px;background:linear-gradient(135deg,var(--prism-primary),var(--prism-accent));display:flex;align-items:center;justify-content:center;margin:0 auto 36px;box-shadow:0 24px 56px -16px var(--prism-primary)}
-.prism-welcome-logo-wrap img{width:60px;height:60px;object-fit:contain;border-radius:12px}
+.prism-welcome-logo-wrap{margin:0 auto 36px;display:flex;justify-content:center}
+.prism-welcome-logo-img{width:88px;height:88px;object-fit:contain;border-radius:16px}
+.prism-welcome-logo-emblem{width:88px;height:88px;border-radius:22px;background:linear-gradient(135deg,var(--prism-primary),var(--prism-accent));box-shadow:0 24px 56px -16px var(--prism-primary)}
 .prism-welcome-kicker{font-size:11px;font-weight:800;letter-spacing:.2em;text-transform:uppercase;color:var(--prism-primary);margin-bottom:18px;display:flex;align-items:center;justify-content:center;gap:10px}
 .prism-welcome-kicker::before,.prism-welcome-kicker::after{content:'';width:28px;height:2px;border-radius:2px;background:currentColor}
 .prism-welcome h1{font-family:var(--prism-font-heading);font-size:clamp(2rem,6vw,3.5rem);font-weight:800;color:var(--prism-text);letter-spacing:-.025em;line-height:1.1;margin-bottom:20px}
@@ -1065,12 +1066,12 @@ function buildWelcomePage(mod: ExportModule, _theme: ExportTheme, hasLogo: boole
   <div class="prism-welcome">
     <div class="prism-welcome-inner">
       <div class="prism-welcome-logo-wrap">
-        ${hasLogo ? '<img src="assets/logo.png" alt=""/>' : ''}
+        ${hasLogo ? '<img class="prism-welcome-logo-img" src="assets/logo.png" alt=""/>' : '<div class="prism-welcome-logo-emblem"></div>'}
       </div>
       <div class="prism-welcome-kicker">Course</div>
       <h1>${escapeHtml(mod.title)}</h1>
       <p class="prism-welcome-meta">
-        <span>&#128218; ${mod.lessons.length} lesson${mod.lessons.length !== 1 ? 's' : ''}</span>
+        <span>${mod.lessons.length} lesson${mod.lessons.length !== 1 ? 's' : ''}</span>
       </p>
       <button class="prism-welcome-start" id="startBtn">
         Start course
@@ -1111,7 +1112,7 @@ function buildGoodbyePage(_theme: ExportTheme): string {
 .prism-bye{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:48px 24px;position:relative}
 .prism-bye::before{content:'';position:fixed;inset:0;background:var(--prism-bg-grad);z-index:0;pointer-events:none}
 .prism-bye-inner{position:relative;z-index:1;max-width:480px;width:100%}
-.prism-bye-icon{width:88px;height:88px;border-radius:50%;background:linear-gradient(135deg,var(--prism-primary),var(--prism-accent));display:flex;align-items:center;justify-content:center;margin:0 auto 32px;font-size:40px;line-height:1;box-shadow:0 20px 52px -14px var(--prism-primary);animation:prism-bye-pop .65s cubic-bezier(.2,.8,.2,1) both}
+.prism-bye-icon{width:88px;height:88px;border-radius:50%;background:linear-gradient(135deg,var(--prism-primary),var(--prism-accent));display:flex;align-items:center;justify-content:center;margin:0 auto 32px;box-shadow:0 20px 52px -14px var(--prism-primary);animation:prism-bye-pop .65s cubic-bezier(.2,.8,.2,1) both}
 @keyframes prism-bye-pop{0%{transform:scale(.4);opacity:0}60%{transform:scale(1.12)}100%{transform:scale(1);opacity:1}}
 .prism-bye h1{font-family:var(--prism-font-heading);font-size:2.5rem;font-weight:800;color:var(--prism-text);letter-spacing:-.025em;margin-bottom:16px}
 .prism-bye p{font-size:16px;color:var(--prism-text-muted);line-height:1.75}
@@ -1120,7 +1121,7 @@ function buildGoodbyePage(_theme: ExportTheme): string {
 <body>
 <div class="prism-bye">
   <div class="prism-bye-inner">
-    <div class="prism-bye-icon">&#128075;</div>
+    <div class="prism-bye-icon"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
     <h1>Thank you!</h1>
     <p>You can now close this course.</p>
   </div>
