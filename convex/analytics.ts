@@ -1,10 +1,13 @@
 /**
- * Analytics layer — bridges Prism Intelligence audit data to Prism Learning
- * course recommendations.
+ * Analytics layer — bridges Prism Intelligence (PI) audit data to Prism Learning (PL).
  *
- * Both PI and PL share the same Convex deployment, so PI tables (submissions,
- * stores, regions, programs, companies) are directly queryable via ctx.db with
- * type casts, since they live outside PL's generated DataModel.
+ * PI and PL are SEPARATE Convex deployments on the same team. PI tables are NOT
+ * accessible via ctx.db from PL. All PI data is fetched via Convex's HTTP API:
+ *   POST {PI_CONVEX_URL}/api/query  { path, args: { apiToken, ...rest } }
+ *
+ * Required env vars in the PL Convex dashboard:
+ *   PI_CONVEX_URL  — PI deployment URL, e.g. https://abc123.convex.cloud
+ *   PI_API_TOKEN   — static token accepted by PI's validateRequest() guard
  */
 import { v } from 'convex/values';
 import { action, internalMutation, internalQuery, mutation, query } from './_generated/server';
@@ -12,19 +15,11 @@ import { getAuthUserId } from '@convex-dev/auth/server';
 import { internal, api } from './_generated/api';
 import type { Id } from './_generated/dataModel';
 
-// ── PI table shapes ────────────────────────────────────────────────────────
-// Minimal interfaces covering only the fields we read from PI tables.
-
-type PICompany = {
-  _id: string;
-  name: string;
-  slug: string;
-  isActive: boolean;
-};
+// ── PI response shapes ────────────────────────────────────────────────────
+// Minimal interfaces for data returned by PI's public Convex HTTP queries.
 
 type PISubmission = {
   _id: string;
-  companyId: string;
   storeId: string;
   programId: string;
   percentage?: number | null;
@@ -33,31 +28,23 @@ type PISubmission = {
   submittedAt?: number | null;
 };
 
+/** Returned by PI's stores:list — regionName is hydrated from the region join */
 type PIStore = {
   _id: string;
-  companyId: string;
   storeName: string;
   regionId?: string | null;
+  regionName?: string | null;
   amName?: string | null;
   city?: string | null;
   isActive?: boolean;
 };
 
-type PIRegion = {
-  _id: string;
-  companyId: string;
-  name: string;
-};
-
 type PIProgram = {
   _id: string;
-  companyId: string;
   name: string;
-  status?: string;
   sections?: Array<{
     id: string;
     title: string;
-    weight?: number;
     maxScore?: number;
   }>;
 };
@@ -76,33 +63,54 @@ async function requireMember(ctx: any, workspaceId: Id<'workspaces'>) {
   return userId;
 }
 
-// ── Company search ─────────────────────────────────────────────────────────
+// ── PI HTTP bridge ────────────────────────────────────────────────────────
 
 /**
- * Search PI companies by name. Returns up to 10 matches.
- * Returns empty array gracefully if the PI companies table is unavailable.
+ * Call a public query on the Prism Intelligence (PI) Convex deployment via
+ * the HTTP API. Automatically injects apiToken from PI_API_TOKEN env var.
  */
-export const searchPICompanies = query({
-  args: { name: v.string() },
-  handler: async (ctx, { name }) => {
+async function callPIQuery(
+  piUrl: string,
+  piToken: string,
+  path: string,
+  args: Record<string, unknown>,
+): Promise<unknown> {
+  const res = await fetch(`${piUrl}/api/query`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ path, args: { apiToken: piToken, ...args } }),
+  });
+  if (!res.ok) throw new Error(`PI HTTP error ${res.status}: ${(await res.text()).slice(0, 200)}`);
+  const json = (await res.json()) as { value?: unknown; errorMessage?: string };
+  if (json.errorMessage) throw new Error(`PI error: ${json.errorMessage}`);
+  return json.value;
+}
+
+/**
+ * Validate that a given PI company ID is reachable with the configured env
+ * vars. Returns program and store counts on success; throws on failure.
+ */
+export const validatePICompany = action({
+  args: { piCompanyId: v.string() },
+  handler: async (ctx, { piCompanyId }): Promise<{ programCount: number; storeCount: number }> => {
     const userId = await getAuthUserId(ctx);
-    if (!userId) return [];
-    try {
-      const all: PICompany[] = await (ctx.db as any).query('companies').collect();
-      const lower = name.toLowerCase().trim();
-      const active = all.filter((c) => c.isActive);
-      if (!lower) return active.slice(0, 10).map((c) => ({ id: c._id, name: c.name, slug: c.slug }));
-      return active
-        .filter(
-          (c) =>
-            c.name.toLowerCase().includes(lower) ||
-            (c.slug ?? '').toLowerCase().includes(lower),
-        )
-        .slice(0, 10)
-        .map((c) => ({ id: c._id, name: c.name, slug: c.slug }));
-    } catch {
-      return [];
-    }
+    if (!userId) throw new Error('Not authenticated');
+
+    const piUrl = process.env.PI_CONVEX_URL;
+    const piToken = process.env.PI_API_TOKEN;
+    if (!piUrl || !piToken)
+      throw new Error(
+        'PI_CONVEX_URL and PI_API_TOKEN must be set as environment variables in the Convex dashboard',
+      );
+
+    const data = (await callPIQuery(piUrl, piToken, 'analytics:filterOptions', {
+      companyId: piCompanyId,
+    })) as any;
+
+    return {
+      programCount: ((data?.programs ?? []) as unknown[]).length,
+      storeCount: ((data?.stores ?? []) as unknown[]).length,
+    };
   },
 });
 
@@ -219,22 +227,40 @@ export const computeGaps = action({
     const link = await ctx.runQuery(internal.analytics.getLinkInternal, { workspaceId });
     if (!link) throw new Error('No PI company linked — connect Prism Intelligence first');
 
+    const piUrl = process.env.PI_CONVEX_URL;
+    const piToken = process.env.PI_API_TOKEN;
+    if (!piUrl || !piToken)
+      throw new Error(
+        'PI_CONVEX_URL and PI_API_TOKEN must be set as environment variables in the Convex dashboard',
+      );
+
     const since = Date.now() - link.lookbackDays * 24 * 60 * 60 * 1000;
 
-    const [rawSubmissions, rawStores, rawRegions, rawPrograms] = await Promise.all([
-      ctx.runQuery(internal.analytics.fetchPISubmissions, {
-        piCompanyId: link.piCompanyId,
-        since,
+    // Fetch stores (with regionName joined), programs, and submissions from PI via HTTP
+    const [rawStores, rawPrograms, rawSubmissions] = await Promise.all([
+      callPIQuery(piUrl, piToken, 'stores:list', {
+        companyId: link.piCompanyId,
+        active: true,
       }),
-      ctx.runQuery(internal.analytics.fetchPIStores, { piCompanyId: link.piCompanyId }),
-      ctx.runQuery(internal.analytics.fetchPIRegions, { piCompanyId: link.piCompanyId }),
-      ctx.runQuery(internal.analytics.fetchPIPrograms, { piCompanyId: link.piCompanyId }),
+      callPIQuery(piUrl, piToken, 'programs:list', {
+        companyId: link.piCompanyId,
+      }),
+      callPIQuery(piUrl, piToken, 'submissions:list', {
+        companyId: link.piCompanyId,
+        limit: 3000,
+      }),
     ]);
 
-    const submissions = rawSubmissions as PISubmission[];
     const storeMap = new Map((rawStores as PIStore[]).map((s) => [s._id, s]));
-    const regionMap = new Map((rawRegions as PIRegion[]).map((r) => [r._id, r]));
     const programMap = new Map((rawPrograms as PIProgram[]).map((p) => [p._id, p]));
+
+    // Exclude drafts; require a percentage score; limit to the lookback window
+    const submissions = (rawSubmissions as PISubmission[]).filter(
+      (s) =>
+        s.status !== 'draft' &&
+        s.percentage != null &&
+        (s.submittedAt == null || s.submittedAt >= since),
+    );
 
     type AggEntry = {
       sum: number;
@@ -284,8 +310,8 @@ export const computeGaps = action({
       const program = programMap.get(sub.programId);
       if (!program) continue;
 
-      const region = store.regionId ? regionMap.get(store.regionId) : null;
-      const regionName = region?.name ?? store.city ?? 'Unknown Region';
+      // stores:list from PI hydrates regionName via a region join
+      const regionName = store.regionName?.trim() || store.city?.trim() || 'Unknown Region';
       const amName = store.amName?.trim() || 'Unassigned';
       const dims = [
         ['region', regionName],
@@ -353,7 +379,7 @@ export const computeGaps = action({
   },
 });
 
-// ── Internal: PI data fetchers ─────────────────────────────────────────────
+// ── Internal helpers ─────────────────────────────────────────────────────
 
 export const getLinkInternal = internalQuery({
   args: { workspaceId: v.id('workspaces') },
@@ -362,67 +388,6 @@ export const getLinkInternal = internalQuery({
       .query('analyticsLinks')
       .withIndex('by_workspace', (q) => q.eq('workspaceId', workspaceId))
       .first(),
-});
-
-export const fetchPISubmissions = internalQuery({
-  args: { piCompanyId: v.string(), since: v.number() },
-  handler: async (ctx, { piCompanyId, since }) => {
-    try {
-      return await (ctx.db as any)
-        .query('submissions')
-        .filter((q: any) =>
-          q.and(
-            q.eq(q.field('companyId'), piCompanyId),
-            q.gte(q.field('submittedAt'), since),
-          ),
-        )
-        .take(3000);
-    } catch {
-      return [];
-    }
-  },
-});
-
-export const fetchPIStores = internalQuery({
-  args: { piCompanyId: v.string() },
-  handler: async (ctx, { piCompanyId }) => {
-    try {
-      return await (ctx.db as any)
-        .query('stores')
-        .filter((q: any) => q.eq(q.field('companyId'), piCompanyId))
-        .collect();
-    } catch {
-      return [];
-    }
-  },
-});
-
-export const fetchPIRegions = internalQuery({
-  args: { piCompanyId: v.string() },
-  handler: async (ctx, { piCompanyId }) => {
-    try {
-      return await (ctx.db as any)
-        .query('regions')
-        .filter((q: any) => q.eq(q.field('companyId'), piCompanyId))
-        .collect();
-    } catch {
-      return [];
-    }
-  },
-});
-
-export const fetchPIPrograms = internalQuery({
-  args: { piCompanyId: v.string() },
-  handler: async (ctx, { piCompanyId }) => {
-    try {
-      return await (ctx.db as any)
-        .query('programs')
-        .filter((q: any) => q.eq(q.field('companyId'), piCompanyId))
-        .collect();
-    } catch {
-      return [];
-    }
-  },
 });
 
 export const storeGaps = internalMutation({

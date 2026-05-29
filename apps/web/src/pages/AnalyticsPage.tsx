@@ -125,25 +125,42 @@ function SetupWizard({
   workspaceId: Id<'workspaces'>;
   onLinked: () => void;
 }) {
-  const [query, setQuery] = useState('');
-  const [selected, setSelected] = useState<{ id: string; name: string } | null>(null);
+  const [companyId, setCompanyId] = useState('');
+  const [companyName, setCompanyName] = useState('');
   const [benchmark, setBenchmark] = useState(75);
   const [lookback, setLookback] = useState(90);
+  const [validating, setValidating] = useState(false);
+  const [validated, setValidated] = useState<{ programCount: number; storeCount: number } | null>(null);
   const [linking, setLinking] = useState(false);
   const [err, setErr] = useState('');
 
-  const results = useQuery(api.analytics.searchPICompanies, { name: query });
+  const validateCompany = useAction(api.analytics.validatePICompany);
   const linkCompany = useMutation(api.analytics.linkCompany);
 
+  async function handleValidate() {
+    if (!companyId.trim()) return;
+    setValidating(true);
+    setErr('');
+    setValidated(null);
+    try {
+      const result = await validateCompany({ piCompanyId: companyId.trim() });
+      setValidated(result);
+    } catch (e: any) {
+      setErr(e.message ?? 'Validation failed — check the company ID and PI env vars');
+    } finally {
+      setValidating(false);
+    }
+  }
+
   async function handleConnect() {
-    if (!selected) return;
+    if (!companyId.trim() || !companyName.trim()) return;
     setLinking(true);
     setErr('');
     try {
       await linkCompany({
         workspaceId,
-        piCompanyId: selected.id,
-        piCompanyName: selected.name,
+        piCompanyId: companyId.trim(),
+        piCompanyName: companyName.trim(),
         benchmarkScore: benchmark,
         lookbackDays: lookback,
       });
@@ -170,57 +187,54 @@ function SetupWizard({
         </p>
 
         <div className="widget p-6 space-y-5">
-          {/* Company search */}
+          {/* PI Company ID */}
           <div>
             <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
-              Search your PI company
+              PI Company ID
+            </label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={companyId}
+                onChange={(e) => { setCompanyId(e.target.value); setValidated(null); }}
+                placeholder="Paste your PI company document ID…"
+                className="prism-input flex-1"
+              />
+              <button
+                type="button"
+                onClick={handleValidate}
+                disabled={!companyId.trim() || validating}
+                className="flex items-center gap-1.5 rounded-xl border border-[var(--border-subtle)] px-3 py-2 text-xs font-semibold text-[var(--text-muted)] hover:text-[var(--text-primary)] transition disabled:opacity-50"
+              >
+                {validating ? <Loader2 className="size-3.5 animate-spin" /> : <Check className="size-3.5" />}
+                {validating ? 'Checking…' : 'Validate'}
+              </button>
+            </div>
+            <p className="mt-1 text-[11px] text-[var(--text-muted)]">
+              Find this in your Prism Intelligence admin URL or company settings page.
+            </p>
+            {validated && (
+              <div className="mt-2 flex items-center gap-2 rounded-lg border border-[rgba(140,67,208,0.25)] bg-[rgba(140,67,208,0.08)] px-3 py-2">
+                <Check className="size-3.5 text-emerald-400" />
+                <span className="text-xs text-[var(--text-primary)]">
+                  Connected — {validated.programCount} programs, {validated.storeCount} stores
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Company display name */}
+          <div>
+            <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+              Company display name
             </label>
             <input
               type="text"
-              value={query}
-              onChange={(e) => {
-                setQuery(e.target.value);
-                setSelected(null);
-              }}
-              placeholder="Type company name…"
+              value={companyName}
+              onChange={(e) => setCompanyName(e.target.value)}
+              placeholder="e.g. Acme Retail Co."
               className="prism-input w-full"
             />
-            {results !== undefined && query.length > 0 && !selected && (
-              <ul className="mt-1 overflow-hidden rounded-xl border border-[var(--border-subtle)] bg-[var(--card-bg)] shadow-xl">
-                {results.length === 0 ? (
-                  <li className="px-4 py-3 text-sm text-[var(--text-muted)]">No companies found</li>
-                ) : (
-                  results.map((c) => (
-                    <li key={c.id}>
-                      <button
-                        type="button"
-                        className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm text-[var(--text-primary)] hover:bg-[var(--hover-bg)] transition"
-                        onClick={() => {
-                          setSelected(c);
-                          setQuery(c.name);
-                        }}
-                      >
-                        <span className="flex-1">{c.name}</span>
-                        <span className="text-xs text-[var(--text-muted)]">{c.slug}</span>
-                      </button>
-                    </li>
-                  ))
-                )}
-              </ul>
-            )}
-            {selected && (
-              <div className="mt-2 flex items-center gap-2 rounded-lg border border-[rgba(140,67,208,0.25)] bg-[rgba(140,67,208,0.08)] px-3 py-2">
-                <Check className="size-3.5 text-[var(--ember-400)]" />
-                <span className="flex-1 text-sm font-medium text-[var(--text-primary)]">{selected.name}</span>
-                <button
-                  type="button"
-                  onClick={() => { setSelected(null); setQuery(''); }}
-                  className="text-[var(--text-muted)] hover:text-[var(--text-primary)]"
-                >
-                  <X className="size-3.5" />
-                </button>
-              </div>
-            )}
           </div>
 
           {/* Benchmark */}
@@ -267,7 +281,7 @@ function SetupWizard({
           <button
             type="button"
             onClick={handleConnect}
-            disabled={!selected || linking}
+            disabled={!companyId.trim() || !companyName.trim() || linking}
             className="prism-action-primary flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-bold disabled:opacity-50"
           >
             {linking ? <Loader2 className="size-4 animate-spin" /> : <BarChart2 className="size-4" />}
