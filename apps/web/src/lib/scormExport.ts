@@ -504,16 +504,17 @@ body::before{content:'';position:fixed;inset:0;background:var(--prism-bg-grad);z
 .prism-exit:hover{border-color:var(--prism-text-muted);color:var(--prism-text)}
 
 /* ── Page (formerly card) ── */
-.prism-card{position:relative;background:var(--prism-surface);display:flex;flex-direction:column;min-height:calc(100vh - 70px)}
+.prism-card{position:relative;background:var(--prism-surface);display:flex;flex-direction:column;min-height:calc(100vh - 70px);border-top:5px solid var(--prism-primary)}
 
 /* ── Hero band (lesson header) ── */
-.prism-top{position:relative;z-index:2;background:linear-gradient(180deg, color-mix(in srgb, var(--prism-primary) 4%, var(--prism-surface)) 0%, var(--prism-surface) 100%);border-bottom:1px solid var(--prism-border-subtle);padding:56px 64px 36px;}
+.prism-top{position:relative;z-index:2;background:linear-gradient(160deg, color-mix(in srgb, var(--prism-primary) 9%, var(--prism-surface)) 0%, var(--prism-surface) 70%);border-bottom:1px solid var(--prism-border-subtle);padding:48px 64px 32px;}
+.prism-lesson-badge{display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,var(--prism-primary),var(--prism-accent));color:#fff;font-size:11px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;padding:6px 16px;border-radius:999px;margin-bottom:18px;box-shadow:0 8px 20px -8px var(--prism-primary)}
 .prism-kicker{font-size:11px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:var(--prism-primary);display:flex;align-items:center;gap:10px}
 .prism-kicker::before{content:'';width:22px;height:2px;border-radius:2px;background:currentColor}
-.prism-title-row{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;margin-top:14px}
+.prism-title-row{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;margin-top:12px}
 h1{font-family:var(--prism-font-heading);font-size:2.5rem;line-height:1.12;font-weight:800;color:var(--prism-text);letter-spacing:-.025em;max-width:24ch}
 .prism-count{flex-shrink:0;font-size:13px;font-weight:700;color:var(--prism-text-muted);font-variant-numeric:tabular-nums;padding-bottom:6px}
-.prism-progress{position:relative;height:4px;border-radius:999px;background:var(--prism-surface-3);overflow:hidden;margin-top:24px}
+.prism-progress{position:relative;height:7px;border-radius:999px;background:var(--prism-surface-3);overflow:hidden;margin-top:20px}
 .prism-progress span{position:absolute;inset:0 auto 0 0;border-radius:999px;background:linear-gradient(90deg,var(--prism-primary),var(--prism-accent));transition:width var(--prism-motion-slow) var(--prism-ease-emphasized);box-shadow:0 0 12px -2px var(--prism-primary)}
 .prism-progress::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.4),transparent);transform:translateX(-100%);animation:prism-shimmer 2.6s ease-in-out infinite;opacity:.5;pointer-events:none}
 @keyframes prism-shimmer{0%{transform:translateX(-100%)}60%,100%{transform:translateX(200%)}}
@@ -532,14 +533,25 @@ h1{font-family:var(--prism-font-heading);font-size:2.5rem;line-height:1.12;font-
 @keyframes prism-block-reveal{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 @keyframes prism-feedback-enter{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
 @keyframes prism-marker-pop{0%{opacity:0;transform:scale(.65)}100%{opacity:1;transform:scale(1)}}
+@keyframes prism-shake{0%,100%{transform:translateX(0) scale(1)}15%{transform:translateX(-7px) scale(.99)}30%{transform:translateX(6px)}45%{transform:translateX(-4px)}60%{transform:translateX(3px)}75%{transform:translateX(-2px)}}
+@keyframes prism-correct-pop{0%,100%{transform:scale(1)}40%{transform:scale(1.035)}}
+@keyframes prism-ripple-expand{to{transform:scale(4);opacity:0}}
+@keyframes prism-slide-out-next{to{opacity:0;transform:translateX(-32px)}}
+@keyframes prism-slide-out-prev{to{opacity:0;transform:translateX(32px)}}
+@keyframes prism-toast-show{0%{opacity:0;transform:translateX(-50%) translateY(18px)}100%{opacity:1;transform:translateX(-50%) translateY(0)}}
+@keyframes prism-toast-hide{to{opacity:0;transform:translateX(-50%) translateY(12px)}}
+.prism-shake{animation:prism-shake 380ms cubic-bezier(.36,.07,.19,.97) both!important}
+.prism-correct-pop{animation:prism-correct-pop 320ms var(--prism-ease-emphasized) both!important}
 
 /* ── Bottom nav (sticky page footer) ── */
 .prism-nav{position:sticky;bottom:0;z-index:30;display:flex;justify-content:space-between;align-items:center;gap:12px;padding:18px 64px calc(18px + env(safe-area-inset-bottom));border-top:1px solid var(--prism-border-subtle);background:color-mix(in srgb, var(--prism-surface) 92%, transparent);backdrop-filter:saturate(180%) blur(14px)}
-.prism-nav-btn{display:inline-flex;align-items:center;gap:10px;min-height:48px;padding:0 22px;border-radius:10px;border:1px solid var(--prism-border);background:var(--prism-surface);color:var(--prism-text-2);font:inherit;font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;text-decoration:none;transition:all var(--prism-motion-fast) var(--prism-ease-standard)}
+.prism-nav-btn{display:inline-flex;align-items:center;gap:10px;min-height:48px;padding:0 22px;border-radius:10px;border:1px solid var(--prism-border);background:var(--prism-surface);color:var(--prism-text-2);font:inherit;font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;text-decoration:none;transition:all var(--prism-motion-fast) var(--prism-ease-standard);position:relative;overflow:hidden}
 .prism-nav-btn:hover{border-color:var(--prism-text-muted);color:var(--prism-text)}
+.prism-nav-btn:active{transform:scale(.97)}
 .prism-nav-btn--ghost{visibility:hidden;pointer-events:none}
-.prism-nav-btn--primary{min-height:52px;padding:0 32px;background:var(--prism-primary);color:#fff;border-color:transparent;font-size:13px;box-shadow:0 12px 26px -12px var(--prism-primary)}
-.prism-nav-btn--primary:hover{color:#fff;background:color-mix(in srgb, var(--prism-primary) 88%, #000)}
+.prism-nav-btn--primary{min-height:52px;padding:0 36px;background:var(--prism-primary);color:#fff;border-color:transparent;font-size:14px;letter-spacing:.14em;box-shadow:0 14px 28px -12px var(--prism-primary)}
+.prism-nav-btn--primary:hover{color:#fff;background:color-mix(in srgb, var(--prism-primary) 88%, #000);transform:translateY(-1px);box-shadow:0 18px 32px -12px var(--prism-primary)}
+.prism-nav-btn--primary:active{transform:scale(.97) translateY(0)}
 .prism-nav-meta{font-size:11px;font-weight:700;color:var(--prism-text-faint);font-variant-numeric:tabular-nums;display:flex;align-items:center;gap:8px;letter-spacing:.14em;text-transform:uppercase}
 .prism-nav-meta-dot{width:5px;height:5px;border-radius:50%;background:var(--prism-primary)}
 
@@ -646,9 +658,29 @@ html[data-theme="dark"] .prism-tf-btns button.selected-bad{color:#fca5a5}
 /* ── Reduced motion ── */
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}.prism-block{animation:none}.prism-progress::after{display:none}}
 
+/* ── Toast notification ── */
+.prism-toast{position:fixed;bottom:calc(84px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%) translateY(18px);background:linear-gradient(135deg,var(--prism-primary),var(--prism-accent));color:#fff;padding:11px 26px;border-radius:999px;font:inherit;font-weight:800;font-size:13px;letter-spacing:.04em;z-index:45;white-space:nowrap;box-shadow:0 12px 32px -10px var(--prism-primary);animation:prism-toast-show 240ms var(--prism-ease-emphasized) forwards;pointer-events:none;opacity:0}
+.prism-toast.hiding{animation:prism-toast-hide 220ms ease forwards}
+
 /* ── Responsive ── */
 @media (max-width:900px){.prism-top{padding:40px 28px 28px}.prism-lesson{padding:36px 28px 44px}.prism-nav{padding:14px 28px}.prism-toolbar{padding:12px 20px}h1{font-size:2rem}}
-@media (max-width:560px){.prism-top{padding:32px 20px 22px}.prism-lesson{padding:28px 20px 36px}.prism-nav{padding:12px 18px}.prism-nav-btn{padding:0 16px;font-size:11px}.prism-nav-btn--primary{padding:0 22px;font-size:12px}h1{font-size:1.625rem;max-width:none}.prism-toolbar{padding:10px 14px}.prism-brand-name{display:none}}
+@media (max-width:560px){
+  .prism-top{padding:28px 20px 20px;border-top-width:0}
+  .prism-lesson{padding:24px 18px 36px;font-size:1.125rem}
+  .prism-rt{font-size:1.0625rem}
+  .prism-nav{padding:12px 16px calc(12px + env(safe-area-inset-bottom));flex-wrap:wrap;gap:8px}
+  .prism-nav-btn--primary{flex:1 1 100%;justify-content:center;min-height:56px;font-size:15px;order:-1;border-radius:14px}
+  .prism-nav-meta{order:1;flex:1}
+  .prism-nav-btn:not(.prism-nav-btn--primary):not(.prism-nav-btn--ghost){order:2}
+  .prism-nav-btn:not(.prism-nav-btn--primary){padding:0 14px;font-size:11px;min-height:40px}
+  h1{font-size:1.75rem;max-width:none}
+  .prism-toolbar{padding:10px 14px}
+  .prism-brand-name{display:none}
+  .prism-opt{min-height:3.5rem;font-size:1rem;padding:.9rem 1rem}
+  .prism-tf-btns button{min-height:3.5rem;font-size:1rem}
+  .prism-lesson-badge{font-size:10px;padding:5px 14px}
+  .prism-submit{min-height:48px;font-size:1rem}
+}
 
 /* ── New block types ── */
 .prism-quote{border-left:4px solid var(--prism-primary);background:var(--prism-surface-2);border-radius:0 12px 12px 0;padding:1.25rem 1.25rem 1.25rem 1.5rem;margin:1.75rem 0;font-size:1.1rem;font-style:italic;color:var(--prism-text-2);line-height:1.75}
@@ -842,8 +874,10 @@ document.querySelectorAll('.prism-mcq').forEach(function(el){
         else{btn.classList.add('wrong');if(marker)marker.textContent='✗';allOk=false;}
       } else if(correct && !selected.has(id)){allOk=false;}
     });
-    result.textContent=allOk?'✓ Correct!':'✗ Not quite.';
+    result.textContent=allOk?'✓ Nailed it!':'✗ Not quite — give it another go!';
     result.className='prism-result '+(allOk?'ok':'bad');
+    if(allOk){opts.forEach(function(btn){if(btn.classList.contains('correct')){btn.classList.remove('prism-correct-pop');void btn.offsetWidth;btn.classList.add('prism-correct-pop');}});}
+    else{opts.forEach(function(btn){if(btn.classList.contains('wrong')){btn.classList.remove('prism-shake');void btn.offsetWidth;btn.classList.add('prism-shake');}});}
     submit.style.display='none';
     retry.style.display='inline';
     // SCORM score
@@ -871,7 +905,9 @@ document.querySelectorAll('.prism-tf').forEach(function(el){
       var answer=btn.dataset.answer==='true';
       var ok=answer===correct;
       btn.className=ok?'selected-ok':'selected-bad';
-      if(res){res.textContent=(ok?'✓ Correct! ':'✗ Not quite. ')+(answer?tf:ff);res.style.display='';}
+      if(ok){btn.classList.remove('prism-correct-pop');void btn.offsetWidth;btn.classList.add('prism-correct-pop');}
+      else{btn.classList.remove('prism-shake');void btn.offsetWidth;btn.classList.add('prism-shake');}
+      if(res){res.textContent=(ok?'✓ Got it! ':'✗ Not this time. ')+(answer?tf:ff);res.style.display='';}}
       if(retry)retry.style.display='inline';
       if(typeof API!=='undefined'){try{API.LMSSetValue('cmi.core.lesson_status',ok?'passed':'failed');API.LMSCommit('');}catch(e){}}
     });
@@ -1042,7 +1078,7 @@ function buildLessonPage(
     </div>
     <main class="prism-card">
       <header class="prism-top">
-        <div class="prism-kicker"><span>Lesson ${lessonIdx + 1} of ${total}</span></div>
+        <span class="prism-lesson-badge">Lesson ${lessonIdx + 1} of ${total}</span>
         <div class="prism-title-row">
           <h1>${escapeHtml(lesson.title)}</h1>
           <span class="prism-count">${pct}%</span>
@@ -1071,8 +1107,8 @@ function buildLessonPage(
 <div class="prism-complete" data-prism-complete aria-hidden="true">
   <div class="prism-complete-card" role="dialog" aria-label="Module complete">
     <div class="prism-complete-check">✓</div>
-    <h2>Module complete</h2>
-    <p>Nice work — you've reached the end of <strong>${escapeHtml(mod.title)}</strong>. Your progress has been saved to your LMS.</p>
+    <h2>You crushed it!</h2>
+    <p>That's a wrap on <strong>${escapeHtml(mod.title)}</strong>. Your progress has been saved. Keep it up!</p>
     <div class="prism-complete-row">
       <button type="button" data-prism-restart>Restart</button>
       <button type="button" class="primary" data-prism-close-complete>Done</button>
@@ -1137,17 +1173,77 @@ function buildLessonPage(
   var closeC=document.querySelector('[data-prism-close-complete]');
   if(closeC)closeC.addEventListener('click',function(){if(complete){complete.classList.remove('show');complete.setAttribute('aria-hidden','true');}var api=window.__prismAPI;if(api){try{api.LMSFinish('');}catch(e){}}});
 
-  // Page transition on outbound nav clicks
+  // ── Ripple effect on primary buttons ──
+  function addRipple(el,e){
+    var rect=el.getBoundingClientRect();
+    var x=(e&&e.clientX?e.clientX:rect.left+rect.width/2)-rect.left;
+    var y=(e&&e.clientY?e.clientY:rect.top+rect.height/2)-rect.top;
+    var size=Math.max(rect.width,rect.height)*2.5;
+    var ink=document.createElement('span');
+    ink.style.cssText='position:absolute;border-radius:50%;background:rgba(255,255,255,.28);width:'+size+'px;height:'+size+'px;left:'+(x-size/2)+'px;top:'+(y-size/2)+'px;transform:scale(0);animation:prism-ripple-expand 550ms ease-out forwards;pointer-events:none;z-index:1;';
+    el.appendChild(ink);
+    setTimeout(function(){if(ink.parentNode)ink.parentNode.removeChild(ink);},600);
+  }
+  document.querySelectorAll('.prism-nav-btn--primary').forEach(function(btn){
+    btn.addEventListener('click',function(e){addRipple(btn,e);});
+  });
+
+  // ── Toast notification ──
+  function showToast(msg){
+    var old=document.querySelector('.prism-toast');
+    if(old&&old.parentNode)old.parentNode.removeChild(old);
+    var t=document.createElement('div');
+    t.className='prism-toast';t.textContent=msg;
+    document.body.appendChild(t);
+    setTimeout(function(){t.classList.add('hiding');setTimeout(function(){if(t.parentNode)t.parentNode.removeChild(t);},250);},2400);
+  }
+
+  // ── Directional page transitions ──
+  function navigateTo(href,dir){
+    var card=document.querySelector('.prism-card');
+    // scroll lesson content to top first
+    var content=document.querySelector('[data-prism-content]');
+    if(content)content.scrollTop=0;
+    if(!card){window.location.href=href;return;}
+    card.style.transition='opacity 175ms ease, transform 175ms cubic-bezier(.4,0,1,1)';
+    card.style.opacity='0';
+    card.style.transform=dir==='next'?'translateX(-28px)':'translateX(28px)';
+    setTimeout(function(){window.location.href=href;},160);
+  }
   document.querySelectorAll('a[href^="lesson_"]').forEach(function(a){
     a.addEventListener('click',function(e){
-      var card=document.querySelector('.prism-card');
-      if(!card)return;
       e.preventDefault();
-      card.style.transition='opacity 200ms ease, transform 240ms cubic-bezier(.2,.8,.2,1)';
-      card.style.opacity='0';card.style.transform='translateY(-6px)';
-      setTimeout(function(){window.location.href=a.getAttribute('href');},180);
+      var dir=a.hasAttribute('data-prism-next')?'next':'prev';
+      if(dir==='next')showToast('Moving on \u2192');
+      navigateTo(a.getAttribute('href'),dir);
     });
   });
+
+  // ── Touch swipe navigation ──
+  var swipeEl=document.querySelector('[data-prism-content]');
+  if(swipeEl){
+    var _sx=0,_sy=0,_sw=false;
+    swipeEl.addEventListener('touchstart',function(e){
+      _sx=e.touches[0].clientX;_sy=e.touches[0].clientY;_sw=true;
+    },{passive:true});
+    swipeEl.addEventListener('touchend',function(e){
+      if(!_sw)return;_sw=false;
+      var dx=e.changedTouches[0].clientX-_sx;
+      var dy=e.changedTouches[0].clientY-_sy;
+      if(Math.abs(dx)>Math.abs(dy)&&Math.abs(dx)>64){
+        var target=dx<0?document.querySelector('[data-prism-next]'):document.querySelector('[data-prism-prev]');
+        if(target){
+          var dir2=dx<0?'next':'prev';
+          var href2=target.getAttribute('href');
+          if(href2)navigateTo(href2,dir2);else target.click();
+        }
+      }
+    },{passive:true});
+    // Cancel swipe on scroll
+    swipeEl.addEventListener('touchmove',function(e){
+      if(_sw&&Math.abs(e.touches[0].clientY-_sy)>10)_sw=false;
+    },{passive:true});
+  }
 })();
 </script>
 <script src="assets/interaction.js"></script>
