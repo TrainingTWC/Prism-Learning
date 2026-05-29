@@ -99,10 +99,12 @@ export function PrismWorkspaceShell({
             <BookOpen className="size-4" />
             <span className="prism-sidebar-label">Home</span>
           </Link>
-          <Link to="/intelligence" data-active={active === 'intelligence'} className="prism-nav-item" title="Intelligence">
-            <BarChart2 className="size-4" />
-            <span className="prism-sidebar-label">Intelligence</span>
-          </Link>
+          {!workspaceId && (
+            <Link to="/intelligence" data-active={active === 'intelligence'} className="prism-nav-item" title="Intelligence">
+              <BarChart2 className="size-4" />
+              <span className="prism-sidebar-label">Intelligence</span>
+            </Link>
+          )}
           {workspaceId && navItems.map((item) => {
             const Icon = item.icon;
             return (
