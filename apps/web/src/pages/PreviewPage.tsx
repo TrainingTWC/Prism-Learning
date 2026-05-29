@@ -3,8 +3,8 @@ import { Link, useNavigate, useParams } from '@tanstack/react-router';
 import { api } from '~convex/_generated/api';
 import type { Id } from '~convex/_generated/dataModel';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { buildPreviewHtml } from '~/lib/scormExport';
-import type { ExportBlock, ExportLesson, ExportModule, ExportTheme } from '~/lib/scormExport';
+import { buildPreviewHtml } from '../lib/scormExport';
+import type { ExportBlock, ExportLesson, ExportModule, ExportTheme } from '../lib/scormExport';
 import {
   ChevronLeft,
   Eye,
