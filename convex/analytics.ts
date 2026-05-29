@@ -9,7 +9,7 @@
  *   PI_CONVEX_URL  — PI deployment URL, e.g. https://abc123.convex.cloud
  *   PI_API_TOKEN   — static token accepted by PI's validateRequest() guard
  */
-import { v } from 'convex/values';
+import { v, ConvexError } from 'convex/values';
 import { action, internalMutation, internalQuery, mutation, query } from './_generated/server';
 import { getAuthUserId } from '@convex-dev/auth/server';
 import { internal, api } from './_generated/api';
@@ -75,14 +75,27 @@ async function callPIQuery(
   path: string,
   args: Record<string, unknown>,
 ): Promise<unknown> {
-  const res = await fetch(`${piUrl}/api/query`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ path, args: { apiToken: piToken, ...args } }),
-  });
-  if (!res.ok) throw new Error(`PI HTTP error ${res.status}: ${(await res.text()).slice(0, 200)}`);
-  const json = (await res.json()) as { value?: unknown; errorMessage?: string };
-  if (json.errorMessage) throw new Error(`PI error: ${json.errorMessage}`);
+  const url = `${piUrl}/api/query`;
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path, args: { apiToken: piToken, ...args } }),
+    });
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e);
+    throw new ConvexError(`PI fetch failed (${url}): ${msg}`);
+  }
+  const text = await res.text();
+  if (!res.ok) throw new ConvexError(`PI HTTP ${res.status} for ${path}: ${text.slice(0, 300)}`);
+  let json: { value?: unknown; errorMessage?: string; status?: string };
+  try {
+    json = JSON.parse(text);
+  } catch {
+    throw new ConvexError(`PI non-JSON response for ${path}: ${text.slice(0, 300)}`);
+  }
+  if (json.errorMessage) throw new ConvexError(`PI error on ${path}: ${json.errorMessage}`);
   return json.value;
 }
 
@@ -109,8 +122,9 @@ export const validatePICompany = action({
         companyId: piCompanyId,
       });
     } catch (e: unknown) {
+      if (e instanceof ConvexError) throw e;
       const msg = e instanceof Error ? e.message : String(e);
-      throw new Error(`Cannot reach PI at ${piUrl}: ${msg}`);
+      throw new ConvexError(`Cannot reach PI at ${piUrl}: ${msg}`);
     }
     const d = data as Record<string, unknown[]> | null;
 
@@ -260,8 +274,9 @@ export const computeGaps = action({
         }),
       ]);
     } catch (e: unknown) {
+      if (e instanceof ConvexError) throw e;
       const msg = e instanceof Error ? e.message : String(e);
-      throw new Error(`Failed to fetch data from PI (URL: ${piUrl}): ${msg}`);
+      throw new ConvexError(`Failed to fetch data from PI (URL: ${piUrl}): ${msg}`);
     }
 
     const storeMap = new Map(
