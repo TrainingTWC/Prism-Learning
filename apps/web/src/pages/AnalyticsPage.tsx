@@ -831,7 +831,7 @@ export function AnalyticsPage() {
                 try {
                   await computeGaps({ workspaceId: wsId });
                 } catch (e: any) {
-                  setComputeErr(e.message ?? 'Compute failed');
+                  setComputeErr(e.data ?? e.message ?? 'Compute failed');
                 } finally {
                   setComputing(false);
                 }
@@ -903,7 +903,7 @@ export function AnalyticsPage() {
               try {
                 await computeGaps({ workspaceId: wsId });
               } catch (e: any) {
-                setComputeErr(e.message ?? 'Compute failed');
+                setComputeErr(e.data ?? e.message ?? 'Compute failed');
               } finally {
                 setComputing(false);
               }

@@ -243,15 +243,15 @@ export const computeGaps = action({
   args: { workspaceId: v.id('workspaces') },
   handler: async (ctx, { workspaceId }) => {
     const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error('Not authenticated');
+    if (!userId) throw new ConvexError('Not authenticated');
 
     const link = await ctx.runQuery(internal.analytics.getLinkInternal, { workspaceId });
-    if (!link) throw new Error('No PI company linked — connect Prism Intelligence first');
+    if (!link) throw new ConvexError('No PI company linked — connect Prism Intelligence first');
 
     const piUrl = (process.env.PI_CONVEX_URL ?? '').replace(/\/+$/, '');
     const piToken = process.env.PI_API_TOKEN;
     if (!piUrl || !piToken)
-      throw new Error(
+      throw new ConvexError(
         'PI_CONVEX_URL and PI_API_TOKEN must be set as environment variables in the Convex dashboard',
       );
 
