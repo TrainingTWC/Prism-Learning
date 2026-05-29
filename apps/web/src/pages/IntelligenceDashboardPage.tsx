@@ -1145,5 +1145,12 @@ export function IntelligenceDashboardPage() {
 
   // Pick the first workspace — could be enhanced to remember last active one
   const ws = workspaces[0];
+  if (!ws) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <Loader2 className="size-5 animate-spin text-[var(--text-muted)]" />
+      </div>
+    );
+  }
   return <IntelligenceContent workspaceId={ws._id} workspaceName={ws.name} />;
 }
