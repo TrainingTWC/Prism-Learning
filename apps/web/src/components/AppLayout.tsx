@@ -4,11 +4,13 @@ import { Outlet, useNavigate } from '@tanstack/react-router';
 import { useMutation } from 'convex/react';
 import { api } from '~convex/_generated/api';
 import { CheckCircle2, X } from 'lucide-react';
+import { PENDING_EMPLOYEE_LOGIN_STORAGE_KEY } from '../lib/employeeLogin';
 
 export function AppLayout() {
   const { isAuthenticated, isLoading } = useConvexAuth();
   const navigate = useNavigate();
   const acceptInvites = useMutation(api.members.acceptPendingInvites);
+  const bootstrapEmployeeProfile = useMutation(api.users.bootstrapEmployeeProfile);
   const [joinedWorkspaces, setJoinedWorkspaces] = useState<string[]>([]);
 
   useEffect(() => {
@@ -25,6 +27,37 @@ export function AppLayout() {
       });
     }
   }, [isAuthenticated, acceptInvites]);
+
+  useEffect(() => {
+    if (!isAuthenticated || typeof window === 'undefined') return;
+
+    const raw = window.localStorage.getItem(PENDING_EMPLOYEE_LOGIN_STORAGE_KEY);
+    if (!raw) return;
+
+    let pending: { employeeId?: string; companyCode?: string } | null = null;
+    try {
+      pending = JSON.parse(raw) as { employeeId?: string; companyCode?: string };
+    } catch {
+      window.localStorage.removeItem(PENDING_EMPLOYEE_LOGIN_STORAGE_KEY);
+      return;
+    }
+
+    if (!pending?.employeeId || !pending?.companyCode) {
+      window.localStorage.removeItem(PENDING_EMPLOYEE_LOGIN_STORAGE_KEY);
+      return;
+    }
+
+    void bootstrapEmployeeProfile({
+      employeeId: pending.employeeId,
+      companyCode: pending.companyCode,
+    })
+      .catch((error) => {
+        console.error('Failed to bootstrap employee profile', error);
+      })
+      .finally(() => {
+        window.localStorage.removeItem(PENDING_EMPLOYEE_LOGIN_STORAGE_KEY);
+      });
+  }, [bootstrapEmployeeProfile, isAuthenticated]);
 
   if (isLoading) {
     return (

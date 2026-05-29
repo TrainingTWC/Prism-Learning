@@ -49,6 +49,30 @@ type PIProgram = {
   }>;
 };
 
+const DEFAULT_PI_COMPANY_CODE = 'HBPL';
+
+function normalizeCompanyCode(value: string) {
+  return value.trim().toUpperCase();
+}
+
+function resolvePICompanyId(companyCode: string, currentPiCompanyId?: string) {
+  const normalizedCompanyCode = normalizeCompanyCode(companyCode);
+  const configuredCompanyCode = normalizeCompanyCode(
+    process.env.PI_COMPANY_CODE ?? DEFAULT_PI_COMPANY_CODE,
+  );
+  const configuredCompanyId = (process.env.PI_COMPANY_ID ?? '').trim();
+
+  if (normalizedCompanyCode === configuredCompanyCode) {
+    if (configuredCompanyId) return configuredCompanyId;
+    if (currentPiCompanyId?.trim()) return currentPiCompanyId.trim();
+    throw new ConvexError(
+      `PI_COMPANY_ID must be set in Convex env vars before company code ${normalizedCompanyCode} can be resolved.`,
+    );
+  }
+
+  return companyCode.trim();
+}
+
 // ── Auth helper ────────────────────────────────────────────────────────────
 
 async function requireMember(ctx: any, workspaceId: Id<'workspaces'>) {
@@ -100,12 +124,15 @@ async function callPIQuery(
 }
 
 /**
- * Validate that a given PI company ID is reachable with the configured env
+ * Validate that a given company code is reachable with the configured env
  * vars. Returns program and store counts on success; throws on failure.
  */
 export const validatePICompany = action({
-  args: { piCompanyId: v.string() },
-  handler: async (ctx, { piCompanyId }): Promise<{ programCount: number; storeCount: number }> => {
+  args: {
+    companyCode: v.string(),
+    currentPiCompanyId: v.optional(v.string()),
+  },
+  handler: async (ctx, { companyCode, currentPiCompanyId }): Promise<{ programCount: number; storeCount: number }> => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error('Not authenticated');
 
@@ -115,6 +142,8 @@ export const validatePICompany = action({
       throw new Error(
         'PI_CONVEX_URL and PI_API_TOKEN must be set as environment variables in the Convex dashboard',
       );
+
+    const piCompanyId = resolvePICompanyId(companyCode, currentPiCompanyId);
 
     let data: unknown;
     try {
@@ -140,7 +169,7 @@ export const validatePICompany = action({
 export const linkCompany = mutation({
   args: {
     workspaceId: v.id('workspaces'),
-    piCompanyId: v.string(),
+    companyCode: v.string(),
     piCompanyName: v.string(),
     benchmarkScore: v.number(),
     lookbackDays: v.number(),
@@ -151,10 +180,12 @@ export const linkCompany = mutation({
       .query('analyticsLinks')
       .withIndex('by_workspace', (q) => q.eq('workspaceId', args.workspaceId))
       .first();
+    const piCompanyId = resolvePICompanyId(args.companyCode, existing?.piCompanyId);
     const now = Date.now();
     if (existing) {
       await ctx.db.patch(existing._id, {
-        piCompanyId: args.piCompanyId,
+        companyCode: normalizeCompanyCode(args.companyCode),
+        piCompanyId,
         piCompanyName: args.piCompanyName,
         benchmarkScore: args.benchmarkScore,
         lookbackDays: args.lookbackDays,
@@ -164,7 +195,8 @@ export const linkCompany = mutation({
     }
     return await ctx.db.insert('analyticsLinks', {
       workspaceId: args.workspaceId,
-      piCompanyId: args.piCompanyId,
+      companyCode: normalizeCompanyCode(args.companyCode),
+      piCompanyId,
       piCompanyName: args.piCompanyName,
       benchmarkScore: args.benchmarkScore,
       lookbackDays: args.lookbackDays,

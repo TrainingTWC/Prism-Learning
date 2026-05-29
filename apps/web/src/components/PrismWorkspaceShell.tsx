@@ -29,7 +29,7 @@ const navItems = [
   { id: 'build', label: 'AI Builder', icon: Brain, to: '/w/$workspaceId/build-with-ai' },
   { id: 'theme', label: 'Brand Theme', icon: Palette, to: '/w/$workspaceId/theme' },
   { id: 'members', label: 'Members', icon: Users, to: '/w/$workspaceId/members' },
-  { id: 'analytics', label: 'Intelligence', icon: BarChart2, to: '/w/$workspaceId/analytics' },
+  { id: 'analytics', label: 'Analytics', icon: BarChart2, to: '/w/$workspaceId/analytics' },
 ] as const;
 
 export function PrismWorkspaceShell({

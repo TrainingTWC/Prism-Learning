@@ -5,6 +5,17 @@ import { v } from 'convex/values';
 export default defineSchema({
   ...authTables,
 
+  employeeProfiles: defineTable({
+    email: v.string(),
+    employeeId: v.string(),
+    companyCode: v.string(),
+    userId: v.optional(v.id('users')),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index('by_email', ['email'])
+    .index('by_user', ['userId']),
+
   workspaces: defineTable({
     name: v.string(),
     ownerId: v.id('users'),
@@ -135,6 +146,7 @@ export default defineSchema({
   /** Links a PL workspace to a Prism Intelligence company */
   analyticsLinks: defineTable({
     workspaceId: v.id('workspaces'),
+    companyCode: v.optional(v.string()),
     /** PI company _id stored as string (cross-deployment reference) */
     piCompanyId: v.string(),
     piCompanyName: v.string(),

@@ -34,6 +34,8 @@ import {
 import { useState, useMemo } from 'react';
 import { PrismWorkspaceShell } from '../components/PrismWorkspaceShell';
 
+const DEFAULT_COMPANY_CODE = 'HBPL';
+
 // ── Types ──────────────────────────────────────────────────────────────────
 
 type GapDoc = {
@@ -66,6 +68,7 @@ type RecDoc = {
 
 type AnalyticsLink = {
   _id: Id<'analyticsLinks'>;
+  companyCode?: string;
   piCompanyId: string;
   piCompanyName: string;
   benchmarkScore: number;
@@ -200,7 +203,7 @@ function SetupWizard({
   workspaceId: Id<'workspaces'>;
   onLinked: () => void;
 }) {
-  const [companyId, setCompanyId] = useState('');
+  const [companyId, setCompanyId] = useState(DEFAULT_COMPANY_CODE);
   const [companyName, setCompanyName] = useState('');
   const [benchmark, setBenchmark] = useState(75);
   const [lookback, setLookback] = useState(90);
@@ -220,10 +223,10 @@ function SetupWizard({
     setErr('');
     setValidated(null);
     try {
-      const result = await validateCompany({ piCompanyId: companyId.trim() });
+      const result = await validateCompany({ companyCode: companyId.trim() });
       setValidated(result);
     } catch (e: any) {
-      setErr(e.data ?? e.message ?? 'Validation failed — check the company ID and PI env vars');
+      setErr(e.data ?? e.message ?? 'Validation failed — check the company code and PI env vars');
     } finally {
       setValidating(false);
     }
@@ -236,7 +239,7 @@ function SetupWizard({
     try {
       await linkCompany({
         workspaceId,
-        piCompanyId: companyId.trim(),
+        companyCode: companyId.trim(),
         piCompanyName: companyName.trim(),
         benchmarkScore: benchmark,
         lookbackDays: lookback,
@@ -266,17 +269,17 @@ function SetupWizard({
         <div className="widget space-y-5 p-6">
           <div>
             <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
-              PI Company ID
+              Company code
             </label>
             <div className="flex gap-2">
               <input
                 type="text"
                 value={companyId}
                 onChange={(e) => {
-                  setCompanyId(e.target.value);
+                  setCompanyId(e.target.value.toUpperCase());
                   setValidated(null);
                 }}
-                placeholder="Paste your PI company document ID…"
+                placeholder={DEFAULT_COMPANY_CODE}
                 className="prism-input flex-1"
               />
               <button
@@ -294,8 +297,7 @@ function SetupWizard({
               </button>
             </div>
             <p className="mt-1 text-[11px] text-[var(--text-muted)]">
-              Find this in your Prism Intelligence admin — companies table → copy the{' '}
-              <code className="rounded bg-[var(--input-bg)] px-1 py-0.5">_id</code> value.
+              Use your Prism Intelligence company code. For this workspace, that should be {DEFAULT_COMPANY_CODE}.
             </p>
             {validated && (
               <div className="mt-2 flex items-center gap-2 rounded-lg border border-[rgba(140,67,208,0.25)] bg-[rgba(140,67,208,0.08)] px-3 py-2">
@@ -390,7 +392,7 @@ function SettingsPanel({
   workspaceId: Id<'workspaces'>;
   onClose: () => void;
 }) {
-  const [companyId, setCompanyId] = useState(link.piCompanyId);
+  const [companyId, setCompanyId] = useState(link.companyCode ?? DEFAULT_COMPANY_CODE);
   const [companyName, setCompanyName] = useState(link.piCompanyName);
   const [benchmark, setBenchmark] = useState(link.benchmarkScore);
   const [lookback, setLookback] = useState(link.lookbackDays);
@@ -404,7 +406,7 @@ function SettingsPanel({
   const validateCompany = useAction(api.analytics.validatePICompany);
   const linkCompany = useMutation(api.analytics.linkCompany);
 
-  const companyChanged = companyId.trim() !== link.piCompanyId;
+  const companyChanged = companyId.trim() !== (link.companyCode ?? DEFAULT_COMPANY_CODE);
 
   async function handleValidate() {
     if (!companyId.trim()) return;
@@ -412,10 +414,13 @@ function SettingsPanel({
     setErr('');
     setValidated(null);
     try {
-      const result = await validateCompany({ piCompanyId: companyId.trim() });
+      const result = await validateCompany({
+        companyCode: companyId.trim(),
+        currentPiCompanyId: link.piCompanyId,
+      });
       setValidated(result);
     } catch (e: any) {
-      setErr(e.data ?? e.message ?? 'Validation failed — check the company ID and PI env vars');
+      setErr(e.data ?? e.message ?? 'Validation failed — check the company code and PI env vars');
     } finally {
       setValidating(false);
     }
@@ -425,7 +430,7 @@ function SettingsPanel({
     if (!companyId.trim() || !companyName.trim()) return;
     // If the company ID changed, require a successful validation first.
     if (companyChanged && !validated) {
-      setErr('Validate the new company ID before saving.');
+      setErr('Validate the new company code before saving.');
       return;
     }
     setSaving(true);
@@ -433,7 +438,7 @@ function SettingsPanel({
     try {
       await linkCompany({
         workspaceId,
-        piCompanyId: companyId.trim(),
+        companyCode: companyId.trim(),
         piCompanyName: companyName.trim(),
         benchmarkScore: benchmark,
         lookbackDays: lookback,
@@ -452,7 +457,7 @@ function SettingsPanel({
         <div className="mb-5 flex items-center justify-between">
           <div>
             <h3 className="font-bold text-[var(--text-primary)]">Intelligence Settings</h3>
-            <p className="mt-0.5 text-xs text-[var(--text-muted)]">{link.piCompanyName}</p>
+            <p className="mt-0.5 text-xs text-[var(--text-muted)]">{link.companyCode ?? DEFAULT_COMPANY_CODE} · {link.piCompanyName}</p>
           </div>
           <button
             type="button"
@@ -466,14 +471,14 @@ function SettingsPanel({
         <div className="space-y-4">
           <div>
             <label className="mb-2 block text-xs font-semibold text-[var(--text-muted)]">
-              PI Company ID
+              Company code
             </label>
             <div className="flex gap-2">
               <input
                 type="text"
                 value={companyId}
                 onChange={(e) => {
-                  setCompanyId(e.target.value);
+                  setCompanyId(e.target.value.toUpperCase());
                   setValidated(null);
                 }}
                 placeholder="PI company document ID…"
@@ -1000,7 +1005,7 @@ function IntelligenceContent({
       title="Training Intelligence"
       subtitle={
         link
-          ? `${link.piCompanyName} · ${link.lookbackDays}-day lookback · benchmark ${link.benchmarkScore}%`
+          ? `${link.companyCode ?? DEFAULT_COMPANY_CODE} · ${link.piCompanyName} · ${link.lookbackDays}-day lookback · benchmark ${link.benchmarkScore}%`
           : 'Loading…'
       }
       showPageHeader={false}
@@ -1046,7 +1051,7 @@ function IntelligenceContent({
         </h1>
         {link && (
           <p className="mt-1.5 text-sm text-[var(--text-muted)]">
-            {link.piCompanyName} ·{' '}
+            {link.companyCode ?? DEFAULT_COMPANY_CODE} · {link.piCompanyName} ·{' '}
             <span className="text-[var(--text-secondary)]">{link.lookbackDays}-day lookback</span> ·
             benchmark{' '}
             <span className="text-[var(--text-secondary)]">{link.benchmarkScore}%</span>
@@ -1096,7 +1101,7 @@ function IntelligenceContent({
             <p className="mt-2 max-w-sm text-sm text-[var(--text-muted)]">
               Run your first gap analysis to surface training priorities from{' '}
               <span className="text-[var(--text-secondary)]">
-                {link?.piCompanyName ?? 'Prism Intelligence'}
+                {(link?.companyCode ?? DEFAULT_COMPANY_CODE)} · {link?.piCompanyName ?? 'Prism Intelligence'}
               </span>{' '}
               audit results.
             </p>

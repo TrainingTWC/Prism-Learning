@@ -1,14 +1,22 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearch } from '@tanstack/react-router';
-import { useConvexAuth } from 'convex/react';
+import { useConvexAuth, useMutation } from 'convex/react';
 import { useAuthActions } from '@convex-dev/auth/react';
+import { api } from '~convex/_generated/api';
 import { Loader2, Mail, ArrowLeft, Eye, EyeOff } from 'lucide-react';
+import {
+  DEFAULT_COMPANY_CODE,
+  PENDING_EMPLOYEE_LOGIN_STORAGE_KEY,
+  normalizeCompanyCode,
+  normalizeEmployeeId,
+} from '../lib/employeeLogin';
 
 type Step = 'form' | 'sent' | 'completing';
 
 export function SignInPage() {
   const { isAuthenticated, isLoading } = useConvexAuth();
   const { signIn } = useAuthActions();
+  const validateEmployeeLogin = useMutation(api.users.validateEmployeeLogin);
   const navigate = useNavigate();
 
   // TanStack Router search params
@@ -20,6 +28,8 @@ export function SignInPage() {
 
   const [step, setStep] = useState<Step>(hasCode ? 'completing' : 'form');
   const [email, setEmail] = useState('');
+  const [employeeId, setEmployeeId] = useState('');
+  const [companyCode, setCompanyCode] = useState(DEFAULT_COMPANY_CODE);
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -46,13 +56,39 @@ export function SignInPage() {
   /** Sign in with password / PIN */
   async function handlePasswordSignIn(e: React.FormEvent) {
     e.preventDefault();
-    if (!email.trim() || !password) return;
+    if (!email.trim() || !employeeId.trim() || !companyCode.trim() || !password) return;
 
     setSubmitting(true);
     setError(null);
 
     try {
-      await signIn('password', { email: email.trim(), password, flow: 'signIn' });
+      const validation = await validateEmployeeLogin({
+        email: email.trim(),
+        employeeId: normalizeEmployeeId(employeeId),
+        companyCode: normalizeCompanyCode(companyCode),
+      });
+      if (!validation.ok) {
+        setError(validation.message ?? 'Employee login validation failed.');
+        return;
+      }
+
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem(
+          PENDING_EMPLOYEE_LOGIN_STORAGE_KEY,
+          JSON.stringify({
+            employeeId: normalizeEmployeeId(employeeId),
+            companyCode: validation.companyCode,
+          }),
+        );
+      }
+
+      await signIn('password', {
+        email: email.trim(),
+        password,
+        flow: 'signIn',
+        employeeId: normalizeEmployeeId(employeeId),
+        companyCode: normalizeCompanyCode(companyCode),
+      });
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Sign in failed.';
       // If they don't have a password set, prompt them to use magic link
@@ -72,15 +108,39 @@ export function SignInPage() {
 
   /** Send a magic-link email */
   async function handleMagicLink() {
-    if (!email.trim()) {
-      setError('Enter your email address first.');
+    if (!email.trim() || !employeeId.trim() || !companyCode.trim()) {
+      setError('Enter your email, EMPID, and company code first.');
       return;
     }
     setSendingLink(true);
     setError(null);
 
     try {
-      await signIn('email', { email: email.trim() });
+      const validation = await validateEmployeeLogin({
+        email: email.trim(),
+        employeeId: normalizeEmployeeId(employeeId),
+        companyCode: normalizeCompanyCode(companyCode),
+      });
+      if (!validation.ok) {
+        setError(validation.message ?? 'Employee login validation failed.');
+        return;
+      }
+
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem(
+          PENDING_EMPLOYEE_LOGIN_STORAGE_KEY,
+          JSON.stringify({
+            employeeId: normalizeEmployeeId(employeeId),
+            companyCode: validation.companyCode,
+          }),
+        );
+      }
+
+      await signIn('email', {
+        email: email.trim(),
+        employeeId: normalizeEmployeeId(employeeId),
+        companyCode: normalizeCompanyCode(companyCode),
+      });
       setStep('sent');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
@@ -135,7 +195,7 @@ export function SignInPage() {
           <div className="widget p-8 shadow-sm">
             <h1 className="mb-1 text-xl font-bold text-[var(--text-primary)]">Sign in</h1>
             <p className="mb-6 text-sm text-[var(--text-tertiary)]">
-              Sign in with your password / PIN, or use a magic link.
+              Sign in with your email, EMPID, company code, and password / PIN, or use a magic link.
             </p>
 
             <form onSubmit={(e) => void handlePasswordSignIn(e)} noValidate>
@@ -156,6 +216,39 @@ export function SignInPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
                 className="mb-4 block w-full rounded-lg border px-3.5 py-2.5 text-sm outline-none"
+              />
+
+              <label
+                htmlFor="employeeId"
+                className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]"
+              >
+                EMPID
+              </label>
+              <input
+                id="employeeId"
+                type="text"
+                autoComplete="username"
+                required
+                value={employeeId}
+                onChange={(e) => setEmployeeId(e.target.value.toUpperCase())}
+                placeholder="e.g. EMP1024"
+                className="mb-4 block w-full rounded-lg border px-3.5 py-2.5 text-sm outline-none"
+              />
+
+              <label
+                htmlFor="companyCode"
+                className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]"
+              >
+                Company code
+              </label>
+              <input
+                id="companyCode"
+                type="text"
+                required
+                value={companyCode}
+                onChange={(e) => setCompanyCode(e.target.value.toUpperCase())}
+                placeholder={DEFAULT_COMPANY_CODE}
+                className="mb-4 block w-full rounded-lg border px-3.5 py-2.5 text-sm uppercase outline-none"
               />
 
               {/* Password / PIN */}
@@ -193,7 +286,7 @@ export function SignInPage() {
 
               <button
                 type="submit"
-                disabled={submitting || !email.trim() || !password}
+                disabled={submitting || !email.trim() || !employeeId.trim() || !companyCode.trim() || !password}
                 className="prism-action-primary flex w-full items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-bold disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {submitting && <Loader2 className="size-4 animate-spin" />}
