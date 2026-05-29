@@ -129,4 +129,72 @@ export default defineSchema({
   })
     .index('by_module', ['moduleId'])
     .index('by_user_module', ['userId', 'moduleId']),
+
+  // ── Analytics layer ─────────────────────────────────────────────────────
+
+  /** Links a PL workspace to a Prism Intelligence company */
+  analyticsLinks: defineTable({
+    workspaceId: v.id('workspaces'),
+    /** PI company _id stored as string (cross-deployment reference) */
+    piCompanyId: v.string(),
+    piCompanyName: v.string(),
+    /** Score below which a category is considered a gap (default 75) */
+    benchmarkScore: v.number(),
+    /** How far back to pull submissions in days (default 90) */
+    lookbackDays: v.number(),
+    lastComputedAt: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index('by_workspace', ['workspaceId']),
+
+  /** Materialized gap analysis results — recomputed on demand */
+  trainingGaps: defineTable({
+    workspaceId: v.id('workspaces'),
+    piCompanyId: v.string(),
+    /** Geographic or management dimension */
+    dimension: v.union(v.literal('region'), v.literal('areaManager')),
+    /** Region name or area manager name */
+    dimensionValue: v.string(),
+    /** Program section title, or "Overall" for the overall program score */
+    category: v.string(),
+    programName: v.string(),
+    avgScore: v.number(),
+    benchmark: v.number(),
+    /** benchmark - avgScore (positive = below benchmark) */
+    gap: v.number(),
+    severity: v.union(
+      v.literal('critical'), // gap > 25
+      v.literal('high'),     // gap 15–25
+      v.literal('medium'),   // gap 8–15
+      v.literal('low'),      // gap 2–8
+    ),
+    submissionCount: v.number(),
+    computedAt: v.number(),
+  })
+    .index('by_workspace', ['workspaceId'])
+    .index('by_workspace_severity', ['workspaceId', 'severity'])
+    .index('by_workspace_dimension', ['workspaceId', 'dimension']),
+
+  /** AI-generated course recommendations derived from training gaps */
+  courseRecommendations: defineTable({
+    workspaceId: v.id('workspaces'),
+    gapId: v.id('trainingGaps'),
+    title: v.string(),
+    rationale: v.string(),
+    targetAudience: v.string(),
+    keyTopics: v.array(v.string()),
+    estimatedLessons: v.number(),
+    /** 1–10, higher = more urgent */
+    priority: v.number(),
+    status: v.union(
+      v.literal('pending'),
+      v.literal('building'),
+      v.literal('built'),
+      v.literal('dismissed'),
+    ),
+    moduleId: v.optional(v.id('modules')),
+    createdAt: v.number(),
+  })
+    .index('by_workspace', ['workspaceId'])
+    .index('by_workspace_status', ['workspaceId', 'status']),
 });

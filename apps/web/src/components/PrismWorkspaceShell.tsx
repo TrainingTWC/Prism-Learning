@@ -1,5 +1,5 @@
 import { Link, useNavigate } from '@tanstack/react-router';
-import { Bell, BookOpen, Brain, ChevronsLeft, ChevronsRight, KeyRound, Layers, LogOut, Moon, Palette, Search, Sun, Users } from 'lucide-react';
+import { BarChart2, Bell, BookOpen, Brain, ChevronsLeft, ChevronsRight, KeyRound, Layers, LogOut, Moon, Palette, Search, Sun, Users } from 'lucide-react';
 import { SetPasswordModal } from './SetPasswordModal';
 import { useAuthActions } from '@convex-dev/auth/react';
 import { useQuery } from 'convex/react';
@@ -7,7 +7,7 @@ import { api } from '~convex/_generated/api';
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 
-type ActiveSection = 'home' | 'overview' | 'modules' | 'build' | 'theme' | 'members';
+type ActiveSection = 'home' | 'overview' | 'modules' | 'build' | 'theme' | 'members' | 'analytics';
 
 type PrismWorkspaceShellProps = {
   workspaceId?: string;
@@ -29,6 +29,7 @@ const navItems = [
   { id: 'build', label: 'AI Builder', icon: Brain, to: '/w/$workspaceId/build-with-ai' },
   { id: 'theme', label: 'Brand Theme', icon: Palette, to: '/w/$workspaceId/theme' },
   { id: 'members', label: 'Members', icon: Users, to: '/w/$workspaceId/members' },
+  { id: 'analytics', label: 'Intelligence', icon: BarChart2, to: '/w/$workspaceId/analytics' },
 ] as const;
 
 export function PrismWorkspaceShell({
