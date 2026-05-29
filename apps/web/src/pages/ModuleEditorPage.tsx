@@ -187,7 +187,9 @@ export function ModuleEditorPage() {
   useEffect(() => {
     document.documentElement.classList.toggle('light', theme === 'light');
     localStorage.setItem('prism-theme', theme);
-  }, [theme]);opts: ExportOptions) => {
+  }, [theme]);
+
+  const handleExportScorm = useCallback(async (opts: ExportOptions) => {
     if (!content) return;
     setExporting(true);
     setExportDialogOpen(false);
@@ -210,8 +212,6 @@ export function ModuleEditorPage() {
         },
         theme,
         opts,
-        },
-        theme,
         async (storageId) => {
           const url = await convex.query(api.files.getFileUrl, { storageId });
           return url ?? '';
@@ -409,11 +409,11 @@ export function ModuleEditorPage() {
             className="rounded-lg p-2 text-[var(--text-tertiary)] hover:bg-[var(--card-bg-hover)] hover:text-[var(--text-primary)] transition-colors"
             aria-label={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
           >
-            {theme === 'ligsetExportDialogOpen(truesize-4" /> : <Sun className="size-4" />}
+            {theme === 'light' ? <Moon className="size-4" /> : <Sun className="size-4" />}
           </button>
           <button
             type="button"
-            onClick={() => void handleExportScorm()}
+            onClick={() => setExportDialogOpen(true)}
             disabled={exporting}
             className="flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-60"
           >
@@ -591,6 +591,68 @@ export function ModuleEditorPage() {
             </div>
           )}
         </main>
+
+    {/* ── SCORM Export Dialog ── */}
+    {exportDialogOpen && (
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Export SCORM options"
+        className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      >
+        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setExportDialogOpen(false)} />
+        <div className="relative w-full max-w-md rounded-2xl border border-[var(--border-primary)] bg-[var(--bg-primary)] p-6 shadow-2xl">
+          <div className="mb-5 flex items-center justify-between">
+            <h2 className="text-lg font-bold text-[var(--text-primary)]">Export SCORM 1.2</h2>
+            <button type="button" onClick={() => setExportDialogOpen(false)} className="rounded-lg p-1.5 text-[var(--text-muted)] hover:bg-[var(--card-bg-hover)]"><X className="size-4" /></button>
+          </div>
+
+          {/* Completion criterion */}
+          <div className="mb-5">
+            <p className="mb-2 text-sm font-semibold text-[var(--text-secondary)]">Mark complete when…</p>
+            <div className="flex flex-col gap-2">
+              {([['completed', 'Learner reaches the final lesson'], ['passed', 'Learner achieves the pass score']] as const).map(([val, label]) => (
+                <label key={val} className="flex cursor-pointer items-center gap-3 rounded-xl border border-[var(--border-primary)] px-4 py-3 transition-colors hover:border-indigo-500 has-[:checked]:border-indigo-500 has-[:checked]:bg-indigo-500/10">
+                  <input
+                    type="radio"
+                    name="completionCriteria"
+                    value={val}
+                    checked={exportOptions.completionCriteria === val}
+                    onChange={() => setExportOptions((o) => ({ ...o, completionCriteria: val }))}
+                    className="accent-indigo-500"
+                  />
+                  <span className="text-sm text-[var(--text-primary)]">{label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {/* Pass score */}
+          <div className="mb-6">
+            <label className="mb-2 block text-sm font-semibold text-[var(--text-secondary)]">
+              Pass score: <span className="text-indigo-400">{exportOptions.passingScore}%</span>
+            </label>
+            <input
+              type="range"
+              min={0}
+              max={100}
+              step={5}
+              value={exportOptions.passingScore}
+              onChange={(e) => setExportOptions((o) => ({ ...o, passingScore: Number(e.target.value) }))}
+              className="w-full accent-indigo-500"
+            />
+            <div className="mt-1 flex justify-between text-[11px] text-[var(--text-muted)]"><span>0%</span><span>50%</span><span>100%</span></div>
+          </div>
+
+          <div className="flex gap-3 justify-end">
+            <button type="button" onClick={() => setExportDialogOpen(false)} className="rounded-lg border border-[var(--border-primary)] px-4 py-2 text-sm font-semibold text-[var(--text-secondary)] hover:bg-[var(--card-bg-hover)]">Cancel</button>
+            <button type="button" onClick={() => void handleExportScorm(exportOptions)} className="flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700">
+              <Download className="size-4" /> Export
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
       </div>
     </div>
   );
