@@ -20,6 +20,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { useState, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { PrismWorkspaceShell } from '../components/PrismWorkspaceShell';
 
 const DEFAULT_COMPANY_CODE = 'HBPL';
@@ -368,9 +369,9 @@ function SettingsPanel({
     }
   }
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <div className="w-full max-w-sm rounded-2xl border border-[var(--border-subtle)] bg-[var(--card-bg)] p-6 shadow-2xl">
+  return createPortal(
+    <div className="prism-modal-overlay fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-black/55 p-4 backdrop-blur-md">
+      <div className="my-auto w-full max-w-sm rounded-2xl border border-[var(--border-subtle)] bg-[var(--card-bg)] p-6 shadow-2xl">
         <div className="mb-5 flex items-center justify-between">
           <h3 className="font-bold text-[var(--text-primary)]">Intelligence Settings</h3>
           <button
@@ -500,7 +501,8 @@ function SettingsPanel({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -540,9 +542,9 @@ function BuildModuleDialog({
     }
   }
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <div className="w-full max-w-md rounded-2xl border border-[var(--border-subtle)] bg-[var(--card-bg)] p-6 shadow-2xl">
+  return createPortal(
+    <div className="prism-modal-overlay fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-black/55 p-4 backdrop-blur-md">
+      <div className="my-auto w-full max-w-md rounded-2xl border border-[var(--border-subtle)] bg-[var(--card-bg)] p-6 shadow-2xl">
         <div className="mb-5 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Sparkles className="size-4 text-[var(--ember-400)]" />
@@ -616,7 +618,8 @@ function BuildModuleDialog({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
