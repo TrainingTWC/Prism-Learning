@@ -227,7 +227,7 @@ export const computeGaps = action({
     const link = await ctx.runQuery(internal.analytics.getLinkInternal, { workspaceId });
     if (!link) throw new Error('No PI company linked — connect Prism Intelligence first');
 
-    const piUrl = process.env.PI_CONVEX_URL;
+    const piUrl = (process.env.PI_CONVEX_URL ?? '').replace(/\/+$/, '');
     const piToken = process.env.PI_API_TOKEN;
     if (!piUrl || !piToken)
       throw new Error(
@@ -237,25 +237,35 @@ export const computeGaps = action({
     const since = Date.now() - link.lookbackDays * 24 * 60 * 60 * 1000;
 
     // Fetch stores (with regionName joined), programs, and submissions from PI via HTTP
-    const [rawStores, rawPrograms, rawSubmissions] = await Promise.all([
-      callPIQuery(piUrl, piToken, 'stores:list', {
-        companyId: link.piCompanyId,
-        active: true,
-      }),
-      callPIQuery(piUrl, piToken, 'programs:list', {
-        companyId: link.piCompanyId,
-      }),
-      callPIQuery(piUrl, piToken, 'submissions:list', {
-        companyId: link.piCompanyId,
-        limit: 3000,
-      }),
-    ]);
+    let rawStores: unknown, rawPrograms: unknown, rawSubmissions: unknown;
+    try {
+      [rawStores, rawPrograms, rawSubmissions] = await Promise.all([
+        callPIQuery(piUrl, piToken, 'stores:list', {
+          companyId: link.piCompanyId,
+          active: true,
+        }),
+        callPIQuery(piUrl, piToken, 'programs:list', {
+          companyId: link.piCompanyId,
+        }),
+        callPIQuery(piUrl, piToken, 'submissions:list', {
+          companyId: link.piCompanyId,
+          limit: 3000,
+        }),
+      ]);
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      throw new Error(`Failed to fetch data from PI (URL: ${piUrl}): ${msg}`);
+    }
 
-    const storeMap = new Map((rawStores as PIStore[]).map((s) => [s._id, s]));
-    const programMap = new Map((rawPrograms as PIProgram[]).map((p) => [p._id, p]));
+    const storeMap = new Map(
+      (Array.isArray(rawStores) ? (rawStores as PIStore[]) : []).map((s) => [s._id, s]),
+    );
+    const programMap = new Map(
+      (Array.isArray(rawPrograms) ? (rawPrograms as PIProgram[]) : []).map((p) => [p._id, p]),
+    );
 
     // Exclude drafts; require a percentage score; limit to the lookback window
-    const submissions = (rawSubmissions as PISubmission[]).filter(
+    const submissions = (Array.isArray(rawSubmissions) ? (rawSubmissions as PISubmission[]) : []).filter(
       (s) =>
         s.status !== 'draft' &&
         s.percentage != null &&
