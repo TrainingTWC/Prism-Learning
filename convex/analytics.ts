@@ -96,20 +96,27 @@ export const validatePICompany = action({
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error('Not authenticated');
 
-    const piUrl = process.env.PI_CONVEX_URL;
+    const piUrl = (process.env.PI_CONVEX_URL ?? '').replace(/\/+$/, '');
     const piToken = process.env.PI_API_TOKEN;
     if (!piUrl || !piToken)
       throw new Error(
         'PI_CONVEX_URL and PI_API_TOKEN must be set as environment variables in the Convex dashboard',
       );
 
-    const data = (await callPIQuery(piUrl, piToken, 'analytics:filterOptions', {
-      companyId: piCompanyId,
-    })) as any;
+    let data: unknown;
+    try {
+      data = await callPIQuery(piUrl, piToken, 'analytics:filterOptions', {
+        companyId: piCompanyId,
+      });
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      throw new Error(`Cannot reach PI at ${piUrl}: ${msg}`);
+    }
+    const d = data as Record<string, unknown[]> | null;
 
     return {
-      programCount: ((data?.programs ?? []) as unknown[]).length,
-      storeCount: ((data?.stores ?? []) as unknown[]).length,
+      programCount: Array.isArray(d?.programs) ? d!.programs.length : 0,
+      storeCount: Array.isArray(d?.stores) ? d!.stores.length : 0,
     };
   },
 });
