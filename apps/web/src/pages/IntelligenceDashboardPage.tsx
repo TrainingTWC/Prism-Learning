@@ -1218,7 +1218,7 @@ export function IntelligenceDashboardPage() {
 
   if (workspaces.length === 0) {
     return (
-      <PrismWorkspaceShell active="home" title="Prism Learning" showPageHeader={false}>
+      <PrismWorkspaceShell active="intelligence" title="Prism Learning" showPageHeader={false}>
         <div className="flex flex-col items-center gap-6 py-20 text-center">
           <div className="prism-icon-tile size-16 rounded-2xl">
             <Layers className="size-7" />

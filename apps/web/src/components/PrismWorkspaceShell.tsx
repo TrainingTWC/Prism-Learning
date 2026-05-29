@@ -7,7 +7,7 @@ import { api } from '~convex/_generated/api';
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 
-type ActiveSection = 'home' | 'overview' | 'modules' | 'build' | 'theme' | 'members' | 'analytics';
+type ActiveSection = 'home' | 'intelligence' | 'overview' | 'modules' | 'build' | 'theme' | 'members' | 'analytics';
 
 type PrismWorkspaceShellProps = {
   workspaceId?: string;
@@ -98,6 +98,10 @@ export function PrismWorkspaceShell({
           <Link to="/" data-active={active === 'home'} className="prism-nav-item" title="Home">
             <BookOpen className="size-4" />
             <span className="prism-sidebar-label">Home</span>
+          </Link>
+          <Link to="/intelligence" data-active={active === 'intelligence'} className="prism-nav-item" title="Intelligence">
+            <BarChart2 className="size-4" />
+            <span className="prism-sidebar-label">Intelligence</span>
           </Link>
           {workspaceId && navItems.map((item) => {
             const Icon = item.icon;
