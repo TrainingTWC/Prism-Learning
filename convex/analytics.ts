@@ -613,6 +613,15 @@ export const listRecommendations = query({
   },
 });
 
+export const getRecommendation = query({
+  args: { recId: v.id('courseRecommendations') },
+  handler: async (ctx, { recId }) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return null;
+    return await ctx.db.get(recId);
+  },
+});
+
 export const dismissRecommendation = mutation({
   args: { recId: v.id('courseRecommendations') },
   handler: async (ctx, { recId }) => {

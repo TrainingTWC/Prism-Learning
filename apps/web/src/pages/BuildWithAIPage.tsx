@@ -1,12 +1,12 @@
 import { useState, useRef, useEffect } from 'react';
-import { useParams, useNavigate } from '@tanstack/react-router';
+import { useParams, useNavigate, useSearch } from '@tanstack/react-router';
 import { useAction, useMutation, useQuery } from 'convex/react';
 import { api } from '~convex/_generated/api';
 import type { Id } from '~convex/_generated/dataModel';
 import {
   Sparkles, Loader2, BookOpen, Zap, FileText,
   Upload, X, ChevronRight, ChevronLeft, ArrowRight,
-  Check, PenLine, FolderOpen,
+  Check, PenLine, FolderOpen, BarChart2,
 } from 'lucide-react';
 import { PrismWorkspaceShell } from '../components/PrismWorkspaceShell';
 
@@ -64,12 +64,254 @@ async function extractPdfText(file: File): Promise<string> {
   return pages.join('\n\n').slice(0, 18000);
 }
 
+// ── From-recommendation component (extracted for clarity) ─────────────────
+
+type RecDoc = {
+  _id: Id<'courseRecommendations'>;
+  title: string;
+  rationale: string;
+  targetAudience: string;
+  keyTopics: string[];
+  estimatedLessons: number;
+  priority: number;
+  status: string;
+};
+
+function FromRecommendationMode({
+  workspaceId,
+  workspaceName,
+  rec,
+  recId,
+  buildFromRec,
+  onNavigateToModule,
+  onBack,
+}: {
+  workspaceId: Id<'workspaces'>;
+  workspaceName: string;
+  rec: RecDoc | null | undefined;
+  recId: string;
+  buildFromRec: (args: {
+    recId: Id<'courseRecommendations'>;
+    workspaceId: Id<'workspaces'>;
+    moduleType: 'microLearning' | 'course';
+  }) => Promise<Id<'modules'>>;
+  onNavigateToModule: (id: string) => void;
+  onBack: () => void;
+}) {
+  const [moduleType, setModuleType] = useState<'microLearning' | 'course'>('course');
+  const [building, setBuilding] = useState(false);
+  const [err, setErr] = useState('');
+  const [statusIdx, setStatusIdx] = useState(0);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    if (building) {
+      intervalRef.current = setInterval(() => {
+        setStatusIdx((i) => Math.min(i + 1, GENERATING_MESSAGES.length - 1));
+      }, 5000);
+    } else {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      setStatusIdx(0);
+    }
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [building]);
+
+  if (building) {
+    return (
+      <div className="prism-brand-screen flex min-h-screen flex-col items-center justify-center px-6">
+        <div className="w-full max-w-xs text-center">
+          <div className="relative mx-auto mb-6 flex h-20 w-20 items-center justify-center">
+            <div className="absolute inset-0 rounded-2xl bg-[rgba(140,67,208,0.15)] animate-pulse" />
+            <Sparkles className="relative size-9 text-[var(--ember-400)]" />
+          </div>
+          <h2 className="text-xl font-bold text-[var(--text-primary)]">Building your module</h2>
+          <p className="mt-2 text-sm text-[var(--text-secondary)] transition-all duration-500">
+            {GENERATING_MESSAGES[statusIdx]}
+          </p>
+          <div className="mt-8 flex items-center justify-center gap-2">
+            {GENERATING_MESSAGES.map((_, i) => (
+              <span
+                key={i}
+                className={`block h-1.5 rounded-full transition-all duration-500 ${
+                  i === statusIdx
+                    ? 'w-6 bg-[var(--ember-400)]'
+                    : i < statusIdx
+                      ? 'w-1.5 bg-[var(--ember-300)]'
+                      : 'w-1.5 bg-[var(--border-subtle)]'
+                }`}
+              />
+            ))}
+          </div>
+          <p className="mt-6 text-xs text-[var(--text-muted)]">
+            Llama 3.3 is generating content — this usually takes 15–30 seconds.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  async function handleBuild() {
+    setBuilding(true);
+    setErr('');
+    try {
+      const moduleId = await buildFromRec({
+        recId: recId as Id<'courseRecommendations'>,
+        workspaceId,
+        moduleType,
+      });
+      onNavigateToModule(moduleId as string);
+    } catch (e: any) {
+      setErr(e.data ?? e.message ?? 'Build failed');
+      setBuilding(false);
+    }
+  }
+
+  return (
+    <PrismWorkspaceShell
+      workspaceId={workspaceId as string}
+      workspaceName={workspaceName}
+      active="build"
+      overline="AI-native learning builder"
+      title="Build from recommendation"
+    >
+      <div className="mx-auto max-w-xl">
+        {/* Back */}
+        <button
+          type="button"
+          onClick={onBack}
+          className="mb-6 flex items-center gap-1.5 text-xs font-semibold text-[var(--text-muted)] transition hover:text-[var(--text-primary)]"
+        >
+          <ChevronLeft className="size-3.5" /> Back to Intelligence
+        </button>
+
+        {/* Recommendation context */}
+        {rec === undefined ? (
+          <div className="flex items-center gap-2 text-[var(--text-muted)]">
+            <Loader2 className="size-4 animate-spin" /> Loading recommendation…
+          </div>
+        ) : rec === null ? (
+          <div className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+            Recommendation not found. It may have been dismissed.
+          </div>
+        ) : (
+          <>
+            {/* Rec context card */}
+            <div className="widget mb-6 p-5">
+              <div className="mb-1 flex items-center gap-2">
+                <BarChart2 className="size-4 text-[var(--ember-400)]" />
+                <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--ember-400)]">
+                  AI Recommendation
+                </p>
+              </div>
+              <h2 className="mt-1 text-lg font-bold leading-snug text-[var(--text-primary)]">
+                {rec.title}
+              </h2>
+              <p className="mt-1.5 text-sm leading-relaxed text-[var(--text-muted)]">
+                {rec.rationale}
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2 text-[10px] text-[var(--text-muted)]">
+                <span>Audience: {rec.targetAudience}</span>
+                <span>·</span>
+                <span>{rec.estimatedLessons} lessons</span>
+              </div>
+              {rec.keyTopics.length > 0 && (
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  {rec.keyTopics.map((t) => (
+                    <span
+                      key={t}
+                      className="rounded-full border border-[var(--border-subtle)] bg-[var(--input-bg)] px-2.5 py-0.5 text-[10px] text-[var(--text-secondary)]"
+                    >
+                      {t}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Format picker */}
+            <h3 className="mb-3 text-sm font-bold text-[var(--text-primary)]">Choose format</h3>
+            <div className="mb-8 grid grid-cols-2 gap-3">
+              {(
+                [
+                  {
+                    id: 'microLearning' as const,
+                    icon: <Zap className="size-5" />,
+                    label: 'Micro-learning',
+                    desc: '5–8 min · focused, single concept',
+                  },
+                  {
+                    id: 'course' as const,
+                    icon: <BookOpen className="size-5" />,
+                    label: 'Full course',
+                    desc: '20–40 min · multi-lesson structured',
+                  },
+                ] as const
+              ).map((opt) => (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => setModuleType(opt.id)}
+                  className={`widget flex flex-col items-start gap-3 rounded-xl p-5 text-left transition ${
+                    moduleType === opt.id
+                      ? 'border-[var(--ember-400)]/60 bg-[rgba(140,67,208,0.08)] ring-1 ring-[var(--ember-400)]/30'
+                      : 'hover:border-[var(--ember-400)]/30 hover:bg-[var(--hover-bg)]'
+                  }`}
+                >
+                  <div
+                    className={`prism-icon-tile rounded-lg p-2.5 ${
+                      moduleType === opt.id ? 'opacity-100' : 'opacity-60'
+                    }`}
+                  >
+                    {opt.icon}
+                  </div>
+                  <div>
+                    <p className="font-bold text-[var(--text-primary)]">{opt.label}</p>
+                    <p className="mt-0.5 text-xs text-[var(--text-muted)]">{opt.desc}</p>
+                  </div>
+                  {moduleType === opt.id && (
+                    <Check className="absolute right-4 top-4 size-4 text-[var(--ember-400)]" />
+                  )}
+                </button>
+              ))}
+            </div>
+
+            {err && (
+              <p className="mb-4 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+                {err}
+              </p>
+            )}
+
+            <button
+              type="button"
+              onClick={() => void handleBuild()}
+              disabled={building}
+              className="prism-action-primary flex w-full items-center justify-center gap-2 rounded-xl py-3 font-bold disabled:opacity-50"
+            >
+              <Sparkles className="size-4" /> Build module with AI
+            </button>
+          </>
+        )}
+      </div>
+    </PrismWorkspaceShell>
+  );
+}
+
 export function BuildWithAIPage() {
   const { workspaceId } = useParams({ from: '/protected/w/$workspaceId/build-with-ai' });
   const wsId = workspaceId as Id<'workspaces'>;
   const navigate = useNavigate();
+  const search = useSearch({ from: '/protected/w/$workspaceId/build-with-ai' });
+  const recId = (search as { recId?: string }).recId;
+
   const workspace = useQuery(api.workspaces.getById, { workspaceId: wsId });
+  const rec = useQuery(
+    api.analytics.getRecommendation,
+    recId ? { recId: recId as Id<'courseRecommendations'> } : 'skip',
+  );
   const generateModule = useAction(api.ai.generateModule);
+  const buildFromRec = useAction(api.analytics.buildModuleFromRecommendation);
   const generateUploadUrl = useMutation(api.files.generateUploadUrl);
   const deleteFile = useMutation(api.files.deleteFile);
 
@@ -259,6 +501,26 @@ export function BuildWithAIPage() {
           </p>
         </div>
       </div>
+    );
+  }
+
+  // ── From-recommendation mode ──────────────────────────────────────
+  if (recId) {
+    return (
+      <FromRecommendationMode
+        workspaceId={wsId}
+        workspaceName={workspace?.name ?? 'Workspace'}
+        rec={rec ?? null}
+        recId={recId}
+        buildFromRec={buildFromRec}
+        onNavigateToModule={(moduleId: string) => {
+          void navigate({
+            to: '/w/$workspaceId/m/$moduleId',
+            params: { workspaceId, moduleId },
+          });
+        }}
+        onBack={() => void navigate({ to: '/' })}
+      />
     );
   }
 

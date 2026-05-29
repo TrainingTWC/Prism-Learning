@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useAction } from 'convex/react';
-import { useParams, Link } from '@tanstack/react-router';
+import { useParams, useNavigate, Link } from '@tanstack/react-router';
 import { api } from '~convex/_generated/api';
 import type { Id } from '~convex/_generated/dataModel';
 import {
@@ -628,9 +628,8 @@ function RecCard({
   workspaceId: Id<'workspaces'>;
   onDismiss: (id: Id<'courseRecommendations'>) => void;
 }) {
-  const [building, setBuilding] = useState(false);
   const [builtId, setBuiltId] = useState<string | null>(rec.moduleId ?? null);
-
+  const navigate = useNavigate();
   const dismiss = useMutation(api.analytics.dismissRecommendation);
 
   const priorityColor =
@@ -644,8 +643,15 @@ function RecCard({
 
   if (rec.status === 'dismissed') return null;
 
+  function handleBuildWithAI() {
+    void navigate({
+      to: '/w/$workspaceId/build-with-ai',
+      params: { workspaceId: workspaceId as string },
+      search: { recId: rec._id as string },
+    });
+  }
+
   return (
-    <>
       <div className="widget p-5 relative">
         {/* Dismiss button */}
         <button
@@ -716,7 +722,7 @@ function RecCard({
           <div className="flex gap-2">
             <button
               type="button"
-              onClick={() => setBuilding(true)}
+              onClick={handleBuildWithAI}
               className="prism-action-primary flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold"
             >
               <Sparkles className="size-3.5" /> Build with AI
@@ -731,19 +737,6 @@ function RecCard({
           </div>
         )}
       </div>
-
-      {building && (
-        <BuildModuleDialog
-          rec={rec}
-          workspaceId={workspaceId}
-          onClose={() => setBuilding(false)}
-          onBuilt={(id) => {
-            setBuiltId(id);
-            setBuilding(false);
-          }}
-        />
-      )}
-    </>
   );
 }
 

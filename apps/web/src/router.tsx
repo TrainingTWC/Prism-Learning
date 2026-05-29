@@ -7,6 +7,7 @@ import {
 import { AppLayout } from './components/AppLayout';
 import { MobileGuard } from './components/MobileGuard';
 import { SignInPage } from './pages/SignInPage';
+import { IntelligenceDashboardPage } from './pages/IntelligenceDashboardPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { WorkspacePage } from './pages/WorkspacePage';
 import { MembersPage } from './pages/MembersPage';
@@ -41,10 +42,17 @@ const protectedRoute = createRoute({
   component: AppLayout,
 });
 
-// Dashboard — workspace list
+// Home — Intelligence Dashboard (primary landing page)
 const dashboardRoute = createRoute({
   getParentRoute: () => protectedRoute,
   path: '/',
+  component: IntelligenceDashboardPage,
+});
+
+// Workspaces list page (accessible via /workspaces)
+const workspacesListRoute = createRoute({
+  getParentRoute: () => protectedRoute,
+  path: '/workspaces',
   component: DashboardPage,
 });
 
@@ -83,11 +91,14 @@ const themeEditorRoute = createRoute({
   component: ThemeEditorPage,
 });
 
-// Build with AI
+// Build with AI — supports optional ?recId= search param from Intelligence recs
 const buildWithAIRoute = createRoute({
   getParentRoute: () => protectedRoute,
   path: '/w/$workspaceId/build-with-ai',
   component: BuildWithAIPage,
+  validateSearch: (search: Record<string, unknown>): { recId?: string } => ({
+    recId: typeof search.recId === 'string' ? search.recId : undefined,
+  }),
 });
 
 // Analytics intelligence
@@ -114,7 +125,7 @@ const rendererDemoRoute = createRoute({
 const routeTree = rootRoute.addChildren([
   signInRoute,
   rendererDemoRoute,
-  protectedRoute.addChildren([dashboardRoute, workspaceRoute, membersRoute, moduleListRoute, moduleEditorRoute, themeEditorRoute, buildWithAIRoute, analyticsRoute, previewRoute]),
+  protectedRoute.addChildren([dashboardRoute, workspacesListRoute, workspaceRoute, membersRoute, moduleListRoute, moduleEditorRoute, themeEditorRoute, buildWithAIRoute, analyticsRoute, previewRoute]),
 ]);
 
 export const router = createRouter({ routeTree });
