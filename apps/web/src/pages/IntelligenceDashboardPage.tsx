@@ -452,34 +452,27 @@ function SettingsPanel({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(8,10,18,0.68)] p-4 backdrop-blur-md">
-      <div className="w-full max-w-xl overflow-hidden rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(23,27,43,0.98)_0%,rgba(14,17,28,0.98)_100%)] shadow-[0_36px_120px_rgba(0,0,0,0.45)]">
-        <div className="border-b border-white/8 bg-[radial-gradient(circle_at_top_left,rgba(170,117,221,0.22),transparent_42%),linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0))] px-7 py-6">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--ember-400)]">Prism Intelligence</p>
-              <h3 className="mt-2 text-2xl font-extrabold tracking-tight text-[var(--text-primary)]">Workspace settings</h3>
-              <p className="mt-2 text-sm leading-6 text-[var(--text-muted)]">
-                Tune the company mapping and gap thresholds without exposing the raw backend identifier.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-full border border-white/10 bg-white/5 p-2 text-[var(--text-muted)] transition hover:bg-white/10 hover:text-[var(--text-primary)]"
-            >
-              <X className="size-4" />
-            </button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+      <div className="w-full max-w-sm rounded-2xl border border-[var(--border-subtle)] bg-[var(--card-bg)] p-6 shadow-2xl">
+        <div className="mb-5 flex items-center justify-between">
+          <div>
+            <h3 className="font-bold text-[var(--text-primary)]">Intelligence Settings</h3>
+            <p className="mt-0.5 text-xs text-[var(--text-muted)]">
+              {link.companyCode ?? DEFAULT_COMPANY_CODE} · {link.piCompanyName}
+            </p>
           </div>
-          <div className="mt-5 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-[var(--text-secondary)]">
-            <span className="size-2 rounded-full bg-[var(--ember-400)]" />
-            {link.companyCode ?? DEFAULT_COMPANY_CODE} · {link.piCompanyName}
-          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg p-1.5 text-[var(--text-muted)] transition hover:bg-[var(--hover-bg)] hover:text-[var(--text-primary)]"
+          >
+            <X className="size-4" />
+          </button>
         </div>
 
-        <div className="space-y-6 px-7 py-6">
+        <div className="space-y-4">
           <div>
-            <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
+            <label className="mb-2 block text-xs font-semibold text-[var(--text-muted)]">
               Company code
             </label>
             <div className="flex gap-2">
@@ -497,7 +490,7 @@ function SettingsPanel({
                 type="button"
                 onClick={handleValidate}
                 disabled={!companyId.trim() || validating}
-                className="flex min-w-[110px] items-center justify-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-[var(--text-secondary)] transition hover:bg-white/10 hover:text-[var(--text-primary)] disabled:opacity-50"
+                className="flex items-center gap-1.5 rounded-xl border border-[var(--border-subtle)] px-3 py-2 text-xs font-semibold text-[var(--text-muted)] transition hover:text-[var(--text-primary)] disabled:opacity-50"
               >
                 {validating ? (
                   <Loader2 className="size-3.5 animate-spin" />
@@ -507,11 +500,8 @@ function SettingsPanel({
                 {validating ? 'Checking…' : 'Validate'}
               </button>
             </div>
-            <p className="mt-2 text-xs leading-5 text-[var(--text-muted)]">
-              Use the human-readable company code your team recognizes. The raw backend id stays internal.
-            </p>
             {validated && (
-              <div className="mt-3 flex items-center gap-2 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-3 py-3">
+              <div className="mt-2 flex items-center gap-2 rounded-lg border border-[rgba(140,67,208,0.25)] bg-[rgba(140,67,208,0.08)] px-3 py-2">
                 <Check className="size-3.5 text-emerald-400" />
                 <span className="text-xs text-[var(--text-primary)]">
                   Valid — {validated.programCount} programs, {validated.storeCount} stores
@@ -527,7 +517,7 @@ function SettingsPanel({
           </div>
 
           <div>
-            <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
+            <label className="mb-2 block text-xs font-semibold text-[var(--text-muted)]">
               Company display name
             </label>
             <input
@@ -540,7 +530,7 @@ function SettingsPanel({
           </div>
 
           <div>
-            <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
+            <label className="mb-2 block text-xs font-semibold text-[var(--text-muted)]">
               Benchmark:{' '}
               <span className="text-[var(--ember-400)]">{benchmark}%</span>
             </label>
@@ -560,7 +550,7 @@ function SettingsPanel({
             </div>
           </div>
           <div>
-            <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
+            <label className="mb-2 block text-xs font-semibold text-[var(--text-muted)]">
               Lookback window
             </label>
             <select
@@ -578,14 +568,14 @@ function SettingsPanel({
         </div>
 
         {err && (
-          <div className="mx-7 rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">{err}</div>
+          <p className="mt-3 rounded-lg bg-red-500/10 px-3 py-2 text-xs text-red-400">{err}</p>
         )}
 
-        <div className="flex gap-3 border-t border-white/8 px-7 py-5">
+        <div className="mt-6 flex gap-3">
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold text-[var(--text-secondary)] transition hover:bg-white/10 hover:text-[var(--text-primary)]"
+            className="flex-1 rounded-xl border border-[var(--border-subtle)] px-4 py-2 text-sm text-[var(--text-muted)] transition hover:text-[var(--text-primary)]"
           >
             Cancel
           </button>
@@ -593,7 +583,7 @@ function SettingsPanel({
             type="button"
             onClick={handleSave}
             disabled={saving || !companyId.trim() || !companyName.trim() || (companyChanged && !validated)}
-            className="prism-action-primary flex flex-1 items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-bold disabled:opacity-50"
+            className="prism-action-primary flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-bold disabled:opacity-50"
           >
             {saving && <Loader2 className="size-3.5 animate-spin" />}
             Save

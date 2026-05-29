@@ -1,10 +1,11 @@
 import { Link, useNavigate } from '@tanstack/react-router';
-import { BarChart2, Bell, BookOpen, Brain, ChevronsLeft, ChevronsRight, KeyRound, Layers, LogOut, Moon, Palette, Search, Sun, Users } from 'lucide-react';
+import { BarChart2, Bell, BookOpen, Brain, CheckCheck, ChevronsLeft, ChevronsRight, KeyRound, Layers, LogOut, Moon, Palette, Search, Sun, Trash2, Users } from 'lucide-react';
 import { SetPasswordModal } from './SetPasswordModal';
 import { useAuthActions } from '@convex-dev/auth/react';
-import { useQuery } from 'convex/react';
+import { useMutation, useQuery } from 'convex/react';
+import type { Id } from '~convex/_generated/dataModel';
 import { api } from '~convex/_generated/api';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 
 type ActiveSection = 'home' | 'intelligence' | 'overview' | 'modules' | 'build' | 'theme' | 'members' | 'analytics';
@@ -21,6 +22,16 @@ type PrismWorkspaceShellProps = {
   topbarActions?: ReactNode;
   showPageHeader?: boolean;
   children: ReactNode;
+};
+
+type ShellNotification = {
+  _id: Id<'notifications'>;
+  title: string;
+  body: string;
+  createdAt: number;
+  isRead: boolean;
+  workspaceId?: Id<'workspaces'>;
+  moduleId?: Id<'modules'>;
 };
 
 const navItems = [
@@ -48,12 +59,19 @@ export function PrismWorkspaceShell({
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem('prism-sidebar-collapsed') === 'true');
   const [theme, setTheme] = useState<'dark' | 'light'>(() => localStorage.getItem('prism-theme') === 'light' ? 'light' : 'dark');
   const [passwordModalOpen, setPasswordModalOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
   const resolvedWorkspaceName = workspaceName ?? 'Prism Learning';
   const { signOut } = useAuthActions();
   const navigate = useNavigate();
   const me = useQuery(api.users.getMe);
+  const notificationFeed = useQuery(api.notifications.listMine);
+  const markNotificationRead = useMutation(api.notifications.markRead);
+  const markAllNotificationsRead = useMutation(api.notifications.markAllRead);
+  const removeNotification = useMutation(api.notifications.remove);
+  const notificationRef = useRef<HTMLDivElement | null>(null);
   const displayName = me?.name ?? me?.email?.split('@')[0] ?? 'User';
   const initials = getInitials(me?.name ?? me?.email ?? 'U');
+  const notificationItems = (notificationFeed?.items ?? []) as ShellNotification[];
 
   async function handleSignOut() {
     await signOut();
@@ -69,13 +87,62 @@ export function PrismWorkspaceShell({
     localStorage.setItem('prism-sidebar-collapsed', String(collapsed));
   }, [collapsed]);
 
+  useEffect(() => {
+    if (!notificationsOpen) return;
+
+    function handlePointerDown(event: MouseEvent) {
+      if (!notificationRef.current?.contains(event.target as Node)) {
+        setNotificationsOpen(false);
+      }
+    }
+
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === 'Escape') setNotificationsOpen(false);
+    }
+
+    document.addEventListener('mousedown', handlePointerDown);
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [notificationsOpen]);
+
+  async function handleOpenNotification(notification: {
+    _id: Id<'notifications'>;
+    isRead: boolean;
+    workspaceId?: Id<'workspaces'>;
+    moduleId?: Id<'modules'>;
+  }) {
+    if (!notification.isRead) {
+      await markNotificationRead({ notificationId: notification._id });
+    }
+
+    setNotificationsOpen(false);
+
+    if (notification.workspaceId && notification.moduleId) {
+      void navigate({
+        to: '/w/$workspaceId/m/$moduleId',
+        params: { workspaceId: notification.workspaceId, moduleId: notification.moduleId },
+      });
+      return;
+    }
+
+    if (notification.workspaceId) {
+      void navigate({
+        to: '/w/$workspaceId',
+        params: { workspaceId: notification.workspaceId },
+      });
+    }
+  }
+
   return (
     <div className="prism-brand-screen prism-app-shell" data-collapsed={collapsed}>
       <aside className="prism-sidebar">
         <div className="border-b border-[var(--sidebar-border)] px-5 py-5">
-          <Link to="/" className="mb-5 flex items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)] transition hover:opacity-80">
+          <Link to="/" className="prism-brand-link mb-5 flex items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)] transition hover:opacity-80">
             <img src="/prism-logo.png" className="size-8 shrink-0" alt="Prism Learning" />
-            <span className="prism-sidebar-label">Prism Learning</span>
+            <span className="prism-brand-wordmark">Prism Learning</span>
           </Link>
           <p className="prism-sidebar-label truncate text-lg font-bold tracking-tight text-[var(--text-primary)]">{resolvedWorkspaceName}</p>
           {workspaceRole && (
@@ -164,10 +231,108 @@ export function PrismWorkspaceShell({
             >
               {theme === 'light' ? <Moon className="size-4" /> : <Sun className="size-4" />}
             </button>
-            <button type="button" className="relative rounded-lg p-2 text-[var(--text-tertiary)] transition hover:bg-[var(--card-bg-hover)] hover:text-[var(--text-primary)]" aria-label="Notifications">
-              <Bell className="size-4" />
-              <span className="absolute right-1.5 top-1.5 size-2 rounded-full bg-[var(--ember-400)]" />
-            </button>
+            <div className="relative" ref={notificationRef}>
+              <button
+                type="button"
+                onClick={() => setNotificationsOpen((value) => !value)}
+                className="relative rounded-lg p-2 text-[var(--text-tertiary)] transition hover:bg-[var(--card-bg-hover)] hover:text-[var(--text-primary)]"
+                aria-label="Notifications"
+              >
+                <Bell className="size-4" />
+                {!!notificationFeed?.unreadCount && (
+                  <>
+                    <span className="absolute right-1.5 top-1.5 size-2 rounded-full bg-[var(--ember-400)]" />
+                    <span className="absolute -right-1 -top-1 flex min-w-4 items-center justify-center rounded-full bg-[var(--ember-400)] px-1 text-[10px] font-bold leading-4 text-white">
+                      {notificationFeed.unreadCount > 9 ? '9+' : notificationFeed.unreadCount}
+                    </span>
+                  </>
+                )}
+              </button>
+
+              {notificationsOpen && (
+                <div className="absolute right-0 top-12 z-40 w-[360px] overflow-hidden rounded-2xl border border-[var(--border-subtle)] bg-[var(--card-bg)] shadow-2xl">
+                  <div className="flex items-center justify-between border-b border-[var(--border-subtle)] px-4 py-3">
+                    <div>
+                      <p className="text-sm font-semibold text-[var(--text-primary)]">Notifications</p>
+                      <p className="text-[11px] text-[var(--text-muted)]">
+                        {notificationFeed?.unreadCount ?? 0} unread
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => void markAllNotificationsRead({})}
+                      disabled={!notificationFeed?.unreadCount}
+                      className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-semibold text-[var(--ember-400)] transition hover:bg-[var(--card-bg-hover)] disabled:opacity-40"
+                    >
+                      <CheckCheck className="size-3.5" />
+                      Mark all read
+                    </button>
+                  </div>
+
+                  <div className="max-h-[420px] overflow-y-auto p-2">
+                    {notificationItems.length ? (
+                      <div className="space-y-2">
+                        {notificationItems.map((notification) => (
+                          <div
+                            key={notification._id}
+                            className="rounded-xl border border-[var(--border-subtle)] bg-[var(--sidebar-bg)]/60 p-3"
+                          >
+                            <div className="flex items-start gap-3">
+                              <span
+                                className={`mt-1 size-2 shrink-0 rounded-full ${notification.isRead ? 'bg-[var(--border-subtle)]' : 'bg-[var(--ember-400)]'}`}
+                              />
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-start justify-between gap-2">
+                                  <div>
+                                    <p className="text-sm font-semibold text-[var(--text-primary)]">{notification.title}</p>
+                                    <p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">{notification.body}</p>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => void removeNotification({ notificationId: notification._id })}
+                                    className="rounded-md p-1 text-[var(--text-muted)] transition hover:bg-[var(--card-bg-hover)] hover:text-[var(--semantic-danger)]"
+                                    aria-label="Delete notification"
+                                  >
+                                    <Trash2 className="size-3.5" />
+                                  </button>
+                                </div>
+                                <div className="mt-3 flex items-center gap-2 text-[11px]">
+                                  {!notification.isRead && (
+                                    <button
+                                      type="button"
+                                      onClick={() => void markNotificationRead({ notificationId: notification._id })}
+                                      className="rounded-md px-2 py-1 font-semibold text-[var(--ember-400)] transition hover:bg-[var(--card-bg-hover)]"
+                                    >
+                                      Mark as read
+                                    </button>
+                                  )}
+                                  {(notification.workspaceId || notification.moduleId) && (
+                                    <button
+                                      type="button"
+                                      onClick={() => void handleOpenNotification(notification)}
+                                      className="rounded-md px-2 py-1 font-semibold text-[var(--text-secondary)] transition hover:bg-[var(--card-bg-hover)] hover:text-[var(--text-primary)]"
+                                    >
+                                      Open
+                                    </button>
+                                  )}
+                                  <span className="ml-auto text-[var(--text-muted)]">{formatNotificationTime(notification.createdAt)}</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center gap-2 px-4 py-10 text-center">
+                        <Bell className="size-5 text-[var(--text-muted)]" />
+                        <p className="text-sm font-semibold text-[var(--text-primary)]">No notifications yet</p>
+                        <p className="text-xs text-[var(--text-muted)]">Workspace updates and AI build completions will show up here.</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
             <span className="mx-1.5 h-5 w-px bg-[var(--border-subtle)]" />
             <div className="flex items-center gap-2.5">
               <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[rgba(140,67,208,0.16)] text-xs font-bold text-[var(--ember-400)]">{initials}</div>
@@ -231,4 +396,15 @@ function getInitials(str: string): string {
   const words = str.trim().split(/\s+/);
   if (words.length === 1) return words[0]?.[0]?.toUpperCase() ?? 'U';
   return ((words[0]?.[0] ?? '') + (words[words.length - 1]?.[0] ?? '')).toUpperCase();
+}
+
+function formatNotificationTime(timestamp: number): string {
+  const diff = Date.now() - timestamp;
+  const minutes = Math.floor(diff / 60000);
+  if (minutes < 1) return 'just now';
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
 }

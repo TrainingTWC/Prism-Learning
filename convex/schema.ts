@@ -57,6 +57,23 @@ export default defineSchema({
     .index('by_workspace', ['workspaceId'])
     .index('by_email', ['email']),
 
+  notifications: defineTable({
+    userId: v.id('users'),
+    kind: v.union(
+      v.literal('workspace_invite_sent'),
+      v.literal('workspace_joined'),
+      v.literal('ai_module_built'),
+    ),
+    title: v.string(),
+    body: v.string(),
+    workspaceId: v.optional(v.id('workspaces')),
+    moduleId: v.optional(v.id('modules')),
+    readAt: v.optional(v.number()),
+    createdAt: v.number(),
+  })
+    .index('by_user', ['userId'])
+    .index('by_user_and_createdAt', ['userId', 'createdAt']),
+
   // ── Phase 3: authoring data model ──────────────────────────────────────
 
   modules: defineTable({

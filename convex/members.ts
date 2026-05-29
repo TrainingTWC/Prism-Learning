@@ -155,6 +155,14 @@ export const invite = action({
       }
     }
 
+    await ctx.runMutation(internal.notifications.createForUser, {
+      userId,
+      kind: 'workspace_invite_sent',
+      title: 'Invitation sent',
+      body: `Invitation sent to ${normalizedEmail} for ${workspaceName}.`,
+      workspaceId,
+    });
+
     return inviteId as string;
   },
 });
@@ -228,7 +236,16 @@ export const acceptPendingInvites = mutation({
           role: 'editor',
         });
         const ws = await ctx.db.get(invite.workspaceId);
-        if (ws) joined.push(ws.name);
+        if (ws) {
+          joined.push(ws.name);
+          await ctx.runMutation(internal.notifications.createForUser, {
+            userId,
+            kind: 'workspace_joined',
+            title: 'Added to workspace',
+            body: `You now have access to ${ws.name}.`,
+            workspaceId: invite.workspaceId,
+          });
+        }
       }
     }
 

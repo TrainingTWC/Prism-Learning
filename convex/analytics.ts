@@ -753,6 +753,16 @@ export const buildModuleFromRecommendation: ReturnType<typeof action> = action({
         recId,
         moduleId: moduleId as Id<'modules'>,
       });
+
+      await ctx.runMutation(internal.notifications.createForUser, {
+        userId,
+        kind: 'ai_module_built',
+        title: 'AI module ready',
+        body: `"${(rec as any).title as string}" has been created and is ready to edit.`,
+        workspaceId,
+        moduleId: moduleId as Id<'modules'>,
+      });
+
       return moduleId;
     } catch (err) {
       await ctx.runMutation(internal.analytics.setRecStatus, { recId, status: 'pending' });
