@@ -9,6 +9,7 @@
  */
 
 import type * as ai from "../ai.js";
+import type * as analytics from "../analytics.js";
 import type * as auth from "../auth.js";
 import type * as blocks from "../blocks.js";
 import type * as files from "../files.js";
@@ -28,6 +29,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   ai: typeof ai;
+  analytics: typeof analytics;
   auth: typeof auth;
   blocks: typeof blocks;
   files: typeof files;
