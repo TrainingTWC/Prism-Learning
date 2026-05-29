@@ -42,18 +42,18 @@ const protectedRoute = createRoute({
   component: AppLayout,
 });
 
-// Home — Intelligence Dashboard (primary landing page)
+// Home — workspace dashboard (primary landing page)
 const dashboardRoute = createRoute({
   getParentRoute: () => protectedRoute,
   path: '/',
-  component: IntelligenceDashboardPage,
+  component: DashboardPage,
 });
 
-// Workspaces list page (accessible via /workspaces)
-const workspacesListRoute = createRoute({
+// Standalone Intelligence dashboard (not wired into main nav)
+const intelligenceRoute = createRoute({
   getParentRoute: () => protectedRoute,
-  path: '/workspaces',
-  component: DashboardPage,
+  path: '/intelligence',
+  component: IntelligenceDashboardPage,
 });
 
 // Workspace content shell
@@ -125,7 +125,7 @@ const rendererDemoRoute = createRoute({
 const routeTree = rootRoute.addChildren([
   signInRoute,
   rendererDemoRoute,
-  protectedRoute.addChildren([dashboardRoute, workspacesListRoute, workspaceRoute, membersRoute, moduleListRoute, moduleEditorRoute, themeEditorRoute, buildWithAIRoute, analyticsRoute, previewRoute]),
+  protectedRoute.addChildren([dashboardRoute, intelligenceRoute, workspaceRoute, membersRoute, moduleListRoute, moduleEditorRoute, themeEditorRoute, buildWithAIRoute, analyticsRoute, previewRoute]),
 ]);
 
 export const router = createRouter({ routeTree });
