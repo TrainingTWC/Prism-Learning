@@ -506,15 +506,19 @@ Each recommendation:
   "keyTopics": ["topic 1", "topic 2", "topic 3"],
   "estimatedLessons": 3,
   "priority": 8,
-  "gapIndex": 0
+  "gapIndex": 0,
+  "level": "national"
 }
 
 Rules:
-- Return 5–8 recommendations targeting the highest-impact gaps
-- priority 1–10 (10 = most urgent)
+- Return 6–10 recommendations total
+- ALWAYS include 2–3 national-level recommendations (level: "national") for cross-cutting issues that appear across multiple regions. These should have the highest priority (8–10).
+- Include regional-level recommendations (level: "regional") for gaps concentrated in a specific region.
+- Include areaManager-level recommendations (level: "areaManager") for gaps specific to individual area managers.
+- priority 1–10 (10 = most urgent); national recs typically 8–10
 - estimatedLessons 1–6 (micro = 1–3, full course = 3–6)
 - keyTopics: 3–5 practical skill topics
-- gapIndex: 0-based index linking to the input gap list
+- gapIndex: 0-based index linking to the most representative gap in the input list
 - Group related gaps into one course where sensible
 - Focus on practical, observable skill improvements`;
 
@@ -591,6 +595,12 @@ export const storeRecommendations = internalMutation({
         keyTopics: Array.isArray(rec.keyTopics) ? (rec.keyTopics as unknown[]).map(String).slice(0, 5) : [],
         estimatedLessons: Math.max(1, Math.min(6, Number(rec.estimatedLessons ?? 3))),
         priority: Math.max(1, Math.min(10, Number(rec.priority ?? 5))),
+        audienceLevel:
+          rec.level === 'national'
+            ? 'national'
+            : rec.level === 'areaManager'
+              ? 'areaManager'
+              : 'regional',
         status: 'pending',
         createdAt: now,
       });
@@ -607,9 +617,20 @@ export const listRecommendations = query({
       .query('courseRecommendations')
       .withIndex('by_workspace', (q) => q.eq('workspaceId', workspaceId))
       .collect();
-    return recs
+    const active = recs
       .filter((r) => r.status !== 'dismissed')
       .sort((a, b) => b.priority - a.priority);
+    // Join with gap to get dimension value for grouping
+    return await Promise.all(
+      active.map(async (rec) => {
+        const gap = await ctx.db.get(rec.gapId).catch(() => null);
+        return {
+          ...rec,
+          gapDimension: gap?.dimension ?? null,
+          gapDimensionValue: gap?.dimensionValue ?? null,
+        };
+      }),
+    );
   },
 });
 

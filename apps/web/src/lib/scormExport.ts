@@ -1383,6 +1383,229 @@ function buildLessonPage(
 </html>`;
 }
 
+// ── Preview HTML (same look as export, postMessage navigation) ───────────
+
+/**
+ * Generates a standalone HTML page for in-app learner preview.
+ * Identical styling to the exported SCORM lesson pages, but navigation
+ * communicates via `window.parent.postMessage` instead of href navigation.
+ *
+ * Parent should listen for:
+ *   { type: 'prism-preview-nav', dir: 'next' | 'prev' }
+ *   { type: 'prism-preview-goto', idx: number }
+ *   { type: 'prism-preview-exit' }
+ *   { type: 'prism-preview-restart' }
+ */
+export function buildPreviewHtml(
+  mod: ExportModule,
+  lessonIdx: number,
+  assetMap: Record<string, string>,
+  theme: ExportTheme,
+): string {
+  const lesson = mod.lessons[lessonIdx]!;
+  const total = mod.lessons.length;
+  const isLast = lessonIdx === total - 1;
+  const pct = Math.round(((lessonIdx + 1) / total) * 100);
+
+  const blocksHtml = lesson.blocks
+    .map((b, i) => `<div class="prism-block" style="--i:${i}">${renderBlock(b, assetMap)}</div>`)
+    .join('\n');
+
+  const dotsHtml = mod.lessons
+    .map((_, i) => {
+      const cls = i < lessonIdx ? 'prism-dot done' : i === lessonIdx ? 'prism-dot current' : 'prism-dot';
+      return `<button type="button" class="${cls}" data-lesson="${i}" aria-label="Go to lesson ${i + 1}"></button>`;
+    })
+    .join('');
+
+  const drawerItems = mod.lessons
+    .map((l, i) => {
+      const cls = i < lessonIdx ? 'prism-drawer-item done' : i === lessonIdx ? 'prism-drawer-item current' : 'prism-drawer-item';
+      const stateLabel = i < lessonIdx ? 'Completed' : i === lessonIdx ? 'In progress' : `Lesson ${i + 1}`;
+      return `<button type="button" class="${cls}" data-lesson="${i}"><span class="prism-drawer-num">${i < lessonIdx ? '✓' : i + 1}</span><span><span class="prism-drawer-label">${escapeHtml(l.title)}</span><span class="prism-drawer-meta">${stateLabel}</span></span></button>`;
+    })
+    .join('');
+
+  const prevBtn = lessonIdx > 0
+    ? `<button type="button" class="prism-nav-btn" data-prism-prev><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><path d="M15 18l-6-6 6-6"/></svg>Back</button>`
+    : `<span class="prism-nav-btn prism-nav-btn--ghost"></span>`;
+  const nextBtn = !isLast
+    ? `<button type="button" class="prism-nav-btn prism-nav-btn--primary" data-prism-next>Continue<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><path d="M9 6l6 6-6 6"/></svg></button>`
+    : `<button type="button" class="prism-nav-btn prism-nav-btn--primary" data-prism-finish>Finish<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><path d="M20 6L9 17l-5-5"/></svg></button>`;
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<title>${escapeHtml(lesson.title)}</title>
+<style>${buildCss(theme)}</style>
+</head>
+<body>
+<div class="prism-shell">
+  <div class="prism-stage">
+    <div class="prism-toolbar">
+      <div class="prism-brand">
+        <span class="prism-brand-mark" aria-hidden="true"></span>
+        <span class="prism-brand-name">${escapeHtml(mod.title)}</span>
+      </div>
+      <div class="prism-tools">
+        <button class="prism-tool" type="button" data-prism-lessons aria-label="Show lessons" title="Lessons"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+        <button class="prism-tool" type="button" data-prism-theme aria-label="Toggle theme" title="Toggle theme"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg></button>
+        <button class="prism-exit" type="button" data-prism-exit>Back to editor</button>
+      </div>
+    </div>
+    <main class="prism-card">
+      <header class="prism-top">
+        <span class="prism-lesson-badge">Lesson ${lessonIdx + 1} of ${total}</span>
+        <div class="prism-title-row">
+          <h1>${escapeHtml(lesson.title)}</h1>
+          <span class="prism-count">${pct}%</span>
+        </div>
+        <div class="prism-progress"><span style="width:${pct}%"></span></div>
+        ${total > 1 ? `<div class="prism-dots">${dotsHtml}</div>` : ''}
+      </header>
+      <section class="prism-lesson" data-prism-content>
+        ${blocksHtml}
+      </section>
+      ${total > 1 || isLast ? `<nav class="prism-nav">${prevBtn}<span class="prism-nav-meta"><span class="prism-nav-meta-dot"></span>${lessonIdx + 1} / ${total}</span>${nextBtn}</nav>` : ''}
+    </main>
+  </div>
+</div>
+
+<aside class="prism-drawer" data-prism-drawer aria-hidden="true">
+  <div class="prism-drawer-panel" role="dialog" aria-label="Lessons">
+    <div class="prism-drawer-head">
+      <span class="prism-drawer-title">${escapeHtml(mod.title)}</span>
+      <button class="prism-drawer-close" type="button" data-prism-drawer-close aria-label="Close">×</button>
+    </div>
+    <div class="prism-drawer-list">${drawerItems}</div>
+  </div>
+</aside>
+
+<div class="prism-complete" data-prism-complete aria-hidden="true">
+  <div class="prism-complete-card" role="dialog" aria-label="Module complete">
+    <div class="prism-complete-check">✓</div>
+    <h2>You crushed it!</h2>
+    <p>That's a wrap on <strong>${escapeHtml(mod.title)}</strong>. Preview complete!</p>
+    <div class="prism-complete-row">
+      <button type="button" data-prism-restart>Restart</button>
+      <button type="button" class="primary" data-prism-close-complete>Done</button>
+    </div>
+  </div>
+</div>
+
+<script>${buildInteractionJs()}</script>
+<script>
+(function(){
+  function msg(data){window.parent.postMessage(data,'*');}
+
+  // Theme toggle
+  var themeBtn=document.querySelector('[data-prism-theme]');
+  if(themeBtn)themeBtn.addEventListener('click',function(){
+    var cur=document.documentElement.getAttribute('data-theme')||'light';
+    var next=cur==='dark'?'light':'dark';
+    document.documentElement.setAttribute('data-theme',next);
+  });
+
+  // Lessons drawer
+  var drawer=document.querySelector('[data-prism-drawer]');
+  var openBtn=document.querySelector('[data-prism-lessons]');
+  var closeBtn=document.querySelector('[data-prism-drawer-close]');
+  function openDrawer(){if(drawer){drawer.classList.add('open');drawer.setAttribute('aria-hidden','false');}}
+  function closeDrawer(){if(drawer){drawer.classList.remove('open');drawer.setAttribute('aria-hidden','true');}}
+  if(openBtn)openBtn.addEventListener('click',openDrawer);
+  if(closeBtn)closeBtn.addEventListener('click',closeDrawer);
+  if(drawer)drawer.addEventListener('click',function(e){if(e.target===drawer)closeDrawer();});
+
+  // Back to editor
+  var exitBtn=document.querySelector('[data-prism-exit]');
+  if(exitBtn)exitBtn.addEventListener('click',function(){msg({type:'prism-preview-exit'});});
+
+  // Prev / Next / Finish
+  var prevBtn=document.querySelector('[data-prism-prev]');
+  var nextBtn=document.querySelector('[data-prism-next]');
+  var finishBtn=document.querySelector('[data-prism-finish]');
+  if(prevBtn)prevBtn.addEventListener('click',function(){msg({type:'prism-preview-nav',dir:'prev'});});
+  if(nextBtn)nextBtn.addEventListener('click',function(){msg({type:'prism-preview-nav',dir:'next'});});
+  if(finishBtn)finishBtn.addEventListener('click',function(){
+    var complete=document.querySelector('[data-prism-complete]');
+    if(complete){complete.classList.add('show');complete.setAttribute('aria-hidden','false');}
+    fireConfetti();
+  });
+
+  // Completion overlay
+  var restart=document.querySelector('[data-prism-restart]');
+  if(restart)restart.addEventListener('click',function(){msg({type:'prism-preview-restart'});});
+  var closeC=document.querySelector('[data-prism-close-complete]');
+  if(closeC)closeC.addEventListener('click',function(){
+    var complete=document.querySelector('[data-prism-complete]');
+    if(complete){complete.classList.remove('show');complete.setAttribute('aria-hidden','true');}
+    msg({type:'prism-preview-exit'});
+  });
+
+  // Lesson dots + drawer items
+  document.querySelectorAll('[data-lesson]').forEach(function(el){
+    el.addEventListener('click',function(e){
+      e.preventDefault();
+      msg({type:'prism-preview-goto',idx:parseInt(el.getAttribute('data-lesson')||'0',10)});
+      closeDrawer();
+    });
+  });
+
+  // Keyboard nav
+  document.addEventListener('keydown',function(e){
+    if(e.target&&/^(INPUT|TEXTAREA|SELECT)$/.test((e.target).tagName))return;
+    if(e.key==='ArrowRight'){if(nextBtn)nextBtn.click();else if(finishBtn)finishBtn.click();}
+    else if(e.key==='ArrowLeft'){if(prevBtn)prevBtn.click();}
+    else if(e.key==='Escape')closeDrawer();
+  });
+
+  // Confetti
+  function fireConfetti(){
+    var wrap=document.createElement('div');wrap.className='prism-confetti';document.body.appendChild(wrap);
+    var colors=['#6366f1','#10b981','#f59e0b','#ec4899','#3b82f6'];
+    for(var i=0;i<60;i++){var p=document.createElement('i');p.style.left=(Math.random()*100)+'%';p.style.background=colors[i%colors.length];p.style.animationDuration=(2+Math.random()*2)+'s';p.style.animationDelay=(Math.random()*0.6)+'s';p.style.transform='rotate('+(Math.random()*360)+'deg)';wrap.appendChild(p);}
+    setTimeout(function(){if(wrap.parentNode)wrap.parentNode.removeChild(wrap);},5000);
+  }
+
+  // Ripple on primary buttons
+  function addRipple(el,e){
+    var rect=el.getBoundingClientRect();
+    var x=(e&&e.clientX?e.clientX:rect.left+rect.width/2)-rect.left;
+    var y=(e&&e.clientY?e.clientY:rect.top+rect.height/2)-rect.top;
+    var size=Math.max(rect.width,rect.height)*2.5;
+    var ink=document.createElement('span');
+    ink.style.cssText='position:absolute;border-radius:50%;background:rgba(255,255,255,.28);width:'+size+'px;height:'+size+'px;left:'+(x-size/2)+'px;top:'+(y-size/2)+'px;transform:scale(0);animation:prism-ripple-expand 550ms ease-out forwards;pointer-events:none;z-index:1;';
+    el.appendChild(ink);
+    setTimeout(function(){if(ink.parentNode)ink.parentNode.removeChild(ink);},600);
+  }
+  document.querySelectorAll('.prism-nav-btn--primary').forEach(function(btn){
+    btn.addEventListener('click',function(e){addRipple(btn,e);});
+  });
+
+  // Touch swipe
+  var swipeEl=document.querySelector('[data-prism-content]');
+  if(swipeEl){
+    var _sx=0,_sy=0,_sw=false;
+    swipeEl.addEventListener('touchstart',function(e){_sx=e.touches[0].clientX;_sy=e.touches[0].clientY;_sw=true;},{passive:true});
+    swipeEl.addEventListener('touchend',function(e){
+      if(!_sw)return;_sw=false;
+      var dx=e.changedTouches[0].clientX-_sx;
+      var dy=e.changedTouches[0].clientY-_sy;
+      if(Math.abs(dx)>Math.abs(dy)&&Math.abs(dx)>64){
+        if(dx<0){if(nextBtn)nextBtn.click();else if(finishBtn)finishBtn.click();}
+        else{if(prevBtn)prevBtn.click();}
+      }
+    },{passive:true});
+    swipeEl.addEventListener('touchmove',function(e){if(_sw&&Math.abs(e.touches[0].clientY-_sy)>10)_sw=false;},{passive:true});
+  }
+})();
+</script>
+</body>
+</html>`;
+}
+
 // ── Main export function ───────────────────────────────────────────────────
 
 export async function buildScormPackage(

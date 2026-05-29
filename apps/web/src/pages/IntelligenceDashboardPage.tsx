@@ -59,6 +59,9 @@ type RecDoc = {
   priority: number;
   status: 'pending' | 'building' | 'built' | 'dismissed';
   moduleId?: Id<'modules'>;
+  audienceLevel?: 'national' | 'regional' | 'areaManager';
+  gapDimension?: string | null;
+  gapDimensionValue?: string | null;
 };
 
 type AnalyticsLink = {
@@ -683,6 +686,98 @@ function GapList({
   );
 }
 
+// ── Grouped recommendations ────────────────────────────────────────────────
+
+function RecGrouped({
+  recs,
+  workspaceId,
+  onDismiss,
+}: {
+  recs: RecDoc[];
+  workspaceId: Id<'workspaces'>;
+  onDismiss: (id: Id<'courseRecommendations'>) => void;
+}) {
+  function effectiveLevel(r: RecDoc): 'national' | 'regional' | 'areaManager' {
+    if (r.audienceLevel) return r.audienceLevel;
+    if (r.gapDimension === 'areaManager') return 'areaManager';
+    if (r.gapDimension === 'region') return 'regional';
+    return 'national';
+  }
+
+  const national = recs.filter((r) => effectiveLevel(r) === 'national');
+  const regional = recs.filter((r) => effectiveLevel(r) === 'regional');
+  const areaManager = recs.filter((r) => effectiveLevel(r) === 'areaManager');
+
+  const regionalGroups = new Map<string, RecDoc[]>();
+  for (const r of regional) {
+    const key = r.gapDimensionValue ?? 'Region';
+    const group = regionalGroups.get(key) ?? [];
+    group.push(r);
+    regionalGroups.set(key, group);
+  }
+
+  const amGroups = new Map<string, RecDoc[]>();
+  for (const r of areaManager) {
+    const key = r.gapDimensionValue ?? 'Area Manager';
+    const group = amGroups.get(key) ?? [];
+    group.push(r);
+    amGroups.set(key, group);
+  }
+
+  const sharedProps = { workspaceId, onDismiss };
+
+  return (
+    <div className="space-y-6">
+      {national.length > 0 && (
+        <div>
+          <div className="mb-2 flex items-center gap-2">
+            <span className="text-sm">🌐</span>
+            <h4 className="text-xs font-bold text-[var(--text-primary)] uppercase tracking-wider">National Priorities</h4>
+            <span className="rounded-full bg-indigo-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-indigo-400">{national.length}</span>
+          </div>
+          <div className="space-y-3">
+            {national.map((rec) => (<RecCard key={rec._id} rec={rec} {...sharedProps} />))}
+          </div>
+        </div>
+      )}
+
+      {regionalGroups.size > 0 && (
+        <div>
+          <div className="mb-2 flex items-center gap-2">
+            <span className="text-sm">📍</span>
+            <h4 className="text-xs font-bold text-[var(--text-primary)] uppercase tracking-wider">By Region</h4>
+          </div>
+          <div className="space-y-4">
+            {[...regionalGroups.entries()].map(([region, regionRecs]) => (
+              <div key={region}>
+                <p className="mb-1.5 text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wider">{region}</p>
+                <div className="space-y-3">{regionRecs.map((rec) => (<RecCard key={rec._id} rec={rec} {...sharedProps} />))}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {amGroups.size > 0 && (
+        <div>
+          <div className="mb-2 flex items-center gap-2">
+            <span className="text-sm">👤</span>
+            <h4 className="text-xs font-bold text-[var(--text-primary)] uppercase tracking-wider">By Area Manager</h4>
+          </div>
+          <div className="space-y-4">
+            {[...amGroups.entries()].map(([am, amRecs]) => (
+              <div key={am}>
+                <p className="mb-1.5 text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wider">{am}</p>
+                <div className="space-y-3">{amRecs.map((rec) => (<RecCard key={rec._id} rec={rec} {...sharedProps} />))}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Recommendation card ────────────────────────────────────────────────────
 
 function RecCard({
@@ -1156,18 +1251,11 @@ function IntelligenceContent({
               )}
 
               {visibleRecs.length > 0 ? (
-                <div className="space-y-3">
-                  {visibleRecs.map((rec) => (
-                    <RecCard
-                      key={rec._id}
-                      rec={rec}
-                      workspaceId={workspaceId}
-                      onDismiss={(id) =>
-                        setDismissedRecs((prev) => new Set([...prev, id as string]))
-                      }
-                    />
-                  ))}
-                </div>
+                <RecGrouped
+                  recs={visibleRecs}
+                  workspaceId={workspaceId}
+                  onDismiss={(id) => setDismissedRecs((prev) => new Set([...prev, id as string]))}
+                />
               ) : !generating ? (
                 <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-[var(--border-subtle)] py-10 text-center">
                   <Sparkles className="size-6 text-[var(--text-muted)]" />

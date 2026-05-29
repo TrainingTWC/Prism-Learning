@@ -193,6 +193,10 @@ export default defineSchema({
       v.literal('dismissed'),
     ),
     moduleId: v.optional(v.id('modules')),
+    /** Audience scope returned by the AI: national, regional, or area-manager level */
+    audienceLevel: v.optional(
+      v.union(v.literal('national'), v.literal('regional'), v.literal('areaManager')),
+    ),
     createdAt: v.number(),
   })
     .index('by_workspace', ['workspaceId'])
