@@ -304,16 +304,56 @@ function SettingsPanel({
   workspaceId: Id<'workspaces'>;
   onClose: () => void;
 }) {
+  const [companyId, setCompanyId] = useState(link.piCompanyId);
+  const [companyName, setCompanyName] = useState(link.piCompanyName);
   const [benchmark, setBenchmark] = useState(link.benchmarkScore);
   const [lookback, setLookback] = useState(link.lookbackDays);
+  const [validating, setValidating] = useState(false);
+  const [validated, setValidated] = useState<{ programCount: number; storeCount: number } | null>(
+    null,
+  );
   const [saving, setSaving] = useState(false);
-  const updateSettings = useMutation(api.analytics.updateLinkSettings);
+  const [err, setErr] = useState('');
+
+  const validateCompany = useAction(api.analytics.validatePICompany);
+  const linkCompany = useMutation(api.analytics.linkCompany);
+
+  const companyChanged = companyId.trim() !== link.piCompanyId;
+
+  async function handleValidate() {
+    if (!companyId.trim()) return;
+    setValidating(true);
+    setErr('');
+    setValidated(null);
+    try {
+      const result = await validateCompany({ piCompanyId: companyId.trim() });
+      setValidated(result);
+    } catch (e: any) {
+      setErr(e.data ?? e.message ?? 'Validation failed — check the company ID and PI env vars');
+    } finally {
+      setValidating(false);
+    }
+  }
 
   async function handleSave() {
+    if (!companyId.trim() || !companyName.trim()) return;
+    if (companyChanged && !validated) {
+      setErr('Validate the new company ID before saving.');
+      return;
+    }
     setSaving(true);
+    setErr('');
     try {
-      await updateSettings({ workspaceId, benchmarkScore: benchmark, lookbackDays: lookback });
+      await linkCompany({
+        workspaceId,
+        piCompanyId: companyId.trim(),
+        piCompanyName: companyName.trim(),
+        benchmarkScore: benchmark,
+        lookbackDays: lookback,
+      });
       onClose();
+    } catch (e: any) {
+      setErr(e.data ?? e.message ?? 'Failed to save');
     } finally {
       setSaving(false);
     }
@@ -331,9 +371,63 @@ function SettingsPanel({
 
         <div className="space-y-4">
           <div>
-            <p className="mb-1 text-xs text-[var(--text-muted)]">Connected company</p>
-            <p className="text-sm font-medium text-[var(--text-primary)]">{link.piCompanyName}</p>
+            <label className="mb-2 block text-xs font-semibold text-[var(--text-muted)]">
+              PI Company ID
+            </label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={companyId}
+                onChange={(e) => {
+                  setCompanyId(e.target.value);
+                  setValidated(null);
+                }}
+                placeholder="PI company document ID…"
+                className="prism-input flex-1"
+              />
+              <button
+                type="button"
+                onClick={handleValidate}
+                disabled={!companyId.trim() || validating}
+                className="flex items-center gap-1.5 rounded-xl border border-[var(--border-subtle)] px-3 py-2 text-xs font-semibold text-[var(--text-muted)] transition hover:text-[var(--text-primary)] disabled:opacity-50"
+              >
+                {validating ? (
+                  <Loader2 className="size-3.5 animate-spin" />
+                ) : (
+                  <Check className="size-3.5" />
+                )}
+                {validating ? 'Checking…' : 'Validate'}
+              </button>
+            </div>
+            {validated && (
+              <div className="mt-2 flex items-center gap-2 rounded-lg border border-[rgba(140,67,208,0.25)] bg-[rgba(140,67,208,0.08)] px-3 py-2">
+                <Check className="size-3.5 text-emerald-400" />
+                <span className="text-xs text-[var(--text-primary)]">
+                  Valid — {validated.programCount} programs, {validated.storeCount} stores
+                </span>
+              </div>
+            )}
+            {companyChanged && (
+              <p className="mt-1.5 flex items-center gap-1.5 text-[11px] text-amber-400">
+                <AlertTriangle className="size-3" />
+                Changing the company resets gap data — re-run a compute after saving.
+              </p>
+            )}
           </div>
+
+          <div>
+            <label className="mb-2 block text-xs font-semibold text-[var(--text-muted)]">
+              Company display name
+            </label>
+            <input
+              type="text"
+              value={companyName}
+              onChange={(e) => setCompanyName(e.target.value)}
+              placeholder="e.g. Acme Retail Co."
+              className="prism-input w-full"
+            />
+          </div>
+
           <div>
             <label className="mb-2 block text-xs font-semibold text-[var(--text-muted)]">
               Benchmark: <span className="text-[var(--ember-400)]">{benchmark}%</span>
@@ -364,6 +458,10 @@ function SettingsPanel({
           </div>
         </div>
 
+        {err && (
+          <p className="mt-3 rounded-lg bg-red-500/10 px-3 py-2 text-xs text-red-400">{err}</p>
+        )}
+
         <div className="mt-6 flex gap-3">
           <button
             type="button"
@@ -375,7 +473,7 @@ function SettingsPanel({
           <button
             type="button"
             onClick={handleSave}
-            disabled={saving}
+            disabled={saving || !companyId.trim() || !companyName.trim() || (companyChanged && !validated)}
             className="flex-1 prism-action-primary flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-bold disabled:opacity-50"
           >
             {saving ? <Loader2 className="size-3.5 animate-spin" /> : null}
