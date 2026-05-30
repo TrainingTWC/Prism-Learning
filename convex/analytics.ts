@@ -240,7 +240,7 @@ export const updateLinkSettings = mutation({
 export const listGaps = query({
   args: {
     workspaceId: v.id('workspaces'),
-    dimension: v.optional(v.union(v.literal('region'), v.literal('areaManager'))),
+    dimension: v.optional(v.union(v.literal('region'), v.literal('areaManager'), v.literal('store'))),
   },
   handler: async (ctx, { workspaceId, dimension }) => {
     const userId = await getAuthUserId(ctx);
@@ -377,9 +377,11 @@ export const computeGaps = action({
       // stores:list from PI hydrates regionName via a region join
       const regionName = store.regionName?.trim() || store.city?.trim() || 'Unknown Region';
       const amName = store.amName?.trim() || 'Unassigned';
+      const storeName = store.storeName?.trim() || store._id;
       const dims = [
         ['region', regionName],
         ['areaManager', amName],
+        ['store', storeName],
       ] as const;
 
       for (const [dim, val] of dims) add(dim, val, program.name, 'Overall', sub.percentage);
@@ -399,7 +401,7 @@ export const computeGaps = action({
     type GapRecord = {
       workspaceId: Id<'workspaces'>;
       piCompanyId: string;
-      dimension: 'region' | 'areaManager';
+      dimension: 'region' | 'areaManager' | 'store';
       dimensionValue: string;
       category: string;
       programName: string;
@@ -422,7 +424,7 @@ export const computeGaps = action({
       gaps.push({
         workspaceId,
         piCompanyId: link.piCompanyId,
-        dimension: e.dimension as 'region' | 'areaManager',
+        dimension: e.dimension as 'region' | 'areaManager' | 'store',
         dimensionValue: e.dimensionValue,
         category: e.category,
         programName: e.programName,
@@ -461,7 +463,7 @@ export const storeGaps = internalMutation({
       v.object({
         workspaceId: v.id('workspaces'),
         piCompanyId: v.string(),
-        dimension: v.union(v.literal('region'), v.literal('areaManager')),
+        dimension: v.union(v.literal('region'), v.literal('areaManager'), v.literal('store')),
         dimensionValue: v.string(),
         category: v.string(),
         programName: v.string(),
@@ -501,8 +503,14 @@ export const storeGaps = internalMutation({
 // ── Course recommendations ─────────────────────────────────────────────────
 
 export const generateRecommendations = action({
-  args: { workspaceId: v.id('workspaces') },
-  handler: async (ctx, { workspaceId }) => {
+  args: {
+    workspaceId: v.id('workspaces'),
+    filterRegion: v.optional(v.string()),
+    filterAreaManager: v.optional(v.string()),
+    filterProgram: v.optional(v.string()),
+    filterStore: v.optional(v.string()),
+  },
+  handler: async (ctx, { workspaceId, filterRegion, filterAreaManager, filterProgram, filterStore }) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error('Not authenticated');
 
@@ -510,15 +518,42 @@ export const generateRecommendations = action({
     if (!link) throw new Error('No PI company linked');
 
     const allGaps = await ctx.runQuery(api.analytics.listGaps, { workspaceId });
-    const topGaps = (allGaps as any[])
-      .filter((g) => g.severity === 'critical' || g.severity === 'high')
-      .slice(0, 12);
-    if (topGaps.length === 0) throw new Error('No critical or high gaps found to address');
+    let topGaps = (allGaps as any[])
+      .filter((g) => g.severity === 'critical' || g.severity === 'high');
+
+    // Apply dimension-based filters
+    if (filterRegion) {
+      topGaps = topGaps.filter((g) => g.dimension !== 'region' || g.dimensionValue === filterRegion);
+    }
+    if (filterAreaManager) {
+      topGaps = topGaps.filter((g) => g.dimension !== 'areaManager' || g.dimensionValue === filterAreaManager);
+    }
+    if (filterStore) {
+      topGaps = topGaps.filter((g) => g.dimension !== 'store' || g.dimensionValue === filterStore);
+    }
+    if (filterProgram) {
+      topGaps = topGaps.filter((g) => g.programName === filterProgram);
+    }
+
+    topGaps = topGaps.slice(0, 15);
+    if (topGaps.length === 0) throw new Error('No critical or high gaps found for the selected filters');
+
+    // Build context for scope description
+    const scopeParts: string[] = [];
+    if (filterRegion) scopeParts.push(`Region: ${filterRegion}`);
+    if (filterAreaManager) scopeParts.push(`Area Manager: ${filterAreaManager}`);
+    if (filterStore) scopeParts.push(`Store: ${filterStore}`);
+    if (filterProgram) scopeParts.push(`Program: ${filterProgram}`);
+    const scopeLabel = scopeParts.length > 0 ? scopeParts.join(', ') : 'all areas (national)';
+    const isFiltered = scopeParts.length > 0;
+
+    const dimLabel = (dim: string) =>
+      dim === 'region' ? 'Region' : dim === 'areaManager' ? 'Area Manager' : 'Store';
 
     const gapText = topGaps
       .map(
         (g, i) =>
-          `${i}. ${g.programName} — "${g.category}" — ${g.dimension === 'region' ? 'Region' : 'Area Manager'}: ${g.dimensionValue} — Avg: ${g.avgScore}% vs benchmark ${g.benchmark}% (gap: ${g.gap}%, ${g.severity})`,
+          `${i}. ${g.programName} — "${g.category}" — ${dimLabel(g.dimension)}: ${g.dimensionValue} — Avg: ${g.avgScore}% vs benchmark ${g.benchmark}% (gap: ${g.gap}%, ${g.severity})`,
       )
       .join('\n');
 
@@ -543,11 +578,10 @@ Each recommendation:
 }
 
 Rules:
-- Return 6–10 recommendations total
-- ALWAYS include 2–3 national-level recommendations (level: "national") for cross-cutting issues that appear across multiple regions. These should have the highest priority (8–10).
-- Include regional-level recommendations (level: "regional") for gaps concentrated in a specific region.
-- Include areaManager-level recommendations (level: "areaManager") for gaps specific to individual area managers.
-- priority 1–10 (10 = most urgent); national recs typically 8–10
+- Return 4–10 recommendations total
+- If the scope is national (no filters), include 2–3 national-level recommendations (level: "national") for cross-cutting issues, then regional and area-manager levels.
+- If the scope is filtered (specific region/AM/store/program), generate recommendations focused on that specific scope. Still use level to indicate the best rollout audience: "national" if applicable, "regional", "areaManager", or "store" for targeted ones.
+- priority 1–10 (10 = most urgent)
 - estimatedLessons 1–6 (micro = 1–3, full course = 3–6)
 - keyTopics: 3–5 practical skill topics
 - gapIndex: 0-based index linking to the most representative gap in the input list
@@ -556,11 +590,12 @@ Rules:
 
     const userPrompt = `Company: ${link.piCompanyName}
 Benchmark: ${link.benchmarkScore}%
+${isFiltered ? `Scope filter: ${scopeLabel}` : ''}
 
 Training gaps (sorted by severity, index 0-based):
 ${gapText}
 
-Generate targeted course recommendations to close these gaps.`;
+Generate targeted course recommendations to close these gaps${isFiltered ? ` for the specified scope (${scopeLabel})` : ''}.`;
 
     const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
@@ -632,7 +667,9 @@ export const storeRecommendations = internalMutation({
             ? 'national'
             : rec.level === 'areaManager'
               ? 'areaManager'
-              : 'regional',
+              : rec.level === 'store'
+                ? 'store'
+                : 'regional',
         status: 'pending',
         createdAt: now,
       });
@@ -652,7 +689,7 @@ export const listRecommendations = query({
     const active = recs
       .filter((r) => r.status !== 'dismissed')
       .sort((a, b) => b.priority - a.priority);
-    // Join with gap to get dimension value for grouping
+    // Join with gap to get dimension value and program name for grouping
     return await Promise.all(
       active.map(async (rec) => {
         const gap = await ctx.db.get(rec.gapId).catch(() => null);
@@ -660,6 +697,7 @@ export const listRecommendations = query({
           ...rec,
           gapDimension: gap?.dimension ?? null,
           gapDimensionValue: gap?.dimensionValue ?? null,
+          gapProgramName: gap?.programName ?? null,
         };
       }),
     );

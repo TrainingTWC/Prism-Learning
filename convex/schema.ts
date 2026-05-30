@@ -183,8 +183,8 @@ export default defineSchema({
     workspaceId: v.id('workspaces'),
     piCompanyId: v.string(),
     /** Geographic or management dimension */
-    dimension: v.union(v.literal('region'), v.literal('areaManager')),
-    /** Region name or area manager name */
+    dimension: v.union(v.literal('region'), v.literal('areaManager'), v.literal('store')),
+    /** Region name, area manager name, or store name */
     dimensionValue: v.string(),
     /** Program section title, or "Overall" for the overall program score */
     category: v.string(),
@@ -224,9 +224,9 @@ export default defineSchema({
       v.literal('dismissed'),
     ),
     moduleId: v.optional(v.id('modules')),
-    /** Audience scope returned by the AI: national, regional, or area-manager level */
+    /** Audience scope returned by the AI: national, regional, area-manager, or store level */
     audienceLevel: v.optional(
-      v.union(v.literal('national'), v.literal('regional'), v.literal('areaManager')),
+      v.union(v.literal('national'), v.literal('regional'), v.literal('areaManager'), v.literal('store')),
     ),
     createdAt: v.number(),
   })

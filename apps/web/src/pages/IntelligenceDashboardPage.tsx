@@ -41,7 +41,7 @@ const DEFAULT_COMPANY_CODE = 'HBPL';
 
 type GapDoc = {
   _id: Id<'trainingGaps'>;
-  dimension: 'region' | 'areaManager';
+  dimension: 'region' | 'areaManager' | 'store';
   dimensionValue: string;
   category: string;
   programName: string;
@@ -62,9 +62,10 @@ type RecDoc = {
   priority: number;
   status: 'pending' | 'building' | 'built' | 'dismissed';
   moduleId?: Id<'modules'>;
-  audienceLevel?: 'national' | 'regional' | 'areaManager';
+  audienceLevel?: 'national' | 'regional' | 'areaManager' | 'store';
   gapDimension?: string | null;
   gapDimensionValue?: string | null;
+  gapProgramName?: string | null;
 };
 
 type AnalyticsLink = {
@@ -711,16 +712,58 @@ function RecGrouped({
   workspaceId: Id<'workspaces'>;
   onDismiss: (id: Id<'courseRecommendations'>) => void;
 }) {
-  function effectiveLevel(r: RecDoc): 'national' | 'regional' | 'areaManager' {
+  const [groupBy, setGroupBy] = useState<'scope' | 'program'>('scope');
+
+  function effectiveLevel(r: RecDoc): 'national' | 'regional' | 'areaManager' | 'store' {
     if (r.audienceLevel) return r.audienceLevel;
     if (r.gapDimension === 'areaManager') return 'areaManager';
     if (r.gapDimension === 'region') return 'regional';
+    if (r.gapDimension === 'store') return 'store';
     return 'national';
   }
 
+  const sharedProps = { workspaceId, onDismiss };
+
+  // ── By Program view ────────────────────────────────────────────────────
+  if (groupBy === 'program') {
+    const programGroups = new Map<string, RecDoc[]>();
+    for (const r of recs) {
+      const key = r.gapProgramName ?? 'General';
+      const group = programGroups.get(key) ?? [];
+      group.push(r);
+      programGroups.set(key, group);
+    }
+    // Sort programs by max priority desc
+    const sorted = [...programGroups.entries()].sort(
+      ([, a], [, b]) => Math.max(...b.map((r) => r.priority)) - Math.max(...a.map((r) => r.priority)),
+    );
+
+    return (
+      <div>
+        <GroupByToggle value={groupBy} onChange={setGroupBy} />
+        <div className="space-y-6">
+          {sorted.map(([program, progRecs]) => (
+            <div key={program}>
+              <div className="mb-2 flex items-center gap-2">
+                <span className="text-sm">📚</span>
+                <h4 className="text-xs font-bold text-[var(--text-primary)] uppercase tracking-wider">{program}</h4>
+                <span className="rounded-full bg-[rgba(140,67,208,0.12)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--ember-400)]">{progRecs.length}</span>
+              </div>
+              <div className="space-y-3">
+                {progRecs.map((rec) => (<RecCard key={rec._id} rec={rec} {...sharedProps} />))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // ── By Scope view (default) ────────────────────────────────────────────
   const national = recs.filter((r) => effectiveLevel(r) === 'national');
   const regional = recs.filter((r) => effectiveLevel(r) === 'regional');
   const areaManager = recs.filter((r) => effectiveLevel(r) === 'areaManager');
+  const storeLevel = recs.filter((r) => effectiveLevel(r) === 'store');
 
   const regionalGroups = new Map<string, RecDoc[]>();
   for (const r of regional) {
@@ -738,56 +781,109 @@ function RecGrouped({
     amGroups.set(key, group);
   }
 
-  const sharedProps = { workspaceId, onDismiss };
+  const storeGroups = new Map<string, RecDoc[]>();
+  for (const r of storeLevel) {
+    const key = r.gapDimensionValue ?? 'Store';
+    const group = storeGroups.get(key) ?? [];
+    group.push(r);
+    storeGroups.set(key, group);
+  }
 
   return (
-    <div className="space-y-6">
-      {national.length > 0 && (
-        <div>
-          <div className="mb-2 flex items-center gap-2">
-            <span className="text-sm">🌐</span>
-            <h4 className="text-xs font-bold text-[var(--text-primary)] uppercase tracking-wider">National Priorities</h4>
-            <span className="rounded-full bg-indigo-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-indigo-400">{national.length}</span>
+    <div>
+      <GroupByToggle value={groupBy} onChange={setGroupBy} />
+      <div className="space-y-6">
+        {national.length > 0 && (
+          <div>
+            <div className="mb-2 flex items-center gap-2">
+              <span className="text-sm">🌐</span>
+              <h4 className="text-xs font-bold text-[var(--text-primary)] uppercase tracking-wider">National Priorities</h4>
+              <span className="rounded-full bg-indigo-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-indigo-400">{national.length}</span>
+            </div>
+            <div className="space-y-3">
+              {national.map((rec) => (<RecCard key={rec._id} rec={rec} {...sharedProps} />))}
+            </div>
           </div>
-          <div className="space-y-3">
-            {national.map((rec) => (<RecCard key={rec._id} rec={rec} {...sharedProps} />))}
-          </div>
-        </div>
-      )}
+        )}
 
-      {regionalGroups.size > 0 && (
-        <div>
-          <div className="mb-2 flex items-center gap-2">
-            <span className="text-sm">📍</span>
-            <h4 className="text-xs font-bold text-[var(--text-primary)] uppercase tracking-wider">By Region</h4>
+        {regionalGroups.size > 0 && (
+          <div>
+            <div className="mb-2 flex items-center gap-2">
+              <span className="text-sm">📍</span>
+              <h4 className="text-xs font-bold text-[var(--text-primary)] uppercase tracking-wider">By Region</h4>
+            </div>
+            <div className="space-y-4">
+              {[...regionalGroups.entries()].map(([region, regionRecs]) => (
+                <div key={region}>
+                  <p className="mb-1.5 text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wider">{region}</p>
+                  <div className="space-y-3">{regionRecs.map((rec) => (<RecCard key={rec._id} rec={rec} {...sharedProps} />))}</div>
+                </div>
+              ))}
+            </div>
           </div>
-          <div className="space-y-4">
-            {[...regionalGroups.entries()].map(([region, regionRecs]) => (
-              <div key={region}>
-                <p className="mb-1.5 text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wider">{region}</p>
-                <div className="space-y-3">{regionRecs.map((rec) => (<RecCard key={rec._id} rec={rec} {...sharedProps} />))}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+        )}
 
-      {amGroups.size > 0 && (
-        <div>
-          <div className="mb-2 flex items-center gap-2">
-            <span className="text-sm">👤</span>
-            <h4 className="text-xs font-bold text-[var(--text-primary)] uppercase tracking-wider">By Area Manager</h4>
+        {amGroups.size > 0 && (
+          <div>
+            <div className="mb-2 flex items-center gap-2">
+              <span className="text-sm">👤</span>
+              <h4 className="text-xs font-bold text-[var(--text-primary)] uppercase tracking-wider">By Area Manager</h4>
+            </div>
+            <div className="space-y-4">
+              {[...amGroups.entries()].map(([am, amRecs]) => (
+                <div key={am}>
+                  <p className="mb-1.5 text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wider">{am}</p>
+                  <div className="space-y-3">{amRecs.map((rec) => (<RecCard key={rec._id} rec={rec} {...sharedProps} />))}</div>
+                </div>
+              ))}
+            </div>
           </div>
-          <div className="space-y-4">
-            {[...amGroups.entries()].map(([am, amRecs]) => (
-              <div key={am}>
-                <p className="mb-1.5 text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wider">{am}</p>
-                <div className="space-y-3">{amRecs.map((rec) => (<RecCard key={rec._id} rec={rec} {...sharedProps} />))}</div>
-              </div>
-            ))}
+        )}
+
+        {storeGroups.size > 0 && (
+          <div>
+            <div className="mb-2 flex items-center gap-2">
+              <span className="text-sm">🏪</span>
+              <h4 className="text-xs font-bold text-[var(--text-primary)] uppercase tracking-wider">By Store</h4>
+            </div>
+            <div className="space-y-4">
+              {[...storeGroups.entries()].map(([store, storeRecs]) => (
+                <div key={store}>
+                  <p className="mb-1.5 text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wider">{store}</p>
+                  <div className="space-y-3">{storeRecs.map((rec) => (<RecCard key={rec._id} rec={rec} {...sharedProps} />))}</div>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
+    </div>
+  );
+}
+
+function GroupByToggle({
+  value,
+  onChange,
+}: {
+  value: 'scope' | 'program';
+  onChange: (v: 'scope' | 'program') => void;
+}) {
+  return (
+    <div className="mb-4 flex items-center gap-1 rounded-lg border border-[var(--border-subtle)] bg-[var(--input-bg)] p-0.5 w-fit">
+      {(['scope', 'program'] as const).map((opt) => (
+        <button
+          key={opt}
+          type="button"
+          onClick={() => onChange(opt)}
+          className={`rounded-md px-3 py-1 text-[10px] font-semibold transition ${
+            value === opt
+              ? 'bg-[var(--card-bg)] text-[var(--text-primary)] shadow-sm'
+              : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
+          }`}
+        >
+          {opt === 'scope' ? 'By Scope' : 'By Program'}
+        </button>
+      ))}
     </div>
   );
 }
@@ -950,7 +1046,23 @@ function IntelligenceContent({
   const [showSettings, setShowSettings] = useState(false);
   const [dismissedRecs, setDismissedRecs] = useState<Set<string>>(new Set());
 
+  // AI generation filters
+  const [filterRegion, setFilterRegion] = useState('');
+  const [filterAreaManager, setFilterAreaManager] = useState('');
+  const [filterStore, setFilterStore] = useState('');
+  const [filterProgram, setFilterProgram] = useState('');
+
   const visibleRecs = (recs ?? []).filter((r) => !dismissedRecs.has(r._id));
+
+  // Derive unique filter options from gap data
+  const filterOptions = useMemo(() => {
+    if (!gaps) return { regions: [], areaManagers: [], stores: [], programs: [] };
+    const regions = [...new Set(gaps.filter((g) => g.dimension === 'region').map((g) => g.dimensionValue))].sort();
+    const areaManagers = [...new Set(gaps.filter((g) => g.dimension === 'areaManager').map((g) => g.dimensionValue))].sort();
+    const stores = [...new Set(gaps.filter((g) => g.dimension === 'store').map((g) => g.dimensionValue))].sort();
+    const programs = [...new Set(gaps.map((g) => g.programName))].sort();
+    return { regions, areaManagers, stores, programs };
+  }, [gaps]);
 
   // Derived KPIs
   const hasData = (summary?.total ?? 0) > 0;
@@ -1225,7 +1337,7 @@ function IntelligenceContent({
 
             {/* Right — recommendations */}
             <section>
-              <div className="mb-4 flex items-center justify-between">
+              <div className="mb-3 flex items-center justify-between">
                 <h2 className="text-sm font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]">
                   Course Recommendations
                 </h2>
@@ -1235,7 +1347,13 @@ function IntelligenceContent({
                     setGenerating(true);
                     setGenerateErr('');
                     try {
-                      await generateRecs({ workspaceId });
+                      await generateRecs({
+                        workspaceId,
+                        filterRegion: filterRegion || undefined,
+                        filterAreaManager: filterAreaManager || undefined,
+                        filterStore: filterStore || undefined,
+                        filterProgram: filterProgram || undefined,
+                      });
                     } catch (e: any) {
                       setGenerateErr(e.message ?? 'Generation failed');
                     } finally {
@@ -1254,6 +1372,101 @@ function IntelligenceContent({
                   {generating ? 'Generating…' : 'Regenerate'}
                 </button>
               </div>
+
+              {/* Filter bar */}
+              {gaps && gaps.length > 0 && (
+                <div className="mb-4 grid grid-cols-2 gap-2">
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[9px] font-bold uppercase tracking-wider text-[var(--text-muted)]">Program</label>
+                    <select
+                      value={filterProgram}
+                      onChange={(e) => setFilterProgram(e.target.value)}
+                      className="rounded-lg border border-[var(--border-subtle)] bg-[var(--input-bg)] px-2.5 py-1.5 text-xs text-[var(--text-primary)] focus:border-[var(--ember-400)]/60 focus:outline-none"
+                    >
+                      <option value="">All Programs</option>
+                      {filterOptions.programs.map((p) => (
+                        <option key={p} value={p}>{p}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[9px] font-bold uppercase tracking-wider text-[var(--text-muted)]">Region</label>
+                    <select
+                      value={filterRegion}
+                      onChange={(e) => setFilterRegion(e.target.value)}
+                      className="rounded-lg border border-[var(--border-subtle)] bg-[var(--input-bg)] px-2.5 py-1.5 text-xs text-[var(--text-primary)] focus:border-[var(--ember-400)]/60 focus:outline-none"
+                    >
+                      <option value="">All Regions</option>
+                      {filterOptions.regions.map((r) => (
+                        <option key={r} value={r}>{r}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[9px] font-bold uppercase tracking-wider text-[var(--text-muted)]">Area Manager</label>
+                    <select
+                      value={filterAreaManager}
+                      onChange={(e) => setFilterAreaManager(e.target.value)}
+                      className="rounded-lg border border-[var(--border-subtle)] bg-[var(--input-bg)] px-2.5 py-1.5 text-xs text-[var(--text-primary)] focus:border-[var(--ember-400)]/60 focus:outline-none"
+                    >
+                      <option value="">All Area Managers</option>
+                      {filterOptions.areaManagers.map((a) => (
+                        <option key={a} value={a}>{a}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[9px] font-bold uppercase tracking-wider text-[var(--text-muted)]">Store</label>
+                    <select
+                      value={filterStore}
+                      onChange={(e) => setFilterStore(e.target.value)}
+                      className="rounded-lg border border-[var(--border-subtle)] bg-[var(--input-bg)] px-2.5 py-1.5 text-xs text-[var(--text-primary)] focus:border-[var(--ember-400)]/60 focus:outline-none"
+                    >
+                      <option value="">All Stores</option>
+                      {filterOptions.stores.map((s) => (
+                        <option key={s} value={s}>{s}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              )}
+
+              {/* Active filter chips */}
+              {(filterRegion || filterAreaManager || filterStore || filterProgram) && (
+                <div className="mb-3 flex flex-wrap gap-1.5">
+                  {filterProgram && (
+                    <span className="flex items-center gap-1 rounded-full bg-[rgba(140,67,208,0.12)] px-2.5 py-0.5 text-[10px] font-semibold text-[var(--ember-400)]">
+                      <BookOpen className="size-2.5" /> {filterProgram}
+                      <button type="button" onClick={() => setFilterProgram('')} className="ml-0.5 opacity-60 hover:opacity-100"><X className="size-2.5" /></button>
+                    </span>
+                  )}
+                  {filterRegion && (
+                    <span className="flex items-center gap-1 rounded-full bg-[rgba(59,130,246,0.12)] px-2.5 py-0.5 text-[10px] font-semibold text-blue-400">
+                      📍 {filterRegion}
+                      <button type="button" onClick={() => setFilterRegion('')} className="ml-0.5 opacity-60 hover:opacity-100"><X className="size-2.5" /></button>
+                    </span>
+                  )}
+                  {filterAreaManager && (
+                    <span className="flex items-center gap-1 rounded-full bg-[rgba(16,185,129,0.12)] px-2.5 py-0.5 text-[10px] font-semibold text-emerald-400">
+                      👤 {filterAreaManager}
+                      <button type="button" onClick={() => setFilterAreaManager('')} className="ml-0.5 opacity-60 hover:opacity-100"><X className="size-2.5" /></button>
+                    </span>
+                  )}
+                  {filterStore && (
+                    <span className="flex items-center gap-1 rounded-full bg-[rgba(245,158,11,0.12)] px-2.5 py-0.5 text-[10px] font-semibold text-amber-400">
+                      🏪 {filterStore}
+                      <button type="button" onClick={() => setFilterStore('')} className="ml-0.5 opacity-60 hover:opacity-100"><X className="size-2.5" /></button>
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => { setFilterRegion(''); setFilterAreaManager(''); setFilterStore(''); setFilterProgram(''); }}
+                    className="text-[10px] text-[var(--text-muted)] underline hover:text-[var(--text-secondary)]"
+                  >
+                    Clear all
+                  </button>
+                </div>
+              )}
 
               {generating && (
                 <div className="mb-3 flex items-center gap-2.5 rounded-xl border border-[rgba(140,67,208,0.2)] bg-[rgba(140,67,208,0.06)] px-4 py-3">
@@ -1274,7 +1487,7 @@ function IntelligenceContent({
                 <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-[var(--border-subtle)] py-10 text-center">
                   <Sparkles className="size-6 text-[var(--text-muted)]" />
                   <p className="max-w-[200px] text-xs text-[var(--text-muted)]">
-                    No recommendations yet. Click regenerate to suggest AI-driven courses.
+                    No recommendations yet. Set filters above and click Suggest to generate AI-driven courses.
                   </p>
                   <button
                     type="button"
@@ -1282,7 +1495,13 @@ function IntelligenceContent({
                       setGenerating(true);
                       setGenerateErr('');
                       try {
-                        await generateRecs({ workspaceId });
+                        await generateRecs({
+                          workspaceId,
+                          filterRegion: filterRegion || undefined,
+                          filterAreaManager: filterAreaManager || undefined,
+                          filterStore: filterStore || undefined,
+                          filterProgram: filterProgram || undefined,
+                        });
                       } catch (e: any) {
                         setGenerateErr(e.message ?? 'Generation failed');
                       } finally {

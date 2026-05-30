@@ -29,7 +29,7 @@ const DEFAULT_COMPANY_CODE = 'HBPL';
 
 type GapDoc = {
   _id: Id<'trainingGaps'>;
-  dimension: 'region' | 'areaManager';
+  dimension: 'region' | 'areaManager' | 'store';
   dimensionValue: string;
   category: string;
   programName: string;
@@ -50,9 +50,10 @@ type RecDoc = {
   priority: number;
   status: 'pending' | 'building' | 'built' | 'dismissed';
   moduleId?: Id<'modules'>;
-  audienceLevel?: 'national' | 'regional' | 'areaManager';
+  audienceLevel?: 'national' | 'regional' | 'areaManager' | 'store';
   gapDimension?: string | null;
   gapDimensionValue?: string | null;
+  gapProgramName?: string | null;
 };
 
 type AnalyticsLink = {
@@ -739,16 +740,18 @@ function RecGrouped({
   onDismiss: (id: string) => void;
 }) {
   // Resolve effective audience level
-  function effectiveLevel(r: RecDoc): 'national' | 'regional' | 'areaManager' {
+  function effectiveLevel(r: RecDoc): 'national' | 'regional' | 'areaManager' | 'store' {
     if (r.audienceLevel) return r.audienceLevel;
     if (r.gapDimension === 'areaManager') return 'areaManager';
     if (r.gapDimension === 'region') return 'regional';
+    if (r.gapDimension === 'store') return 'store';
     return 'national';
   }
 
   const national = recs.filter((r) => effectiveLevel(r) === 'national');
   const regional = recs.filter((r) => effectiveLevel(r) === 'regional');
   const areaManager = recs.filter((r) => effectiveLevel(r) === 'areaManager');
+  const storeLevel = recs.filter((r) => effectiveLevel(r) === 'store');
 
   // Group regional by dimensionValue
   const regionalGroups = new Map<string, RecDoc[]>();
@@ -834,6 +837,38 @@ function RecGrouped({
           </div>
         </div>
       )}
+
+      {storeLevel.length > 0 && (() => {
+        const storeGroups = new Map<string, RecDoc[]>();
+        for (const r of storeLevel) {
+          const key = r.gapDimensionValue ?? 'Store';
+          const group = storeGroups.get(key) ?? [];
+          group.push(r);
+          storeGroups.set(key, group);
+        }
+        return (
+          <div>
+            <div className="mb-3 flex items-center gap-2">
+              <span className="text-base">🏪</span>
+              <h3 className="text-sm font-bold text-[var(--text-primary)]">By Store</h3>
+            </div>
+            <div className="space-y-5">
+              {[...storeGroups.entries()].map(([store, storeRecs]) => (
+                <div key={store}>
+                  <p className="mb-2 text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider">
+                    {store}
+                  </p>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    {storeRecs.map((rec) => (
+                      <RecCard key={rec._id} rec={rec} {...sharedProps} />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
@@ -990,6 +1025,21 @@ export function AnalyticsPage() {
   const [activeTab, setActiveTab] = useState<'region' | 'areaManager'>('region');
   const [showSettings, setShowSettings] = useState(false);
   const [dismissedRecs, setDismissedRecs] = useState<Set<string>>(new Set());
+
+  // Filter state for AI recommendation generation
+  const [filterRegion, setFilterRegion] = useState('');
+  const [filterAreaManager, setFilterAreaManager] = useState('');
+  const [filterStore, setFilterStore] = useState('');
+  const [filterProgram, setFilterProgram] = useState('');
+
+  const filterOptions = useMemo(() => {
+    if (!gaps) return { regions: [] as string[], areaManagers: [] as string[], stores: [] as string[], programs: [] as string[] };
+    const regions = [...new Set(gaps.filter((g) => g.dimension === 'region').map((g) => g.dimensionValue))].sort();
+    const areaManagers = [...new Set(gaps.filter((g) => g.dimension === 'areaManager').map((g) => g.dimensionValue))].sort();
+    const stores = [...new Set(gaps.filter((g) => g.dimension === 'store').map((g) => g.dimensionValue))].sort();
+    const programs = [...new Set(gaps.map((g) => g.programName).filter(Boolean))].sort();
+    return { regions, areaManagers, stores, programs };
+  }, [gaps]);
 
   const visibleRecs = (recs ?? []).filter((r) => !dismissedRecs.has(r._id));
 
@@ -1191,7 +1241,7 @@ export function AnalyticsPage() {
 
           {/* Recommendations section */}
           <div className="mt-10">
-            <div className="mb-5 flex items-center justify-between">
+            <div className="mb-3 flex items-center justify-between">
               <div>
                 <h2 className="text-base font-bold text-[var(--text-primary)]">
                   Course Recommendations
@@ -1207,7 +1257,13 @@ export function AnalyticsPage() {
                     setGenerating(true);
                     setGenerateErr('');
                     try {
-                      await generateRecs({ workspaceId: wsId });
+                      await generateRecs({
+                        workspaceId: wsId,
+                        filterRegion: filterRegion || undefined,
+                        filterAreaManager: filterAreaManager || undefined,
+                        filterStore: filterStore || undefined,
+                        filterProgram: filterProgram || undefined,
+                      });
                     } catch (e: any) {
                       setGenerateErr(e.message ?? 'Generation failed');
                     } finally {
@@ -1226,6 +1282,50 @@ export function AnalyticsPage() {
                 </button>
               )}
             </div>
+
+            {/* Filter bar */}
+            <div className="mb-4 grid grid-cols-2 gap-2 md:grid-cols-4">
+              {[
+                { label: 'Program', value: filterProgram, onChange: setFilterProgram, options: filterOptions.programs },
+                { label: 'Region', value: filterRegion, onChange: setFilterRegion, options: filterOptions.regions },
+                { label: 'Area Manager', value: filterAreaManager, onChange: setFilterAreaManager, options: filterOptions.areaManagers },
+                { label: 'Store', value: filterStore, onChange: setFilterStore, options: filterOptions.stores },
+              ].map(({ label, value, onChange, options }) => (
+                <select
+                  key={label}
+                  value={value}
+                  onChange={(e) => onChange(e.target.value)}
+                  className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-raised)] px-3 py-1.5 text-xs text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--ember-400)]"
+                >
+                  <option value="">All {label}s</option>
+                  {options.map((o) => (
+                    <option key={o} value={o}>{o}</option>
+                  ))}
+                </select>
+              ))}
+            </div>
+            {(filterRegion || filterAreaManager || filterStore || filterProgram) && (
+              <div className="mb-4 flex flex-wrap items-center gap-2">
+                {[
+                  { label: 'Region', value: filterRegion, clear: () => setFilterRegion('') },
+                  { label: 'AM', value: filterAreaManager, clear: () => setFilterAreaManager('') },
+                  { label: 'Store', value: filterStore, clear: () => setFilterStore('') },
+                  { label: 'Program', value: filterProgram, clear: () => setFilterProgram('') },
+                ].filter((f) => f.value).map((f) => (
+                  <span key={f.label} className="flex items-center gap-1 rounded-full bg-[rgba(140,67,208,0.12)] px-2.5 py-0.5 text-[11px] font-medium text-[var(--ember-400)]">
+                    {f.label}: {f.value}
+                    <button type="button" onClick={f.clear} className="ml-0.5 opacity-70 hover:opacity-100">✕</button>
+                  </span>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => { setFilterRegion(''); setFilterAreaManager(''); setFilterStore(''); setFilterProgram(''); }}
+                  className="text-[11px] text-[var(--text-muted)] hover:text-[var(--ember-400)] transition"
+                >
+                  Clear all
+                </button>
+              </div>
+            )}
 
             {generating && (
               <div className="mb-4 flex items-center gap-3 rounded-xl border border-[rgba(140,67,208,0.2)] bg-[rgba(140,67,208,0.06)] px-4 py-3">
@@ -1255,7 +1355,13 @@ export function AnalyticsPage() {
                     setGenerating(true);
                     setGenerateErr('');
                     try {
-                      await generateRecs({ workspaceId: wsId });
+                      await generateRecs({
+                        workspaceId: wsId,
+                        filterRegion: filterRegion || undefined,
+                        filterAreaManager: filterAreaManager || undefined,
+                        filterStore: filterStore || undefined,
+                        filterProgram: filterProgram || undefined,
+                      });
                     } catch (e: any) {
                       setGenerateErr(e.message ?? 'Generation failed');
                     } finally {
