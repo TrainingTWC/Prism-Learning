@@ -564,7 +564,7 @@ Output only the JSON structure. Begin now.`;
   },
 });
 
-// ── AI image generation (Gemini 2.5 Flash Image / "nano banana") ────────────
+// ── AI image generation (Cloudflare Workers AI — FLUX.1 [schnell]) ──────────
 
 /** Internal: fetch a module's workspace + style reference for image gen. */
 export const getModuleForImage = internalQuery({
@@ -579,16 +579,6 @@ export const getModuleForImage = internalQuery({
   },
 });
 
-function arrayBufferToBase64(buf: ArrayBuffer): string {
-  const bytes = new Uint8Array(buf);
-  let binary = '';
-  const chunk = 0x8000;
-  for (let i = 0; i < bytes.length; i += chunk) {
-    binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
-  }
-  return btoa(binary);
-}
-
 function base64ToUint8Array(b64: string): Uint8Array {
   const binary = atob(b64);
   const len = binary.length;
@@ -597,19 +587,38 @@ function base64ToUint8Array(b64: string): Uint8Array {
   return bytes;
 }
 
+/** Style presets for AI image generation (steers FLUX schnell). */
+const IMAGE_STYLE_PRESETS: Record<string, string> = {
+  'flat-vector':
+    'Clean modern flat-vector illustration, bold simple shapes, cohesive limited color palette, subtle gradients',
+  isometric:
+    'Isometric 3D vector illustration, precise geometry, soft shadows, clean tech-style color palette',
+  '3d-render':
+    'Polished 3D render, soft studio lighting, smooth rounded shapes, gentle ambient occlusion, pastel color palette',
+  watercolor:
+    'Soft hand-painted watercolor illustration, gentle textured brush strokes, warm organic color palette',
+  'line-art':
+    'Minimal line-art illustration, clean confident strokes, limited accent colors, lots of white space',
+  photographic:
+    'Realistic professional photograph, natural lighting, shallow depth of field, sharp focus, editorial quality',
+  minimalist:
+    'Minimalist illustration, geometric simplicity, generous negative space, muted modern color palette',
+};
+
 /**
- * Generate an image with Gemini 2.5 Flash Image ("nano banana"), optionally
- * conditioned on the module's style reference image. Stores the result in
- * Convex storage and returns its storageId.
- * Requires GEMINI_API_KEY set in the Convex dashboard.
+ * Generate an image with Cloudflare Workers AI (FLUX.1 [schnell]) and store the
+ * result in Convex storage, returning its storageId.
+ * Requires CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_AI_API_TOKEN set in the Convex
+ * dashboard. FLUX schnell is text-to-image only (no style-reference image input).
  */
 export const generateImage = action({
   args: {
     moduleId: v.id('modules'),
     prompt: v.string(),
+    style: v.optional(v.string()),
     useStyleReference: v.optional(v.boolean()),
   },
-  handler: async (ctx, { moduleId, prompt, useStyleReference }): Promise<{ storageId: string }> => {
+  handler: async (ctx, { moduleId, prompt, style }): Promise<{ storageId: string }> => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error('Unauthenticated');
 
@@ -625,88 +634,60 @@ export const generateImage = action({
     });
     if (!membership) throw new Error('Forbidden');
 
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      throw new Error('Image generation not configured — set GEMINI_API_KEY in the Convex dashboard');
-    }
-
-    const model = process.env.GEMINI_IMAGE_MODEL ?? 'gemini-2.5-flash-image';
-
-    const parts: Array<Record<string, unknown>> = [
-      {
-        text:
-          `Create a single high-quality illustration for an e-learning course module. ` +
-          `${promptText}. The image should be clean, professional, and suitable for a ` +
-          `learning module. Do not include any text, watermarks, or captions in the image.`,
-      },
-    ];
-
-    // Attach the module style reference, if requested and available.
-    if (useStyleReference !== false && mod.styleReferenceStorageId) {
-      const refBlob = await ctx.storage.get(
-        mod.styleReferenceStorageId as Parameters<typeof ctx.storage.get>[0],
+    const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
+    const apiToken = process.env.CLOUDFLARE_AI_API_TOKEN;
+    if (!accountId || !apiToken) {
+      throw new ConvexError(
+        'Image generation not configured — set CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_AI_API_TOKEN in the Convex dashboard.',
       );
-      if (refBlob) {
-        const refBuf = await refBlob.arrayBuffer();
-        parts.unshift({
-          text: 'Match the visual style, color palette, and overall look of this reference image:',
-        });
-        parts.push({
-          inlineData: {
-            mimeType: refBlob.type || 'image/png',
-            data: arrayBufferToBase64(refBuf),
-          },
-        });
-      }
     }
 
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+    const model = process.env.CLOUDFLARE_IMAGE_MODEL ?? '@cf/black-forest-labs/flux-1-schnell';
+
+    const styleDescriptor =
+      (style && IMAGE_STYLE_PRESETS[style]) ?? IMAGE_STYLE_PRESETS['flat-vector'];
+
+    const fullPrompt =
+      `Professional, high-quality, highly detailed illustration for an e-learning course. ` +
+      `${promptText}. ${styleDescriptor}. Balanced composition, soft lighting, crisp shapes, ` +
+      `cohesive color palette, suitable for a corporate learning module. ` +
+      `No text, no words, no letters, no watermarks, no captions, no UI.`;
+
+    const apiUrl = `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/${model}`;
     const res = await fetch(apiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-goog-api-key': apiKey,
+        Authorization: `Bearer ${apiToken}`,
       },
-      body: JSON.stringify({ contents: [{ role: 'user', parts }] }),
+      body: JSON.stringify({ prompt: fullPrompt, steps: 8 }),
     });
 
     if (!res.ok) {
       const errText = await res.text();
-      if (res.status === 429) {
-        throw new ConvexError(
-          'Gemini image quota exceeded. Image generation (nano banana) is not available on the free tier — enable billing on your Gemini API key, or switch to a free image provider.',
-        );
+      if (res.status === 401 || res.status === 403) {
+        throw new ConvexError('Invalid Cloudflare AI credentials — check CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_AI_API_TOKEN.');
       }
-      if (res.status === 400 && /API key/i.test(errText)) {
-        throw new ConvexError('Invalid GEMINI_API_KEY — check the key in your Convex dashboard.');
+      if (res.status === 429) {
+        throw new ConvexError('Cloudflare Workers AI daily free limit reached (10,000 neurons/day). Try again after 00:00 UTC.');
       }
       throw new ConvexError(`Image generation failed (${res.status}). ${errText.slice(0, 200)}`);
     }
 
     const data = (await res.json()) as {
-      candidates?: Array<{
-        content?: { parts?: Array<{ inlineData?: { mimeType?: string; data?: string }; text?: string }> };
-        finishReason?: string;
-      }>;
-      promptFeedback?: { blockReason?: string };
-      error?: { message?: string };
+      result?: { image?: string };
+      success?: boolean;
+      errors?: Array<{ message?: string }>;
     };
 
-    if (data.error?.message) throw new Error(`Image error: ${data.error.message}`);
-    if (data.promptFeedback?.blockReason) {
-      throw new Error(`Image request blocked: ${data.promptFeedback.blockReason}`);
+    if (data.success === false || !data.result?.image) {
+      const msg = data.errors?.map((e) => e.message).filter(Boolean).join('; ');
+      throw new ConvexError(msg ? `Image generation failed: ${msg}` : 'The model did not return an image — try rephrasing your prompt.');
     }
 
-    const responseParts = data.candidates?.[0]?.content?.parts ?? [];
-    const imagePart = responseParts.find((p) => p.inlineData?.data);
-    if (!imagePart?.inlineData?.data) {
-      throw new Error('The model did not return an image — try rephrasing your prompt');
-    }
-
-    const mimeType = imagePart.inlineData.mimeType || 'image/png';
-    const bytes = base64ToUint8Array(imagePart.inlineData.data);
+    const bytes = base64ToUint8Array(data.result.image);
     const storageId = await ctx.storage.store(
-      new Blob([bytes as unknown as BlobPart], { type: mimeType }),
+      new Blob([bytes as unknown as BlobPart], { type: 'image/jpeg' }),
     );
 
     return { storageId: storageId as string };

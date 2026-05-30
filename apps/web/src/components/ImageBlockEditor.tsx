@@ -20,6 +20,17 @@ function parsePayload(content?: string): ImagePayload | null {
   }
 }
 
+// ── AI image style presets (must match keys in convex/ai.ts) ───────────────
+const STYLE_OPTIONS: { value: string; label: string }[] = [
+  { value: 'flat-vector', label: 'Flat vector' },
+  { value: 'isometric', label: 'Isometric' },
+  { value: '3d-render', label: '3D render' },
+  { value: 'watercolor', label: 'Watercolor' },
+  { value: 'line-art', label: 'Line art' },
+  { value: 'minimalist', label: 'Minimalist' },
+  { value: 'photographic', label: 'Photographic' },
+];
+
 // ── Sub-component: resolved image display ─────────────────────────────────
 function ImageDisplay({
   storageId,
@@ -86,17 +97,13 @@ export function ImageBlockEditor({
   const [dragOver, setDragOver] = useState(false);
   const [mode, setMode] = useState<'upload' | 'generate'>('upload');
   const [prompt, setPrompt] = useState('');
+  const [style, setStyle] = useState('flat-vector');
   const [generating, setGenerating] = useState(false);
   const [genError, setGenError] = useState('');
-  const [savingRef, setSavingRef] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const styleRefInputRef = useRef<HTMLInputElement>(null);
   const generateUploadUrl = useMutation(api.files.generateUploadUrl);
   const deleteFile = useMutation(api.files.deleteFile);
   const generateImage = useAction(api.ai.generateImage);
-  const setStyleReference = useMutation(api.modules.setStyleReference);
-  const moduleDoc = useQuery(api.modules.getById, moduleId ? { moduleId } : 'skip');
-  const styleRefStorageId = moduleDoc?.styleReferenceStorageId ?? null;
 
   const storageId = payload?.storageId ?? null;
 
@@ -160,7 +167,7 @@ export function ImageBlockEditor({
     setGenerating(true);
     setGenError('');
     try {
-      const { storageId: newId } = await generateImage({ moduleId, prompt: prompt.trim() });
+      const { storageId: newId } = await generateImage({ moduleId, prompt: prompt.trim(), style });
       save(newId, altText || prompt.trim().slice(0, 120), caption);
     } catch (e) {
       const data = (e as { data?: unknown })?.data;
@@ -174,37 +181,9 @@ export function ImageBlockEditor({
     } finally {
       setGenerating(false);
     }
-  }, [moduleId, prompt, generateImage, save, altText, caption]);
+  }, [moduleId, prompt, style, generateImage, save, altText, caption]);
 
-  const handleStyleRefFile = useCallback(
-    async (file: File) => {
-      if (!moduleId || !file.type.startsWith('image/')) return;
-      setSavingRef(true);
-      try {
-        const uploadUrl = await generateUploadUrl();
-        const res = await fetch(uploadUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': file.type },
-          body: file,
-        });
-        if (!res.ok) throw new Error('Upload failed');
-        const { storageId: newId } = (await res.json()) as { storageId: string };
-        if (styleRefStorageId) await deleteFile({ storageId: styleRefStorageId });
-        await setStyleReference({ moduleId, storageId: newId });
-      } finally {
-        setSavingRef(false);
-      }
-    },
-    [moduleId, generateUploadUrl, deleteFile, setStyleReference, styleRefStorageId],
-  );
-
-  const handleClearStyleRef = useCallback(async () => {
-    if (!moduleId) return;
-    if (styleRefStorageId) await deleteFile({ storageId: styleRefStorageId });
-    await setStyleReference({ moduleId, storageId: null });
-  }, [moduleId, styleRefStorageId, deleteFile, setStyleReference]);
-
-  // ── Image already uploaded ─────────────────────────────────────────────
+  // ── Image already uploaded ──────────────────────────────────────────────
   if (storageId) {
     return (
       <div className="space-y-2 rounded-xl border border-slate-200 bg-white p-3">
@@ -314,50 +293,19 @@ export function ImageBlockEditor({
             className="w-full resize-none rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 placeholder-slate-400 outline-none focus:border-indigo-300 focus:ring-1 focus:ring-indigo-200"
           />
 
-          {/* Module style reference */}
-          <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 p-2">
-            {styleRefStorageId ? (
-              <StyleRefThumb storageId={styleRefStorageId} />
-            ) : (
-              <div className="flex size-10 shrink-0 items-center justify-center rounded-md bg-white text-slate-300">
-                <ImageIcon className="size-4" />
-              </div>
-            )}
-            <div className="min-w-0 flex-1">
-              <p className="text-xs font-semibold text-slate-600">Module style reference</p>
-              <p className="text-[11px] text-slate-400">
-                {styleRefStorageId ? 'All generated images match this style' : 'Optional — set a style for the whole module'}
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => styleRefInputRef.current?.click()}
-              disabled={savingRef}
-              className="rounded-md border border-slate-200 px-2 py-1 text-[11px] font-semibold text-slate-600 hover:bg-white disabled:opacity-50"
+          <div className="flex items-center gap-2">
+            <label className="text-xs font-semibold text-slate-500">Style</label>
+            <select
+              value={style}
+              onChange={(e) => setStyle(e.target.value)}
+              className="flex-1 rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-700 outline-none focus:border-indigo-300 focus:ring-1 focus:ring-indigo-200"
             >
-              {savingRef ? <Loader2 className="size-3 animate-spin" /> : styleRefStorageId ? 'Change' : 'Set'}
-            </button>
-            {styleRefStorageId && (
-              <button
-                type="button"
-                onClick={() => void handleClearStyleRef()}
-                disabled={savingRef}
-                className="rounded-md border border-slate-200 px-2 py-1 text-[11px] font-semibold text-slate-500 hover:bg-white disabled:opacity-50"
-              >
-                Clear
-              </button>
-            )}
-            <input
-              ref={styleRefInputRef}
-              type="file"
-              accept="image/*"
-              className="sr-only"
-              onChange={(e) => {
-                const f = e.target.files?.[0];
-                if (f) void handleStyleRefFile(f);
-                e.target.value = '';
-              }}
-            />
+              {STYLE_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
           </div>
 
           {genError && (
@@ -377,17 +325,4 @@ export function ImageBlockEditor({
       )}
     </div>
   );
-}
-
-// ── Sub-component: style reference thumbnail ────────────────────────────────
-function StyleRefThumb({ storageId }: { storageId: string }) {
-  const url = useQuery(api.files.getFileUrl, { storageId });
-  if (!url) {
-    return (
-      <div className="flex size-10 shrink-0 items-center justify-center rounded-md bg-white">
-        <Loader2 className="size-3.5 animate-spin text-slate-300" />
-      </div>
-    );
-  }
-  return <img src={url} alt="Style reference" className="size-10 shrink-0 rounded-md object-cover" />;
 }
