@@ -512,31 +512,38 @@ export const generateRecommendations = action({
   },
   handler: async (ctx, { workspaceId, filterRegion, filterAreaManager, filterProgram, filterStore }) => {
     const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error('Not authenticated');
+    if (!userId) throw new ConvexError('Not authenticated');
 
     const link = await ctx.runQuery(internal.analytics.getLinkInternal, { workspaceId });
-    if (!link) throw new Error('No PI company linked');
+    if (!link) throw new ConvexError('No PI company linked');
 
     const allGaps = await ctx.runQuery(api.analytics.listGaps, { workspaceId });
-    let topGaps = (allGaps as any[])
-      .filter((g) => g.severity === 'critical' || g.severity === 'high');
 
-    // Apply dimension-based filters
+    // Apply dimension-based filters first, then pick worst severity available
+    let filtered = allGaps as any[];
     if (filterRegion) {
-      topGaps = topGaps.filter((g) => g.dimension !== 'region' || g.dimensionValue === filterRegion);
+      filtered = filtered.filter((g) => g.dimension !== 'region' || g.dimensionValue === filterRegion);
     }
     if (filterAreaManager) {
-      topGaps = topGaps.filter((g) => g.dimension !== 'areaManager' || g.dimensionValue === filterAreaManager);
+      filtered = filtered.filter((g) => g.dimension !== 'areaManager' || g.dimensionValue === filterAreaManager);
     }
     if (filterStore) {
-      topGaps = topGaps.filter((g) => g.dimension !== 'store' || g.dimensionValue === filterStore);
+      filtered = filtered.filter((g) => g.dimension !== 'store' || g.dimensionValue === filterStore);
     }
     if (filterProgram) {
-      topGaps = topGaps.filter((g) => g.programName === filterProgram);
+      filtered = filtered.filter((g) => g.programName === filterProgram);
+    }
+
+    // Try critical+high first, fall back to including medium
+    let topGaps = filtered.filter((g) => g.severity === 'critical' || g.severity === 'high');
+    if (topGaps.length === 0) {
+      topGaps = filtered.filter((g) => g.severity === 'critical' || g.severity === 'high' || g.severity === 'medium');
+    }
+    if (topGaps.length === 0) {
+      throw new ConvexError('No gap data found for the selected filters — try broadening your filter selection');
     }
 
     topGaps = topGaps.slice(0, 15);
-    if (topGaps.length === 0) throw new Error('No critical or high gaps found for the selected filters');
 
     // Build context for scope description
     const scopeParts: string[] = [];
@@ -558,7 +565,7 @@ export const generateRecommendations = action({
       .join('\n');
 
     const apiKey = process.env.GROQ_API_KEY;
-    if (!apiKey) throw new Error('AI not configured — set GROQ_API_KEY in the Convex dashboard');
+    if (!apiKey) throw new ConvexError('AI not configured — set GROQ_API_KEY in the Convex dashboard');
     const model = process.env.GROQ_MODEL ?? 'llama-3.3-70b-versatile';
 
     const systemPrompt = `You are an expert learning & development strategist. Given training gap data from retail audit scores, you generate targeted course recommendations.
@@ -612,17 +619,17 @@ Generate targeted course recommendations to close these gaps${isFiltered ? ` for
       }),
     });
 
-    if (!res.ok) throw new Error(`AI error ${res.status}: ${(await res.text()).slice(0, 200)}`);
+    if (!res.ok) throw new ConvexError(`AI error ${res.status}: ${(await res.text()).slice(0, 200)}`);
     const data = (await res.json()) as any;
     const raw = data.choices?.[0]?.message?.content;
-    if (!raw) throw new Error('Empty AI response');
+    if (!raw) throw new ConvexError('Empty AI response');
 
     let recs: any[];
     try {
       const parsed = JSON.parse(raw) as any;
       recs = Array.isArray(parsed) ? parsed : (parsed.recommendations ?? parsed.courses ?? []);
     } catch {
-      throw new Error('AI returned malformed JSON');
+      throw new ConvexError('AI returned malformed JSON');
     }
 
     await ctx.runMutation(internal.analytics.storeRecommendations, {
