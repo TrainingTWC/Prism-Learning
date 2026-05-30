@@ -803,7 +803,7 @@ function SortableBlock({
       </button>
 
       {/* Block content */}
-      <div className="flex-1">
+      <div className="flex-1 prism-editor-block">
         {block.type === 'richText' && (
           <RichTextBlockEditor
             blockId={block._id}
