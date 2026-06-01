@@ -77,13 +77,13 @@ function resolvePICompanyId(companyCode: string, currentPiCompanyId?: string) {
 
 async function requireMember(ctx: any, workspaceId: Id<'workspaces'>) {
   const userId = await getAuthUserId(ctx);
-  if (!userId) throw new Error('Not authenticated');
+  if (!userId) throw new ConvexError('Not authenticated');
   const member = await ctx.db
     .query('memberships')
     .withIndex('by_workspace', (q: any) => q.eq('workspaceId', workspaceId))
     .filter((q: any) => q.eq(q.field('userId'), userId))
     .first();
-  if (!member) throw new Error('Not a workspace member');
+  if (!member) throw new ConvexError('Not a workspace member');
   return userId;
 }
 
@@ -132,14 +132,14 @@ export const validatePICompany = action({
     companyCode: v.string(),
     currentPiCompanyId: v.optional(v.string()),
   },
-  handler: async (ctx, { companyCode, currentPiCompanyId }): Promise<{ programCount: number; storeCount: number }> => {
+  handler: async (ctx, { companyCode, currentPiCompanyId }): Promise<{ programCount: number; storeCount: number; piCompanyId: string }> => {
     const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error('Not authenticated');
+    if (!userId) throw new ConvexError('Not authenticated');
 
     const piUrl = (process.env.PI_CONVEX_URL ?? '').replace(/\/+$/, '');
     const piToken = process.env.PI_API_TOKEN;
     if (!piUrl || !piToken)
-      throw new Error(
+      throw new ConvexError(
         'PI_CONVEX_URL and PI_API_TOKEN must be set as environment variables in the Convex dashboard',
       );
 
@@ -160,6 +160,7 @@ export const validatePICompany = action({
     return {
       programCount: Array.isArray(d?.programs) ? d!.programs.length : 0,
       storeCount: Array.isArray(d?.stores) ? d!.stores.length : 0,
+      piCompanyId,
     };
   },
 });
@@ -170,6 +171,7 @@ export const linkCompany = mutation({
   args: {
     workspaceId: v.id('workspaces'),
     companyCode: v.string(),
+    piCompanyId: v.string(),
     piCompanyName: v.string(),
     benchmarkScore: v.number(),
     lookbackDays: v.number(),
@@ -180,7 +182,7 @@ export const linkCompany = mutation({
       .query('analyticsLinks')
       .withIndex('by_workspace', (q) => q.eq('workspaceId', args.workspaceId))
       .first();
-    const piCompanyId = resolvePICompanyId(args.companyCode, existing?.piCompanyId);
+    const piCompanyId = args.piCompanyId.trim();
     const now = Date.now();
     if (existing) {
       await ctx.db.patch(existing._id, {
@@ -230,7 +232,7 @@ export const updateLinkSettings = mutation({
       .query('analyticsLinks')
       .withIndex('by_workspace', (q) => q.eq('workspaceId', workspaceId))
       .first();
-    if (!link) throw new Error('No analytics link found');
+    if (!link) throw new ConvexError('No analytics link found');
     await ctx.db.patch(link._id, { benchmarkScore, lookbackDays, updatedAt: Date.now() });
   },
 });
@@ -604,23 +606,35 @@ ${gapText}
 
 Generate targeted course recommendations to close these gaps${isFiltered ? ` for the specified scope (${scopeLabel})` : ''}.`;
 
-    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-      body: JSON.stringify({
-        model,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt },
-        ],
-        temperature: 0.6,
-        max_tokens: 3000,
-        response_format: { type: 'json_object' },
-      }),
-    });
+    let res: Response;
+    try {
+      res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+        body: JSON.stringify({
+          model,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt },
+          ],
+          temperature: 0.6,
+          max_tokens: 3000,
+          response_format: { type: 'json_object' },
+        }),
+      });
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      throw new ConvexError(`AI request failed: ${msg}`);
+    }
 
     if (!res.ok) throw new ConvexError(`AI error ${res.status}: ${(await res.text()).slice(0, 200)}`);
-    const data = (await res.json()) as any;
+
+    let data: any;
+    try {
+      data = await res.json();
+    } catch {
+      throw new ConvexError('AI returned a non-JSON response');
+    }
     const raw = data.choices?.[0]?.message?.content;
     if (!raw) throw new ConvexError('Empty AI response');
 
@@ -632,11 +646,16 @@ Generate targeted course recommendations to close these gaps${isFiltered ? ` for
       throw new ConvexError('AI returned malformed JSON');
     }
 
-    await ctx.runMutation(internal.analytics.storeRecommendations, {
-      workspaceId,
-      topGaps,
-      recs,
-    });
+    try {
+      await ctx.runMutation(internal.analytics.storeRecommendations, {
+        workspaceId,
+        topGaps,
+        recs,
+      });
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      throw new ConvexError(`Failed to save recommendations: ${msg}`);
+    }
     return { count: recs.length };
   },
 });
@@ -724,7 +743,7 @@ export const dismissRecommendation = mutation({
   args: { recId: v.id('courseRecommendations') },
   handler: async (ctx, { recId }) => {
     const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error('Not authenticated');
+    if (!userId) throw new ConvexError('Not authenticated');
     await ctx.db.patch(recId, { status: 'dismissed' });
   },
 });
@@ -772,10 +791,10 @@ export const buildModuleFromRecommendation: ReturnType<typeof action> = action({
   },
   handler: async (ctx, { recId, workspaceId, moduleType, extraContext }): Promise<string> => {
     const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error('Not authenticated');
+    if (!userId) throw new ConvexError('Not authenticated');
 
     const result = await ctx.runQuery(internal.analytics.getRecInternal, { recId });
-    if (!result) throw new Error('Recommendation not found');
+    if (!result) throw new ConvexError('Recommendation not found');
     const { rec, gap } = result as { rec: any; gap: any };
 
     const gapContext = (gap as any)

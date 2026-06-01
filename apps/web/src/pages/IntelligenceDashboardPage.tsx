@@ -210,7 +210,7 @@ function SetupWizard({
   const [benchmark, setBenchmark] = useState(75);
   const [lookback, setLookback] = useState(90);
   const [validating, setValidating] = useState(false);
-  const [validated, setValidated] = useState<{ programCount: number; storeCount: number } | null>(
+  const [validated, setValidated] = useState<{ programCount: number; storeCount: number; piCompanyId: string } | null>(
     null,
   );
   const [linking, setLinking] = useState(false);
@@ -235,13 +235,14 @@ function SetupWizard({
   }
 
   async function handleConnect() {
-    if (!companyId.trim() || !companyName.trim()) return;
+    if (!companyId.trim() || !companyName.trim() || !validated) return;
     setLinking(true);
     setErr('');
     try {
       await linkCompany({
         workspaceId,
         companyCode: companyId.trim(),
+        piCompanyId: validated.piCompanyId,
         piCompanyName: companyName.trim(),
         benchmarkScore: benchmark,
         lookbackDays: lookback,
@@ -399,7 +400,7 @@ function SettingsPanel({
   const [benchmark, setBenchmark] = useState(link.benchmarkScore);
   const [lookback, setLookback] = useState(link.lookbackDays);
   const [validating, setValidating] = useState(false);
-  const [validated, setValidated] = useState<{ programCount: number; storeCount: number } | null>(
+  const [validated, setValidated] = useState<{ programCount: number; storeCount: number; piCompanyId: string } | null>(
     null,
   );
   const [saving, setSaving] = useState(false);
@@ -438,9 +439,12 @@ function SettingsPanel({
     setSaving(true);
     setErr('');
     try {
+      // Use the validated piCompanyId if available, otherwise fall back to existing link's piCompanyId.
+      const piCompanyId = validated?.piCompanyId ?? link.piCompanyId ?? companyId.trim();
       await linkCompany({
         workspaceId,
         companyCode: companyId.trim(),
+        piCompanyId,
         piCompanyName: companyName.trim(),
         benchmarkScore: benchmark,
         lookbackDays: lookback,
@@ -1355,7 +1359,7 @@ function IntelligenceContent({
                         filterProgram: filterProgram || undefined,
                       });
                     } catch (e: any) {
-                      setGenerateErr(e.message ?? 'Generation failed');
+                      setGenerateErr(e.data ?? e.message ?? 'Generation failed');
                     } finally {
                       setGenerating(false);
                     }
@@ -1503,7 +1507,7 @@ function IntelligenceContent({
                           filterProgram: filterProgram || undefined,
                         });
                       } catch (e: any) {
-                        setGenerateErr(e.message ?? 'Generation failed');
+                        setGenerateErr(e.data ?? e.message ?? 'Generation failed');
                       } finally {
                         setGenerating(false);
                       }

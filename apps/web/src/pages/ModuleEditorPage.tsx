@@ -548,49 +548,60 @@ export function ModuleEditorPage() {
               </DndContext>
 
               {/* Add block */}
-              {addBlockMenuOpen ? (
-                <div className="rounded-2xl border-2 border-indigo-500/40 bg-[var(--bg-secondary)] shadow-sm p-4">
-                  <div className="mb-3 flex items-center justify-between">
-                    <span className="text-sm font-bold text-indigo-400">Insert block</span>
-                    <button
-                      type="button"
-                      onClick={() => setAddBlockMenuOpen(false)}
-                      className="rounded-lg p-1 text-[var(--text-muted)] hover:bg-[var(--card-bg-hover)] hover:text-[var(--text-primary)]"
-                    >
-                      <X className="size-4" />
-                    </button>
-                  </div>
-                  {['Content', 'Media', 'Interactive', 'Layout', 'Scenario', 'Advanced'].map((group) => (
-                    <div key={group} className="mb-4 last:mb-0">
-                      <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)]">{group}</p>
-                      <div className="grid grid-cols-4 gap-2">
-                        {BLOCK_TYPES.filter((bt) => bt.group === group).map(({ type, label, icon }) => (
-                          <button
-                            key={type}
-                            type="button"
-                            onClick={() => void handleAddBlock(type)}
-                            className="flex flex-col items-center gap-1.5 rounded-xl border border-[var(--border-primary)] bg-[var(--bg-tertiary)] px-2 py-3 text-center hover:border-indigo-500 hover:bg-indigo-500/10 transition-colors"
-                          >
-                            <span className="[&>svg]:size-5 text-[var(--text-tertiary)]">{icon}</span>
-                            <span className="text-[11px] font-medium text-[var(--text-secondary)] leading-tight">{label}</span>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setAddBlockMenuOpen(true)}
-                  className="flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-[var(--border-primary)] py-5 text-sm font-semibold text-[var(--text-muted)] transition-colors hover:border-indigo-500 hover:bg-indigo-500/10 hover:text-indigo-400"
-                >
-                  <Plus className="size-5" /> Add block
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={() => setAddBlockMenuOpen(true)}
+                className="flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-[var(--border-primary)] py-5 text-sm font-semibold text-[var(--text-muted)] transition-colors hover:border-indigo-500 hover:bg-indigo-500/10 hover:text-indigo-400"
+              >
+                <Plus className="size-5" /> Add block
+              </button>
             </div>
           )}
         </main>
+
+    {/* ── Add Block right-side drawer ── */}
+    {addBlockMenuOpen && (
+      <>
+        {/* Backdrop */}
+        <div
+          className="fixed inset-0 z-30 bg-black/20"
+          onClick={() => setAddBlockMenuOpen(false)}
+        />
+        {/* Drawer */}
+        <div className="fixed right-0 top-0 z-40 flex h-screen w-80 flex-col border-l border-[var(--border-primary)] bg-[var(--bg-secondary)] shadow-2xl">
+          <div className="flex shrink-0 items-center justify-between border-b border-[var(--border-subtle)] px-5 py-4">
+            <span className="text-sm font-bold text-[var(--text-primary)]">Insert block</span>
+            <button
+              type="button"
+              onClick={() => setAddBlockMenuOpen(false)}
+              className="rounded-lg p-1.5 text-[var(--text-muted)] hover:bg-[var(--card-bg-hover)] hover:text-[var(--text-primary)]"
+            >
+              <X className="size-4" />
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto px-4 py-4">
+            {['Content', 'Media', 'Interactive', 'Layout', 'Scenario', 'Advanced'].map((group) => (
+              <div key={group} className="mb-5 last:mb-0">
+                <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)]">{group}</p>
+                <div className="grid grid-cols-3 gap-2">
+                  {BLOCK_TYPES.filter((bt) => bt.group === group).map(({ type, label, icon }) => (
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() => void handleAddBlock(type)}
+                      className="flex flex-col items-center gap-1.5 rounded-xl border border-[var(--border-primary)] bg-[var(--bg-tertiary)] px-2 py-3 text-center hover:border-indigo-500 hover:bg-indigo-500/10 transition-colors"
+                    >
+                      <span className="[&>svg]:size-5 text-[var(--text-tertiary)]">{icon}</span>
+                      <span className="text-[11px] font-medium text-[var(--text-secondary)] leading-tight">{label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </>
+    )}
 
     {/* ── SCORM Export Dialog ── */}
     {exportDialogOpen && (

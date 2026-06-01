@@ -138,7 +138,7 @@ function SetupWizard({
   const [benchmark, setBenchmark] = useState(75);
   const [lookback, setLookback] = useState(90);
   const [validating, setValidating] = useState(false);
-  const [validated, setValidated] = useState<{ programCount: number; storeCount: number } | null>(null);
+  const [validated, setValidated] = useState<{ programCount: number; storeCount: number; piCompanyId: string } | null>(null);
   const [linking, setLinking] = useState(false);
   const [err, setErr] = useState('');
 
@@ -154,27 +154,28 @@ function SetupWizard({
       const result = await validateCompany({ companyCode: companyId.trim() });
       setValidated(result);
     } catch (e: any) {
-      setErr(e.message ?? 'Validation failed — check the company code and PI env vars');
+      setErr(e.data ?? e.message ?? 'Validation failed — check the company code and PI env vars');
     } finally {
       setValidating(false);
     }
   }
 
   async function handleConnect() {
-    if (!companyId.trim() || !companyName.trim()) return;
+    if (!companyId.trim() || !companyName.trim() || !validated) return;
     setLinking(true);
     setErr('');
     try {
       await linkCompany({
         workspaceId,
         companyCode: companyId.trim(),
+        piCompanyId: validated.piCompanyId,
         piCompanyName: companyName.trim(),
         benchmarkScore: benchmark,
         lookbackDays: lookback,
       });
       onLinked();
     } catch (e: any) {
-      setErr(e.message ?? 'Failed to connect');
+      setErr(e.data ?? e.message ?? 'Failed to connect');
     } finally {
       setLinking(false);
     }
@@ -317,7 +318,7 @@ function SettingsPanel({
   const [benchmark, setBenchmark] = useState(link.benchmarkScore);
   const [lookback, setLookback] = useState(link.lookbackDays);
   const [validating, setValidating] = useState(false);
-  const [validated, setValidated] = useState<{ programCount: number; storeCount: number } | null>(
+  const [validated, setValidated] = useState<{ programCount: number; storeCount: number; piCompanyId: string } | null>(
     null,
   );
   const [saving, setSaving] = useState(false);
@@ -355,9 +356,11 @@ function SettingsPanel({
     setSaving(true);
     setErr('');
     try {
+      const piCompanyId = validated?.piCompanyId ?? link.piCompanyId ?? companyId.trim();
       await linkCompany({
         workspaceId,
         companyCode: companyId.trim(),
+        piCompanyId,
         piCompanyName: companyName.trim(),
         benchmarkScore: benchmark,
         lookbackDays: lookback,
@@ -1265,7 +1268,7 @@ export function AnalyticsPage() {
                         filterProgram: filterProgram || undefined,
                       });
                     } catch (e: any) {
-                      setGenerateErr(e.message ?? 'Generation failed');
+                      setGenerateErr(e.data ?? e.message ?? 'Generation failed');
                     } finally {
                       setGenerating(false);
                     }
@@ -1363,7 +1366,7 @@ export function AnalyticsPage() {
                         filterProgram: filterProgram || undefined,
                       });
                     } catch (e: any) {
-                      setGenerateErr(e.message ?? 'Generation failed');
+                      setGenerateErr(e.data ?? e.message ?? 'Generation failed');
                     } finally {
                       setGenerating(false);
                     }
