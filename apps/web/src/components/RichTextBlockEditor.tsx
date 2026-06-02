@@ -4,6 +4,8 @@ import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
 import Underline from '@tiptap/extension-underline';
 import TextAlign from '@tiptap/extension-text-align';
+import TextStyle from '@tiptap/extension-text-style';
+import Color from '@tiptap/extension-color';
 import {
   Bold,
   Italic,
@@ -18,6 +20,7 @@ import {
   AlignCenter,
   AlignRight,
   AlignJustify,
+  Baseline,
 } from 'lucide-react';
 
 interface RichTextBlockEditorProps {
@@ -41,6 +44,8 @@ export function RichTextBlockEditor({
       Placeholder.configure({ placeholder: 'Start writing…' }),
       Underline,
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
+      TextStyle,
+      Color,
     ],
     content: initialContent,
     autofocus: autoFocus ? 'end' : false,
@@ -192,6 +197,13 @@ export function RichTextBlockEditor({
         >
           <AlignJustify className="size-3.5" />
         </ToolbarBtn>
+        <Divider />
+        {/* Text color */}
+        <ColorPickerBtn
+          color={(editor.getAttributes('textStyle') as { color?: string }).color ?? '#000000'}
+          onChange={(color) => editor.chain().focus().setColor(color).run()}
+          onClear={() => editor.chain().focus().unsetColor().run()}
+        />
       </div>
 
       {/* Editor area */}
@@ -232,4 +244,47 @@ function ToolbarBtn({
 
 function Divider() {
   return <span className="mx-0.5 h-4 w-px bg-slate-200" />;
+}
+
+function ColorPickerBtn({
+  color,
+  onChange,
+  onClear,
+}: {
+  color: string;
+  onChange: (color: string) => void;
+  onClear: () => void;
+}) {
+  return (
+    <div className="relative flex items-center">
+      <label
+        title="Text color"
+        className="relative flex cursor-pointer items-center gap-0.5 rounded p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition-colors"
+      >
+        <Baseline className="size-3.5" />
+        <span
+          className="absolute bottom-1 left-1.5 right-1.5 h-0.5 rounded-full"
+          style={{ backgroundColor: color }}
+        />
+        <input
+          type="color"
+          value={color}
+          onChange={(e) => onChange(e.target.value)}
+          className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+          title="Pick text color"
+        />
+      </label>
+      <button
+        type="button"
+        title="Clear color"
+        onMouseDown={(e) => {
+          e.preventDefault();
+          onClear();
+        }}
+        className="rounded p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 text-[10px] leading-none transition-colors"
+      >
+        ✕
+      </button>
+    </div>
+  );
 }

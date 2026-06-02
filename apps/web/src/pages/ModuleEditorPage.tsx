@@ -177,6 +177,8 @@ export function ModuleEditorPage() {
   const [renamingModule, setRenamingModule] = useState(false);
   const [renameModuleValue, setRenameModuleValue] = useState('');
   const [addBlockMenuOpen, setAddBlockMenuOpen] = useState(false);
+  // null = insert before first block, undefined = append at end, number = insert after that order
+  const [insertAfterOrder, setInsertAfterOrder] = useState<number | null | undefined>(undefined);
   const [exporting, setExporting] = useState(false);
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [exportOptions, setExportOptions] = useState<ExportOptions>({ passingScore: 80, completionCriteria: 'completed' });
@@ -293,12 +295,24 @@ export function ModuleEditorPage() {
   async function handleAddBlock(type: BlockType = 'richText') {
     if (!activeLessonId) return;
     setAddBlockMenuOpen(false);
-    const lastBlock = blocksForLesson[blocksForLesson.length - 1];
+    let afterOrder: number | undefined;
+    if (insertAfterOrder === null) {
+      // Insert before first block
+      const firstBlock = blocksForLesson[0];
+      afterOrder = firstBlock ? firstBlock.order - 2000 : undefined;
+    } else if (insertAfterOrder !== undefined) {
+      afterOrder = insertAfterOrder;
+    } else {
+      // Append at end
+      const lastBlock = blocksForLesson[blocksForLesson.length - 1];
+      afterOrder = lastBlock?.order;
+    }
+    setInsertAfterOrder(undefined);
     await addBlock({
       lessonId: activeLessonId,
       moduleId: modId,
       type,
-      afterOrder: lastBlock?.order,
+      afterOrder,
     });
   }
 
@@ -529,19 +543,30 @@ export function ModuleEditorPage() {
                   items={blocksForLesson.map((b) => b._id)}
                   strategy={verticalListSortingStrategy}
                 >
-                  <div className="space-y-3">
-                    {blocksForLesson.map((block) => (
-                      <SortableBlock
-                        key={block._id}
-                        block={block}
-                        onSave={(html) => handleSaveBlock(block._id, html)}
-                        onDelete={async () => {
-                          await removeBlock({ blockId: block._id });
-                        }}
-                        onDuplicate={async () => {
-                          await duplicateBlock({ blockId: block._id });
-                        }}
+                  <div className="flex flex-col gap-0">
+                    {blocksForLesson.length > 0 && (
+                      <InsertBetweenBtn
+                        onClick={() => { setInsertAfterOrder(null); setAddBlockMenuOpen(true); }}
                       />
+                    )}
+                    {blocksForLesson.map((block, idx) => (
+                      <React.Fragment key={block._id}>
+                        <SortableBlock
+                          block={block}
+                          onSave={(html) => handleSaveBlock(block._id, html)}
+                          onDelete={async () => {
+                            await removeBlock({ blockId: block._id });
+                          }}
+                          onDuplicate={async () => {
+                            await duplicateBlock({ blockId: block._id });
+                          }}
+                        />
+                        {idx < blocksForLesson.length - 1 && (
+                          <InsertBetweenBtn
+                            onClick={() => { setInsertAfterOrder(block.order); setAddBlockMenuOpen(true); }}
+                          />
+                        )}
+                      </React.Fragment>
                     ))}
                   </div>
                 </SortableContext>
@@ -550,7 +575,7 @@ export function ModuleEditorPage() {
               {/* Add block */}
               <button
                 type="button"
-                onClick={() => setAddBlockMenuOpen(true)}
+                onClick={() => { setInsertAfterOrder(undefined); setAddBlockMenuOpen(true); }}
                 className="flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-[var(--border-primary)] py-5 text-sm font-semibold text-[var(--text-muted)] transition-colors hover:border-indigo-500 hover:bg-indigo-500/10 hover:text-indigo-400"
               >
                 <Plus className="size-5" /> Add block
@@ -565,7 +590,7 @@ export function ModuleEditorPage() {
         {/* Backdrop */}
         <div
           className="fixed inset-0 z-30 bg-black/20"
-          onClick={() => setAddBlockMenuOpen(false)}
+          onClick={() => { setAddBlockMenuOpen(false); setInsertAfterOrder(undefined); }}
         />
         {/* Drawer */}
         <div className="fixed right-0 top-0 z-40 flex h-screen w-80 flex-col border-l border-[var(--border-primary)] bg-[var(--bg-secondary)] shadow-2xl">
@@ -573,7 +598,7 @@ export function ModuleEditorPage() {
             <span className="text-sm font-bold text-[var(--text-primary)]">Insert block</span>
             <button
               type="button"
-              onClick={() => setAddBlockMenuOpen(false)}
+              onClick={() => { setAddBlockMenuOpen(false); setInsertAfterOrder(undefined); }}
               className="rounded-lg p-1.5 text-[var(--text-muted)] hover:bg-[var(--card-bg-hover)] hover:text-[var(--text-primary)]"
             >
               <X className="size-4" />
@@ -972,6 +997,25 @@ function SortableBlock({
           <Trash2 className="size-5" />
         </button>
       </div>
+    </div>
+  );
+}
+
+// ── InsertBetweenBtn ───────────────────────────────────────────────────────
+
+function InsertBetweenBtn({ onClick }: { onClick: () => void }) {
+  return (
+    <div className="group relative flex items-center py-1">
+      <div className="h-px flex-1 bg-[var(--border-subtle)] transition-colors group-hover:bg-indigo-500/40" />
+      <button
+        type="button"
+        onClick={onClick}
+        title="Insert block here"
+        className="mx-2 flex items-center justify-center rounded-full border border-[var(--border-primary)] bg-[var(--bg-secondary)] p-0.5 text-[var(--text-muted)] opacity-0 transition-all group-hover:opacity-100 hover:border-indigo-500 hover:bg-indigo-500/10 hover:text-indigo-400 hover:scale-110"
+      >
+        <Plus className="size-3.5" />
+      </button>
+      <div className="h-px flex-1 bg-[var(--border-subtle)] transition-colors group-hover:bg-indigo-500/40" />
     </div>
   );
 }

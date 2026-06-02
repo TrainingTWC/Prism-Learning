@@ -76,7 +76,7 @@ function renderBlock(block: ExportBlock, assetMap: Record<string, string>): stri
           'span', 'div', 'figure', 'figcaption', 'img',
           'table', 'thead', 'tbody', 'tr', 'th', 'td',
         ],
-        ALLOWED_ATTR: ['href', 'target', 'rel', 'class', 'src', 'alt', 'width', 'height'],
+        ALLOWED_ATTR: ['href', 'target', 'rel', 'class', 'src', 'alt', 'width', 'height', 'style'],
         ALLOW_DATA_ATTR: false,
         FORCE_BODY: false,
       });
@@ -386,6 +386,20 @@ function renderBlock(block: ExportBlock, assetMap: Record<string, string>): stri
       if (!p.startNodeId || !p.nodes) return '';
       const data = JSON.stringify(p);
       return `<div class="prism-scenario" data-scenario='${data.replace(/'/g, '&#39;')}'><div class="prism-sc-header"><span class="prism-sc-step">Step 1</span><span class="prism-sc-title"></span></div><div class="prism-sc-body"><p class="prism-sc-text"></p><div class="prism-sc-choices"></div></div><script>(function(){var r=document.currentScript.parentElement,d=JSON.parse(r.getAttribute('data-scenario')),cur=d.startNodeId,step=1;function render(){var n=d.nodes.find(function(x){return x.id===cur});if(!n)return;r.querySelector('.prism-sc-step').textContent=n.isEnding?'Complete':'Step '+step;r.querySelector('.prism-sc-title').textContent=n.title;r.querySelector('.prism-sc-text').textContent=n.body;var ch=r.querySelector('.prism-sc-choices');ch.innerHTML='';if(n.isEnding){var b=document.createElement('button');b.type='button';b.className='prism-sc-restart';b.textContent='Restart';b.onclick=function(){cur=d.startNodeId;step=1;render()};ch.appendChild(b)}else{n.choices.forEach(function(c){var b=document.createElement('button');b.type='button';b.className='prism-sc-choice';b.textContent='→ '+c.label;b.disabled=!c.nextNodeId;b.onclick=function(){if(c.nextNodeId){cur=c.nextNodeId;step++;render()}};ch.appendChild(b)})}}render()})();</script></div>`;
+    }
+
+    case 'lottie': {
+      let p: { storageId?: string; loop?: boolean; autoplay?: boolean } = {};
+      try { p = JSON.parse(c) as typeof p; } catch { /* */ }
+      const src = p.storageId ? (assetMap[p.storageId] ?? '') : '';
+      if (!src) return '';
+      const loop = p.loop ?? true;
+      const autoplay = p.autoplay ?? true;
+      const uid = `lottie_${Math.random().toString(36).slice(2, 9)}`;
+      return `<div class="prism-lottie" style="max-width:480px;margin:1.5rem auto;text-align:center">
+  <div id="${uid}"></div>
+  <script>(function(){function _init(){lottie.loadAnimation({container:document.getElementById('${uid}'),renderer:'svg',loop:${loop},autoplay:${autoplay},path:'${escapeHtml(src)}'});}if(window.lottie){_init();}else{var s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js';s.onload=_init;document.head.appendChild(s);}})();</script>
+</div>`;
     }
 
     default:
