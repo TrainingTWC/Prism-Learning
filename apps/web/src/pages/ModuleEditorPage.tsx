@@ -24,6 +24,7 @@ import { CSS } from '@dnd-kit/utilities';
 import {
   Plus,
   ChevronLeft,
+  ChevronRight,
   Loader2,
   GripVertical,
   Pencil,
@@ -143,6 +144,34 @@ const BLOCK_TYPES: { type: BlockType; label: string; icon: React.ReactNode; grou
   { type: 'customHtml', label: 'Custom HTML',      icon: <Code2 className="size-3.5" />,             group: 'Advanced' },
 ];
 
+const BLOCK_DESCRIPTIONS: Record<BlockType, string> = {
+  richText:      'Formatted text, headings, lists and links',
+  image:         'Single image with optional caption',
+  video:         'YouTube or Vimeo embed player',
+  lottie:        'Lottie JSON animation loop',
+  quote:         'Highlighted pull quote block',
+  callout:       'Info, warning or tip callout box',
+  button:        'Clickable call-to-action button',
+  divider:       'Horizontal separator line',
+  mcq:           'Multiple-choice question with scored feedback',
+  trueFalse:     'True / false question with explanation',
+  flashcard:     'Flip-card deck for memorisation',
+  fillBlanks:    'Fill-in-the-blank cloze exercise',
+  matching:      'Drag-and-match pairs activity',
+  sorting:       'Drag items into the correct order',
+  revealCards:   'Cards that reveal content on click',
+  audio:         'Embedded audio file player',
+  gallery:       'Image grid or carousel',
+  compare:       'Before-and-after image slider',
+  hotspots:      'Image with clickable info markers',
+  labeledGraphic:'Image with labelled annotation pins',
+  accordion:     'Collapsible expand / collapse sections',
+  tabs:          'Tabbed content panels',
+  process:       'Numbered step-by-step process',
+  scenario:      'Branching scenario with choices',
+  customHtml:    'Raw HTML or embed code',
+};
+
 // ── Main Page ──────────────────────────────────────────────────────────────
 
 export function ModuleEditorPage() {
@@ -176,7 +205,7 @@ export function ModuleEditorPage() {
   const [renameLessonValue, setRenameLessonValue] = useState('');
   const [renamingModule, setRenamingModule] = useState(false);
   const [renameModuleValue, setRenameModuleValue] = useState('');
-  const [addBlockMenuOpen, setAddBlockMenuOpen] = useState(false);
+  const [lessonsOpen, setLessonsOpen] = useState(true);
   // null = insert before first block, undefined = append at end, number = insert after that order
   const [insertAfterOrder, setInsertAfterOrder] = useState<number | null | undefined>(undefined);
   const [exporting, setExporting] = useState(false);
@@ -294,7 +323,6 @@ export function ModuleEditorPage() {
 
   async function handleAddBlock(type: BlockType = 'richText') {
     if (!activeLessonId) return;
-    setAddBlockMenuOpen(false);
     let afterOrder: number | undefined;
     if (insertAfterOrder === null) {
       // Insert before first block
@@ -439,14 +467,54 @@ export function ModuleEditorPage() {
 
       <div className="flex flex-1 overflow-hidden">
         {/* Lessons sidebar */}
-        <aside className="flex w-64 shrink-0 flex-col border-r border-[var(--border-primary)] bg-[var(--bg-secondary)]">
-          <div className="flex items-center justify-between border-b border-[var(--border-subtle)] px-4 py-3">
-            <span className="text-xs font-bold uppercase tracking-wider text-[var(--text-tertiary)]">
-              Lessons
-            </span>
-            <span className="text-xs text-[var(--text-muted)]">{lessons.length}</span>
+        <aside className={`flex shrink-0 flex-col border-r border-[var(--border-primary)] bg-[var(--bg-secondary)] transition-all duration-200 ${lessonsOpen ? 'w-64' : 'w-12'}`}>
+          <div className={`flex items-center border-b border-[var(--border-subtle)] py-3 ${lessonsOpen ? 'justify-between px-4' : 'justify-center px-2'}`}>
+            {lessonsOpen && (
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold uppercase tracking-wider text-[var(--text-tertiary)]">Lessons</span>
+                <span className="text-xs text-[var(--text-muted)]">{lessons.length}</span>
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={() => setLessonsOpen((o) => !o)}
+              className="shrink-0 rounded-lg p-1.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--card-bg-hover)] hover:text-[var(--text-primary)]"
+              title={lessonsOpen ? 'Collapse lessons' : 'Expand lessons'}
+            >
+              {lessonsOpen ? <ChevronLeft className="size-4" /> : <ChevronRight className="size-4" />}
+            </button>
           </div>
 
+          {/* Collapsed rail — lesson initials */}
+          {!lessonsOpen && (
+            <div className="flex-1 overflow-y-auto py-2">
+              {lessons.map((lesson) => (
+                <button
+                  key={lesson._id}
+                  type="button"
+                  onClick={() => { setActiveLessonId(lesson._id); setLessonsOpen(true); }}
+                  title={lesson.title}
+                  className={`flex w-full items-center justify-center py-2.5 text-[10px] font-bold transition-colors ${
+                    activeLessonId === lesson._id
+                      ? 'bg-indigo-500/10 text-indigo-400'
+                      : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
+                  }`}
+                >
+                  {lesson.title.slice(0, 2).toUpperCase()}
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={() => setLessonsOpen(true)}
+                title="Add lesson"
+                className="flex w-full items-center justify-center py-2.5 text-[var(--text-muted)] hover:text-indigo-400 transition-colors"
+              >
+                <Plus className="size-3.5" />
+              </button>
+            </div>
+          )}
+
+          {lessonsOpen && (
           <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}
@@ -502,6 +570,7 @@ export function ModuleEditorPage() {
               </div>
             </SortableContext>
           </DndContext>
+          )}
         </aside>
 
         {/* Block canvas */}
@@ -546,89 +615,117 @@ export function ModuleEditorPage() {
                   <div className="flex flex-col gap-0">
                     {blocksForLesson.length > 0 && (
                       <InsertBetweenBtn
-                        onClick={() => { setInsertAfterOrder(null); setAddBlockMenuOpen(true); }}
+                        onClick={() => setInsertAfterOrder(null)}
+                        active={insertAfterOrder === null}
                       />
                     )}
-                    {blocksForLesson.map((block, idx) => (
-                      <React.Fragment key={block._id}>
-                        <SortableBlock
-                          block={block}
-                          onSave={(html) => handleSaveBlock(block._id, html)}
-                          onDelete={async () => {
-                            await removeBlock({ blockId: block._id });
-                          }}
-                          onDuplicate={async () => {
-                            await duplicateBlock({ blockId: block._id });
-                          }}
-                        />
-                        {idx < blocksForLesson.length - 1 && (
-                          <InsertBetweenBtn
-                            onClick={() => { setInsertAfterOrder(block.order); setAddBlockMenuOpen(true); }}
+                    {blocksForLesson.map((block, idx) => {
+                      const currentGroup = BLOCK_TYPES.find((bt) => bt.type === block.type)?.group ?? '';
+                      const prevBlock = idx > 0 ? blocksForLesson[idx - 1] : null;
+                      const prevGroup = prevBlock
+                        ? (BLOCK_TYPES.find((bt) => bt.type === prevBlock.type)?.group ?? '')
+                        : null;
+                      const showGroupLabel = prevGroup === null || currentGroup !== prevGroup;
+                      return (
+                        <React.Fragment key={block._id}>
+                          {showGroupLabel && (
+                            <div className="flex items-center gap-2 px-1 pb-1 pt-3">
+                              <span className="shrink-0 text-[9px] font-bold uppercase tracking-widest text-[var(--text-tertiary)]">
+                                {currentGroup}
+                              </span>
+                              <div className="h-px flex-1 bg-[var(--border-subtle)]" />
+                            </div>
+                          )}
+                          <SortableBlock
+                            block={block}
+                            onSave={(html) => handleSaveBlock(block._id, html)}
+                            onDelete={async () => {
+                              await removeBlock({ blockId: block._id });
+                            }}
+                            onDuplicate={async () => {
+                              await duplicateBlock({ blockId: block._id });
+                            }}
                           />
-                        )}
-                      </React.Fragment>
-                    ))}
+                          {idx < blocksForLesson.length - 1 && (
+                            <InsertBetweenBtn
+                              onClick={() => setInsertAfterOrder(block.order)}
+                              active={insertAfterOrder === block.order}
+                            />
+                          )}
+                        </React.Fragment>
+                      );
+                    })}
                   </div>
                 </SortableContext>
               </DndContext>
 
-              {/* Add block */}
+              {/* Append target */}
               <button
                 type="button"
-                onClick={() => { setInsertAfterOrder(undefined); setAddBlockMenuOpen(true); }}
-                className="flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-[var(--border-primary)] py-5 text-sm font-semibold text-[var(--text-muted)] transition-colors hover:border-indigo-500 hover:bg-indigo-500/10 hover:text-indigo-400"
+                onClick={() => setInsertAfterOrder(undefined)}
+                className={`flex w-full items-center justify-center gap-2 rounded-2xl border-2 py-4 text-sm font-medium transition-colors ${
+                  insertAfterOrder === undefined
+                    ? 'border-indigo-500 bg-indigo-500/10 text-indigo-400'
+                    : 'border-dashed border-[var(--border-primary)] text-[var(--text-muted)] hover:border-indigo-500 hover:bg-indigo-500/10 hover:text-indigo-400'
+                }`}
               >
-                <Plus className="size-5" /> Add block
+                <Plus className="size-4" />
+                {insertAfterOrder === undefined ? 'Appending at end' : 'Click to append at end'}
               </button>
             </div>
           )}
         </main>
 
-    {/* ── Add Block right-side drawer ── */}
-    {addBlockMenuOpen && (
-      <>
-        {/* Backdrop */}
-        <div
-          className="fixed inset-0 z-30 bg-black/20"
-          onClick={() => { setAddBlockMenuOpen(false); setInsertAfterOrder(undefined); }}
-        />
-        {/* Drawer */}
-        <div className="fixed right-0 top-0 z-40 flex h-screen w-80 flex-col border-l border-[var(--border-primary)] bg-[var(--bg-secondary)] shadow-2xl">
-          <div className="flex shrink-0 items-center justify-between border-b border-[var(--border-subtle)] px-5 py-4">
-            <span className="text-sm font-bold text-[var(--text-primary)]">Insert block</span>
-            <button
-              type="button"
-              onClick={() => { setAddBlockMenuOpen(false); setInsertAfterOrder(undefined); }}
-              className="rounded-lg p-1.5 text-[var(--text-muted)] hover:bg-[var(--card-bg-hover)] hover:text-[var(--text-primary)]"
-            >
-              <X className="size-4" />
-            </button>
+        {/* ── Block library — always-visible right panel ── */}
+        <aside className="flex w-64 shrink-0 flex-col border-l border-[var(--border-primary)] bg-[var(--bg-secondary)]">
+          <div className="flex shrink-0 items-center justify-between border-b border-[var(--border-subtle)] px-4 py-3">
+            <span className="text-xs font-bold uppercase tracking-wider text-[var(--text-tertiary)]">Blocks</span>
+            {insertAfterOrder !== undefined && (
+              <button
+                type="button"
+                onClick={() => setInsertAfterOrder(undefined)}
+                title="Reset to append mode"
+                className="rounded-md p-1 text-indigo-400 transition-colors hover:bg-indigo-500/10"
+              >
+                <X className="size-3.5" />
+              </button>
+            )}
           </div>
-          <div className="flex-1 overflow-y-auto px-4 py-4">
-            {['Content', 'Media', 'Interactive', 'Layout', 'Scenario', 'Advanced'].map((group) => (
-              <div key={group} className="mb-5 last:mb-0">
-                <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)]">{group}</p>
-                <div className="grid grid-cols-3 gap-2">
-                  {BLOCK_TYPES.filter((bt) => bt.group === group).map(({ type, label, icon }) => (
-                    <button
-                      key={type}
-                      type="button"
-                      onClick={() => void handleAddBlock(type)}
-                      className="flex flex-col items-center gap-1.5 rounded-xl border border-[var(--border-primary)] bg-[var(--bg-tertiary)] px-2 py-3 text-center hover:border-indigo-500 hover:bg-indigo-500/10 transition-colors"
-                    >
-                      <span className="[&>svg]:size-5 text-[var(--text-tertiary)]">{icon}</span>
-                      <span className="text-[11px] font-medium text-[var(--text-secondary)] leading-tight">{label}</span>
-                    </button>
-                  ))}
-                </div>
+          {/* Insertion point banner */}
+          <div className="shrink-0 px-3 pt-2.5">
+            {insertAfterOrder === null ? (
+              <div className="flex items-center gap-1.5 rounded-lg border border-indigo-500/40 bg-indigo-500/10 px-2.5 py-1.5 text-[11px] font-medium text-indigo-400">
+                <Plus className="size-3 shrink-0" /> Inserting before first block
               </div>
+            ) : insertAfterOrder !== undefined ? (
+              <div className="flex items-center gap-1.5 rounded-lg border border-indigo-500/40 bg-indigo-500/10 px-2.5 py-1.5 text-[11px] font-medium text-indigo-400">
+                <Plus className="size-3 shrink-0" /> Inserting after selected block
+              </div>
+            ) : activeLessonId ? (
+              <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-tertiary)] px-2.5 py-1.5 text-[11px] text-[var(--text-muted)]">
+                Appending to end of lesson
+              </div>
+            ) : (
+              <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-tertiary)] px-2.5 py-1.5 text-[11px] text-[var(--text-muted)]">
+                Select a lesson first
+              </div>
+            )}
+          </div>
+          <div className="flex-1 overflow-y-auto px-3 py-3">
+            {(['Content', 'Media', 'Interactive', 'Layout', 'Scenario', 'Advanced'] as const).map((group) => (
+              <BlockLibraryGroup
+                key={group}
+                group={group}
+                blocks={BLOCK_TYPES.filter((bt) => bt.group === group)}
+                onAdd={(type) => void handleAddBlock(type)}
+                disabled={!activeLessonId}
+              />
             ))}
           </div>
-        </div>
-      </>
-    )}
+        </aside>
+      </div>
 
-    {/* ── SCORM Export Dialog ── */}
+    {/* ── SCORM Export Dialog ── */}}
     {exportDialogOpen && (
       <div
         role="dialog"
@@ -689,7 +786,6 @@ export function ModuleEditorPage() {
         </div>
       </div>
     )}
-      </div>
     </div>
   );
 }
@@ -1003,19 +1099,105 @@ function SortableBlock({
 
 // ── InsertBetweenBtn ───────────────────────────────────────────────────────
 
-function InsertBetweenBtn({ onClick }: { onClick: () => void }) {
+function InsertBetweenBtn({ onClick, active }: { onClick: () => void; active?: boolean }) {
   return (
     <div className="group relative flex items-center py-1">
-      <div className="h-px flex-1 bg-[var(--border-subtle)] transition-colors group-hover:bg-indigo-500/40" />
+      <div className={`h-px flex-1 transition-colors ${active ? 'bg-indigo-500/60' : 'bg-[var(--border-subtle)] group-hover:bg-indigo-500/40'}`} />
       <button
         type="button"
         onClick={onClick}
-        title="Insert block here"
-        className="mx-2 flex items-center justify-center rounded-full border border-[var(--border-primary)] bg-[var(--bg-secondary)] p-0.5 text-[var(--text-muted)] opacity-0 transition-all group-hover:opacity-100 hover:border-indigo-500 hover:bg-indigo-500/10 hover:text-indigo-400 hover:scale-110"
+        title={active ? 'Inserting here — pick a block type →' : 'Insert block here'}
+        className={`mx-2 flex items-center justify-center rounded-full border p-0.5 transition-all ${
+          active
+            ? 'scale-110 border-indigo-500 bg-indigo-500/20 text-indigo-400 opacity-100'
+            : 'border-[var(--border-primary)] bg-[var(--bg-secondary)] text-[var(--text-muted)] opacity-0 group-hover:opacity-100 hover:scale-110 hover:border-indigo-500 hover:bg-indigo-500/10 hover:text-indigo-400'
+        }`}
       >
         <Plus className="size-3.5" />
       </button>
-      <div className="h-px flex-1 bg-[var(--border-subtle)] transition-colors group-hover:bg-indigo-500/40" />
+      <div className={`h-px flex-1 transition-colors ${active ? 'bg-indigo-500/60' : 'bg-[var(--border-subtle)] group-hover:bg-indigo-500/40'}`} />
+    </div>
+  );
+}
+
+// ── BlockLibraryGroup ──────────────────────────────────────────────────────
+
+function BlockLibraryGroup({
+  group,
+  blocks,
+  onAdd,
+  disabled,
+}: {
+  group: string;
+  blocks: { type: BlockType; label: string; icon: React.ReactNode }[];
+  onAdd: (type: BlockType) => void;
+  disabled: boolean;
+}) {
+  const [open, setOpen] = useState(true);
+  return (
+    <div className="mb-3 last:mb-0">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="mb-1.5 flex w-full items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)] transition-colors hover:text-[var(--text-secondary)]"
+      >
+        <ChevronRight className={`size-3 shrink-0 transition-transform duration-150 ${open ? 'rotate-90' : ''}`} />
+        {group}
+      </button>
+      {open && (
+        <div className="grid grid-cols-2 gap-1.5">
+          {blocks.map(({ type, label, icon }) => (
+            <BlockTypeBtn
+              key={type}
+              type={type}
+              label={label}
+              icon={icon}
+              onAdd={onAdd}
+              disabled={disabled}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── BlockTypeBtn ───────────────────────────────────────────────────────────
+
+function BlockTypeBtn({
+  type,
+  label,
+  icon,
+  onAdd,
+  disabled,
+}: {
+  type: BlockType;
+  label: string;
+  icon: React.ReactNode;
+  onAdd: (type: BlockType) => void;
+  disabled: boolean;
+}) {
+  const [showTip, setShowTip] = useState(false);
+  const description = BLOCK_DESCRIPTIONS[type];
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => onAdd(type)}
+        onMouseEnter={() => setShowTip(true)}
+        onMouseLeave={() => setShowTip(false)}
+        className="flex w-full flex-col items-center gap-1 rounded-xl border border-[var(--border-primary)] bg-[var(--bg-tertiary)] px-1.5 py-2.5 text-center transition-colors hover:border-indigo-500 hover:bg-indigo-500/10 disabled:pointer-events-none disabled:opacity-40"
+      >
+        <span className="[&>svg]:size-4 text-[var(--text-tertiary)]">{icon}</span>
+        <span className="text-[10px] font-medium leading-tight text-[var(--text-secondary)]">{label}</span>
+      </button>
+      {showTip && description && (
+        <div className="pointer-events-none absolute bottom-full left-1/2 z-50 mb-2 w-44 -translate-x-1/2 rounded-lg border border-[var(--border-primary)] bg-[var(--bg-primary)] px-3 py-2 shadow-xl">
+          <p className="mb-0.5 text-[11px] font-semibold text-[var(--text-primary)]">{label}</p>
+          <p className="text-[10px] leading-snug text-[var(--text-muted)]">{description}</p>
+        </div>
+      )}
     </div>
   );
 }
