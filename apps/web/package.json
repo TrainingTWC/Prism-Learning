@@ -18,6 +18,7 @@
     "@lottiefiles/dotlottie-react": "^0.19.4",
     "@prism/renderer": "workspace:*",
     "@tanstack/react-router": "^1.95.6",
+    "@tiptap/core": "3.24.0",
     "@tiptap/extension-color": "^3.24.0",
     "@tiptap/extension-placeholder": "^3.24.0",
     "@tiptap/extension-subscript": "^3.24.0",

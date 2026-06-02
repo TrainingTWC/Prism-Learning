@@ -78,6 +78,9 @@ importers:
       '@tanstack/react-router':
         specifier: ^1.95.6
         version: 1.170.8(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      '@tiptap/core':
+        specifier: 3.24.0
+        version: 3.24.0(@tiptap/pm@3.24.0)
       '@tiptap/extension-color':
         specifier: ^3.24.0
         version: 3.24.0(@tiptap/extension-text-style@3.24.0(@tiptap/core@3.24.0(@tiptap/pm@3.24.0)))
