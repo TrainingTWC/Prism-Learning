@@ -1,0 +1,13 @@
+{
+    "azure-ai-agent.endpoint": "",
+    "azure-ai-agent.deployment": "gpt-5.4",
+    "azure-ai-agent.apiVersion": "2024-12-01-preview",
+    "azure-ai-agent.webSearch.provider": "duckduckgo",
+    "azure-ai-agent.approvalMode": "destructive",
+    "azure-ai-agent.mcp.approvalMode": "destructive",
+    "azure-ai-agent.webBrowsing.enabled": true,
+    "azure-ai-agent.safety.scrubSecrets": true,
+    "azure-ai-agent.ui.compactMode": false,
+    "azure-ai-agent.mcp.servers": [],
+    "azure-ai-agent.safety.autoApproveCommandPatterns": []
+}

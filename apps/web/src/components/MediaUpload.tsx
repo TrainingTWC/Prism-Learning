@@ -3,6 +3,7 @@ import { useMutation, useQuery } from 'convex/react';
 import { api } from '~convex/_generated/api';
 import type { Id } from '~convex/_generated/dataModel';
 import { ImageIcon, Music, X, Upload } from 'lucide-react';
+import { toWebP } from '~/lib/toWebP';
 
 interface MediaUploadProps {
   accept: 'image/*' | 'audio/*';
@@ -23,11 +24,12 @@ export function MediaUpload({ accept, storageId, onChange, onClear, label }: Med
   const isImage = accept === 'image/*';
 
   async function handleFile(file: File) {
+    const uploadFile = isImage ? await toWebP(file) : file;
     const uploadUrl = await generateUploadUrl();
     const res = await fetch(uploadUrl, {
       method: 'POST',
-      headers: { 'Content-Type': file.type },
-      body: file,
+      headers: { 'Content-Type': uploadFile.type },
+      body: uploadFile,
     });
     const { storageId: newId } = (await res.json()) as { storageId: string };
     onChange(newId);

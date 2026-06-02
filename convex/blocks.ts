@@ -38,6 +38,28 @@ export const list = query({
   },
 });
 
+/** List ALL blocks for a module — used only at SCORM export time, not for live editing. */
+export const listByModule = query({
+  args: { moduleId: v.id('modules') },
+  handler: async (ctx, { moduleId }) => {
+    const mod = await ctx.db.get(moduleId);
+    if (!mod || mod.deletedAt) return [];
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error('Unauthenticated');
+    const membership = await ctx.db
+      .query('memberships')
+      .withIndex('by_workspace', (q) => q.eq('workspaceId', mod.workspaceId))
+      .filter((q) => q.eq(q.field('userId'), userId))
+      .first();
+    if (!membership) throw new Error('Forbidden');
+    const blocks = await ctx.db
+      .query('blocks')
+      .withIndex('by_module', (q) => q.eq('moduleId', moduleId))
+      .collect();
+    return blocks.sort((a, b) => a.order - b.order);
+  },
+});
+
 /** Insert a new block in a lesson after a given position. */
 export const add = mutation({
   args: {

@@ -3,6 +3,7 @@ import { useAction, useMutation, useQuery } from 'convex/react';
 import { api } from '~convex/_generated/api';
 import type { Id } from '~convex/_generated/dataModel';
 import { ImageIcon, Loader2, Sparkles, Upload, Wand2, X } from 'lucide-react';
+import { toWebP } from '~/lib/toWebP';
 
 // ── Payload type stored as JSON in block.content ───────────────────────────
 export type ImagePayload = {
@@ -120,11 +121,12 @@ export function ImageBlockEditor({
       if (!file.type.startsWith('image/')) return;
       setUploading(true);
       try {
+        const webpFile = await toWebP(file);
         const uploadUrl = await generateUploadUrl();
         const res = await fetch(uploadUrl, {
           method: 'POST',
-          headers: { 'Content-Type': file.type },
-          body: file,
+          headers: { 'Content-Type': webpFile.type },
+          body: webpFile,
         });
         if (!res.ok) throw new Error('Upload failed');
         const { storageId: newId } = (await res.json()) as { storageId: string };

@@ -56,8 +56,10 @@ export const getById = query({
   },
 });
 
-/** Aggregate query: module + all its lessons (ordered) + all blocks (ordered).
- *  Used by the editor to subscribe to the whole module in one round-trip.
+/** Aggregate query: module + all its lessons (ordered).
+ *  Blocks are intentionally excluded — the editor fetches them per-lesson
+ *  via blocks.list so that a block save only invalidates subscribers on
+ *  that specific lesson (not all 5–7 co-editors at once).
  */
 export const getWithContent = query({
   args: { moduleId: v.id('modules') },
@@ -72,13 +74,7 @@ export const getWithContent = query({
       .collect();
     lessons.sort((a, b) => a.order - b.order);
 
-    const blocks = await ctx.db
-      .query('blocks')
-      .withIndex('by_module', (q) => q.eq('moduleId', moduleId))
-      .collect();
-    blocks.sort((a, b) => a.order - b.order);
-
-    return { module: mod, lessons, blocks };
+    return { module: mod, lessons };
   },
 });
 

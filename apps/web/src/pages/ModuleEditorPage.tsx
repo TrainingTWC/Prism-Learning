@@ -180,6 +180,12 @@ export function ModuleEditorPage() {
   const modId = moduleId as Id<'modules'>;
 
   const content = useQuery(api.modules.getWithContent, { moduleId: modId });
+  // Blocks are fetched per active lesson — this means a block save by any user
+  // only invalidates the subscribers on THAT lesson, not all 5-7 co-editors.
+  const lessonBlocks = useQuery(
+    api.blocks.list,
+    activeLessonId ? { lessonId: activeLessonId } : 'skip',
+  );
   const presence = useQuery(api.presence.list, { moduleId: modId });
   const workspace = useQuery(api.workspaces.getById, { workspaceId: wsId });
   const convex = useConvex();
@@ -226,6 +232,8 @@ export function ModuleEditorPage() {
       const theme: ExportTheme = workspace?.theme ?? {
         primary: '#4f46e5', accent: '#aa75dd', headingFont: 'Inter', bodyFont: 'Inter',
       };
+      // Fetch all blocks at export time (one-shot, not a live subscription)
+      const allBlocks = (await convex.query(api.blocks.listByModule, { moduleId: modId })) as Block[];
       const blob = await buildScormPackage(
         {
           id: modId,
@@ -233,9 +241,8 @@ export function ModuleEditorPage() {
           lessons: content.lessons.map((l) => ({
             id: l._id,
             title: l.title,
-            blocks: (content.blocks as Block[])
+            blocks: allBlocks
               .filter((b) => b.lessonId === l._id)
-              .sort((a, b) => a.order - b.order)
               .map((b) => ({ id: b._id, type: b.type, content: b.content })),
           })),
         },
@@ -273,9 +280,7 @@ export function ModuleEditorPage() {
 
   const lessons = (content?.lessons ?? []) as Lesson[];
   const activeLesson = lessons.find((l) => l._id === activeLessonId) ?? null;
-  const blocksForLesson = ((content?.blocks ?? []) as Block[]).filter(
-    (b) => b.lessonId === activeLessonId,
-  );
+  const blocksForLesson = (lessonBlocks ?? []) as Block[];
 
   // dnd-kit sensors
   const sensors = useSensors(
