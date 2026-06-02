@@ -725,7 +725,7 @@ export function ModuleEditorPage() {
         </aside>
       </div>
 
-    {/* ── SCORM Export Dialog ── */}}
+    {/* ── SCORM Export Dialog ── */}
     {exportDialogOpen && (
       <div
         role="dialog"
