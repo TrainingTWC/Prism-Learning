@@ -1,11 +1,14 @@
 import { useState, useCallback } from 'react';
 import type { Id } from '~convex/_generated/dataModel';
 import { PanelTop, Plus, Trash2 } from 'lucide-react';
+import { MediaUpload } from './MediaUpload';
 
 export type TabItem = {
   id: string;
   title: string;
   content: string;
+  imageStorageId?: string;
+  audioStorageId?: string;
 };
 
 export type TabsPayload = {
@@ -44,6 +47,14 @@ export function TabsBlockEditor({
 
   function updateContent(id: string, content: string) {
     commit({ tabs: payload.tabs.map((t) => (t.id === id ? { ...t, content } : t)) });
+  }
+
+  function setMedia(id: string, field: 'imageStorageId' | 'audioStorageId', value: string | null) {
+    commit({
+      tabs: payload.tabs.map((t) =>
+        t.id === id ? { ...t, [field]: value ?? undefined } : t,
+      ),
+    });
   }
 
   function addTab() {
@@ -128,6 +139,20 @@ export function TabsBlockEditor({
               placeholder="Tab content…"
               rows={4}
               className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 resize-none"
+            />
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <MediaUpload
+              accept="image/*"
+              storageId={activeTab.imageStorageId ?? null}
+              onChange={(id) => setMedia(activeTab.id, 'imageStorageId', id)}
+              onClear={() => setMedia(activeTab.id, 'imageStorageId', null)}
+            />
+            <MediaUpload
+              accept="audio/*"
+              storageId={activeTab.audioStorageId ?? null}
+              onChange={(id) => setMedia(activeTab.id, 'audioStorageId', id)}
+              onClear={() => setMedia(activeTab.id, 'audioStorageId', null)}
             />
           </div>
         </div>

@@ -1,11 +1,14 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
+import { Extension } from '@tiptap/core';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
 import Underline from '@tiptap/extension-underline';
 import TextAlign from '@tiptap/extension-text-align';
 import { TextStyle } from '@tiptap/extension-text-style';
 import { Color } from '@tiptap/extension-color';
+import Subscript from '@tiptap/extension-subscript';
+import Superscript from '@tiptap/extension-superscript';
 import {
   Bold,
   Italic,
@@ -22,6 +25,61 @@ import {
   AlignJustify,
   Baseline,
 } from 'lucide-react';
+
+// ── Custom line-height extension (block-level) ─────────────────────────────
+const LineHeight = Extension.create({
+  name: 'lineHeight',
+  addGlobalAttributes() {
+    return [{
+      types: ['paragraph', 'heading'],
+      attributes: {
+        lineHeight: {
+          default: null,
+          parseHTML: (el: HTMLElement) => (el as HTMLElement).style.lineHeight || null,
+          renderHTML: (attrs: Record<string, unknown>) =>
+            attrs.lineHeight ? { style: `line-height: ${attrs.lineHeight as string}` } : {},
+        },
+      },
+    }];
+  },
+});
+
+// ── Custom letter-spacing extension (inline via TextStyle) ─────────────────
+const LetterSpacing = Extension.create({
+  name: 'letterSpacing',
+  addGlobalAttributes() {
+    return [{
+      types: ['textStyle'],
+      attributes: {
+        letterSpacing: {
+          default: null,
+          parseHTML: (el: HTMLElement) => (el as HTMLElement).style.letterSpacing || null,
+          renderHTML: (attrs: Record<string, unknown>) =>
+            attrs.letterSpacing ? { style: `letter-spacing: ${attrs.letterSpacing as string}` } : {},
+        },
+      },
+    }];
+  },
+});
+
+// ── LINE_HEIGHTS / LETTER_SPACINGS options ─────────────────────────────────
+const LINE_HEIGHTS = [
+  { label: 'Normal', value: '' },
+  { label: '1.0', value: '1' },
+  { label: '1.25', value: '1.25' },
+  { label: '1.5', value: '1.5' },
+  { label: '1.75', value: '1.75' },
+  { label: '2.0', value: '2' },
+  { label: '2.5', value: '2.5' },
+];
+
+const LETTER_SPACINGS = [
+  { label: 'Normal', value: '' },
+  { label: 'Tight', value: '-0.02em' },
+  { label: 'Wide', value: '0.05em' },
+  { label: 'Wider', value: '0.1em' },
+  { label: 'Widest', value: '0.2em' },
+];
 
 interface RichTextBlockEditorProps {
   blockId: string;
@@ -46,6 +104,10 @@ export function RichTextBlockEditor({
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
       TextStyle,
       Color,
+      Subscript,
+      Superscript,
+      LineHeight,
+      LetterSpacing,
     ],
     content: initialContent,
     autofocus: autoFocus ? 'end' : false,
@@ -63,8 +125,6 @@ export function RichTextBlockEditor({
     },
   });
 
-  // Sync external content changes (e.g. from another author) without clobbering local edits.
-  // We only sync if the block ID changed (lesson switch) or if the editor is not focused.
   const prevBlockId = useRef(blockId);
   useEffect(() => {
     if (!editor) return;
@@ -74,7 +134,6 @@ export function RichTextBlockEditor({
     }
   }, [blockId, editor, initialContent]);
 
-  // Flush unsaved changes on unmount
   useEffect(() => {
     return () => {
       if (saveTimer.current) {
@@ -95,69 +154,59 @@ export function RichTextBlockEditor({
 
   if (!editor) return null;
 
+  // Derived state helpers
+  const paraLineHeight = (editor.getAttributes('paragraph').lineHeight as string | null) ?? '';
+  const headLineHeight = (editor.getAttributes('heading').lineHeight as string | null) ?? '';
+  const activeLineHeight = paraLineHeight || headLineHeight;
+  const activeLetterSpacing = (editor.getAttributes('textStyle') as { letterSpacing?: string }).letterSpacing ?? '';
+
   return (
     <div className="rounded-xl border border-slate-200 bg-white shadow-sm focus-within:border-indigo-300 focus-within:shadow-md transition-shadow">
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-0.5 border-b border-slate-100 px-2 py-1.5">
+        {/* Headings */}
         <ToolbarBtn
           active={editor.isActive('heading', { level: 1 })}
           onClick={() => handleToggle(() => editor.chain().focus().toggleHeading({ level: 1 }).run())}
           title="Heading 1"
-        >
-          <Heading1 className="size-3.5" />
-        </ToolbarBtn>
+        ><Heading1 className="size-3.5" /></ToolbarBtn>
         <ToolbarBtn
           active={editor.isActive('heading', { level: 2 })}
           onClick={() => handleToggle(() => editor.chain().focus().toggleHeading({ level: 2 }).run())}
           title="Heading 2"
-        >
-          <Heading2 className="size-3.5" />
-        </ToolbarBtn>
+        ><Heading2 className="size-3.5" /></ToolbarBtn>
         <ToolbarBtn
           active={editor.isActive('heading', { level: 3 })}
           onClick={() => handleToggle(() => editor.chain().focus().toggleHeading({ level: 3 }).run())}
           title="Heading 3"
-        >
-          <Heading3 className="size-3.5" />
-        </ToolbarBtn>
+        ><Heading3 className="size-3.5" /></ToolbarBtn>
         <Divider />
-        <ToolbarBtn
-          active={editor.isActive('bold')}
-          onClick={() => handleToggle(() => editor.chain().focus().toggleBold().run())}
-          title="Bold (⌘B)"
-        >
+        {/* Inline formatting */}
+        <ToolbarBtn active={editor.isActive('bold')} onClick={() => handleToggle(() => editor.chain().focus().toggleBold().run())} title="Bold (⌘B)">
           <Bold className="size-3.5" />
         </ToolbarBtn>
-        <ToolbarBtn
-          active={editor.isActive('italic')}
-          onClick={() => handleToggle(() => editor.chain().focus().toggleItalic().run())}
-          title="Italic (⌘I)"
-        >
+        <ToolbarBtn active={editor.isActive('italic')} onClick={() => handleToggle(() => editor.chain().focus().toggleItalic().run())} title="Italic (⌘I)">
           <Italic className="size-3.5" />
         </ToolbarBtn>
-        <ToolbarBtn
-          active={editor.isActive('underline')}
-          onClick={() => handleToggle(() => editor.chain().focus().toggleUnderline().run())}
-          title="Underline (⌘U)"
-        >
+        <ToolbarBtn active={editor.isActive('underline')} onClick={() => handleToggle(() => editor.chain().focus().toggleUnderline().run())} title="Underline (⌘U)">
           <UnderlineIcon className="size-3.5" />
         </ToolbarBtn>
+        <ToolbarBtn active={editor.isActive('subscript')} onClick={() => handleToggle(() => editor.chain().focus().toggleSubscript().run())} title="Subscript">
+          <span className="text-[11px] font-medium leading-none">X<sub>2</sub></span>
+        </ToolbarBtn>
+        <ToolbarBtn active={editor.isActive('superscript')} onClick={() => handleToggle(() => editor.chain().focus().toggleSuperscript().run())} title="Superscript">
+          <span className="text-[11px] font-medium leading-none">X<sup>2</sup></span>
+        </ToolbarBtn>
         <Divider />
-        <ToolbarBtn
-          active={editor.isActive('bulletList')}
-          onClick={() => handleToggle(() => editor.chain().focus().toggleBulletList().run())}
-          title="Bullet list"
-        >
+        {/* Lists */}
+        <ToolbarBtn active={editor.isActive('bulletList')} onClick={() => handleToggle(() => editor.chain().focus().toggleBulletList().run())} title="Bullet list">
           <List className="size-3.5" />
         </ToolbarBtn>
-        <ToolbarBtn
-          active={editor.isActive('orderedList')}
-          onClick={() => handleToggle(() => editor.chain().focus().toggleOrderedList().run())}
-          title="Ordered list"
-        >
+        <ToolbarBtn active={editor.isActive('orderedList')} onClick={() => handleToggle(() => editor.chain().focus().toggleOrderedList().run())} title="Ordered list">
           <ListOrdered className="size-3.5" />
         </ToolbarBtn>
         <Divider />
+        {/* Link */}
         <ToolbarBtn
           active={editor.isActive('link')}
           onClick={() => {
@@ -165,45 +214,66 @@ export function RichTextBlockEditor({
             if (url) editor.chain().focus().setLink({ href: url }).run();
           }}
           title="Link"
-        >
-          <Link2 className="size-3.5" />
-        </ToolbarBtn>
+        ><Link2 className="size-3.5" /></ToolbarBtn>
         <Divider />
-        <ToolbarBtn
-          active={editor.isActive({ textAlign: 'left' })}
-          onClick={() => handleToggle(() => editor.chain().focus().setTextAlign('left').run())}
-          title="Align left"
-        >
+        {/* Alignment */}
+        <ToolbarBtn active={editor.isActive({ textAlign: 'left' })} onClick={() => handleToggle(() => editor.chain().focus().setTextAlign('left').run())} title="Align left">
           <AlignLeft className="size-3.5" />
         </ToolbarBtn>
-        <ToolbarBtn
-          active={editor.isActive({ textAlign: 'center' })}
-          onClick={() => handleToggle(() => editor.chain().focus().setTextAlign('center').run())}
-          title="Align center"
-        >
+        <ToolbarBtn active={editor.isActive({ textAlign: 'center' })} onClick={() => handleToggle(() => editor.chain().focus().setTextAlign('center').run())} title="Align center">
           <AlignCenter className="size-3.5" />
         </ToolbarBtn>
-        <ToolbarBtn
-          active={editor.isActive({ textAlign: 'right' })}
-          onClick={() => handleToggle(() => editor.chain().focus().setTextAlign('right').run())}
-          title="Align right"
-        >
+        <ToolbarBtn active={editor.isActive({ textAlign: 'right' })} onClick={() => handleToggle(() => editor.chain().focus().setTextAlign('right').run())} title="Align right">
           <AlignRight className="size-3.5" />
         </ToolbarBtn>
-        <ToolbarBtn
-          active={editor.isActive({ textAlign: 'justify' })}
-          onClick={() => handleToggle(() => editor.chain().focus().setTextAlign('justify').run())}
-          title="Justify"
-        >
+        <ToolbarBtn active={editor.isActive({ textAlign: 'justify' })} onClick={() => handleToggle(() => editor.chain().focus().setTextAlign('justify').run())} title="Justify">
           <AlignJustify className="size-3.5" />
         </ToolbarBtn>
         <Divider />
-        {/* Text color */}
+        {/* Color */}
         <ColorPickerBtn
           color={(editor.getAttributes('textStyle') as { color?: string }).color ?? '#000000'}
           onChange={(color) => editor.chain().focus().setColor(color).run()}
           onClear={() => editor.chain().focus().unsetColor().run()}
         />
+        <Divider />
+        {/* Line height */}
+        <label className="text-[10px] text-slate-400 mr-0.5 select-none" title="Line spacing">↕</label>
+        <select
+          title="Line height"
+          value={activeLineHeight}
+          onMouseDown={(e) => e.stopPropagation()}
+          onChange={(e) => {
+            const v = e.target.value;
+            if (v) {
+              editor.chain().focus().updateAttributes('paragraph', { lineHeight: v }).updateAttributes('heading', { lineHeight: v }).run();
+            } else {
+              editor.chain().focus().updateAttributes('paragraph', { lineHeight: null }).updateAttributes('heading', { lineHeight: null }).run();
+            }
+          }}
+          className="h-6 rounded border border-slate-200 bg-white px-0.5 text-[10px] text-slate-600 hover:border-slate-300 cursor-pointer"
+        >
+          {LINE_HEIGHTS.map((o) => (
+            <option key={o.value} value={o.value}>{o.label}</option>
+          ))}
+        </select>
+        <Divider />
+        {/* Letter spacing */}
+        <label className="text-[10px] text-slate-400 mr-0.5 select-none" title="Letter spacing">AV</label>
+        <select
+          title="Letter spacing"
+          value={activeLetterSpacing}
+          onMouseDown={(e) => e.stopPropagation()}
+          onChange={(e) => {
+            const v = e.target.value;
+            editor.chain().focus().setMark('textStyle', { letterSpacing: v || null }).run();
+          }}
+          className="h-6 rounded border border-slate-200 bg-white px-0.5 text-[10px] text-slate-600 hover:border-slate-300 cursor-pointer"
+        >
+          {LETTER_SPACINGS.map((o) => (
+            <option key={o.value} value={o.value}>{o.label}</option>
+          ))}
+        </select>
       </div>
 
       {/* Editor area */}
@@ -228,7 +298,7 @@ function ToolbarBtn({
       type="button"
       title={title}
       onMouseDown={(e) => {
-        e.preventDefault(); // Don't blur editor
+        e.preventDefault();
         onClick();
       }}
       className={`rounded p-1.5 transition-colors ${
@@ -288,3 +358,4 @@ function ColorPickerBtn({
     </div>
   );
 }
+

@@ -1,12 +1,15 @@
 import { useState, useCallback } from 'react';
 import type { Id } from '~convex/_generated/dataModel';
 import { ChevronDown, ChevronRight, Plus, Trash2, GripVertical } from 'lucide-react';
+import { MediaUpload } from './MediaUpload';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 export type AccordionSection = {
   id: string;
   title: string;
   content: string;
+  imageStorageId?: string;
+  audioStorageId?: string;
 };
 
 export type AccordionPayload = {
@@ -67,6 +70,14 @@ export function AccordionBlockEditor({
   function setContent(id: string, content: string) {
     commit({
       sections: payload.sections.map((s) => (s.id === id ? { ...s, content } : s)),
+    });
+  }
+
+  function setMedia(id: string, field: 'imageStorageId' | 'audioStorageId', value: string | null) {
+    commit({
+      sections: payload.sections.map((s) =>
+        s.id === id ? { ...s, [field]: value ?? undefined } : s,
+      ),
     });
   }
 
@@ -155,6 +166,20 @@ export function AccordionBlockEditor({
                   <p className="mt-1 text-[11px] text-slate-400">
                     Plain text — rich text support coming in preview phase.
                   </p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <MediaUpload
+                      accept="image/*"
+                      storageId={section.imageStorageId ?? null}
+                      onChange={(id) => setMedia(section.id, 'imageStorageId', id)}
+                      onClear={() => setMedia(section.id, 'imageStorageId', null)}
+                    />
+                    <MediaUpload
+                      accept="audio/*"
+                      storageId={section.audioStorageId ?? null}
+                      onChange={(id) => setMedia(section.id, 'audioStorageId', id)}
+                      onClear={() => setMedia(section.id, 'audioStorageId', null)}
+                    />
+                  </div>
                 </div>
               )}
             </div>

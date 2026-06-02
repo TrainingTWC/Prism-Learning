@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useQuery, useMutation, useConvex } from 'convex/react';
 import { Link, useParams } from '@tanstack/react-router';
 import { api } from '~convex/_generated/api';
@@ -82,7 +83,6 @@ import { CompareBlockEditor } from '../components/CompareBlockEditor';
 import { AudioBlockEditor } from '../components/AudioBlockEditor';
 import { LabeledGraphicBlockEditor } from '../components/LabeledGraphicBlockEditor';
 import { FillBlanksBlockEditor } from '../components/FillBlanksBlockEditor';
-import { RevealCardsBlockEditor } from '../components/RevealCardsBlockEditor';
 import { MatchingBlockEditor } from '../components/MatchingBlockEditor';
 import { SortingBlockEditor } from '../components/SortingBlockEditor';
 import { ScenarioBlockEditor } from '../components/ScenarioBlockEditor';
@@ -97,7 +97,7 @@ type Lesson = {
   moduleId: Id<'modules'>;
 };
 
-type BlockType = 'richText' | 'image' | 'video' | 'lottie' | 'mcq' | 'trueFalse' | 'accordion' | 'quote' | 'callout' | 'divider' | 'flashcard' | 'process' | 'tabs' | 'button' | 'customHtml' | 'hotspots' | 'gallery' | 'compare' | 'audio' | 'labeledGraphic' | 'fillBlanks' | 'revealCards' | 'matching' | 'sorting' | 'scenario';
+type BlockType = 'richText' | 'image' | 'video' | 'lottie' | 'mcq' | 'trueFalse' | 'accordion' | 'quote' | 'callout' | 'divider' | 'flashcard' | 'process' | 'tabs' | 'button' | 'customHtml' | 'hotspots' | 'gallery' | 'compare' | 'audio' | 'labeledGraphic' | 'fillBlanks' | 'matching' | 'sorting' | 'scenario';
 
 type Block = {
   _id: Id<'blocks'>;
@@ -127,7 +127,6 @@ const BLOCK_TYPES: { type: BlockType; label: string; icon: React.ReactNode; grou
   { type: 'fillBlanks', label: 'Fill blanks',      icon: <Type className="size-3.5" />,              group: 'Interactive' },
   { type: 'matching',   label: 'Matching',         icon: <GitMerge className="size-3.5" />,          group: 'Interactive' },
   { type: 'sorting',    label: 'Sort order',       icon: <ArrowUpDown className="size-3.5" />,       group: 'Interactive' },
-  { type: 'revealCards',label: 'Reveal cards',     icon: <Layers className="size-3.5" />,            group: 'Interactive' },
   // Media
   { type: 'audio',          label: 'Audio',            icon: <Music className="size-3.5" />,          group: 'Media' },
   { type: 'gallery',        label: 'Gallery',          icon: <Images className="size-3.5" />,         group: 'Media' },
@@ -159,7 +158,6 @@ const BLOCK_DESCRIPTIONS: Record<BlockType, string> = {
   fillBlanks:    'Fill-in-the-blank cloze exercise',
   matching:      'Drag-and-match pairs activity',
   sorting:       'Drag items into the correct order',
-  revealCards:   'Cards that reveal content on click',
   audio:         'Embedded audio file player',
   gallery:       'Image grid or carousel',
   compare:       'Before-and-after image slider',
@@ -1060,9 +1058,6 @@ function SortableBlock({
         {block.type === 'fillBlanks' && (
           <FillBlanksBlockEditor blockId={block._id} initialContent={block.content} onSave={onSave} />
         )}
-        {block.type === 'revealCards' && (
-          <RevealCardsBlockEditor blockId={block._id} initialContent={block.content} onSave={onSave} />
-        )}
         {block.type === 'matching' && (
           <MatchingBlockEditor blockId={block._id} initialContent={block.content} onSave={onSave} />
         )}
@@ -1177,26 +1172,39 @@ function BlockTypeBtn({
   onAdd: (type: BlockType) => void;
   disabled: boolean;
 }) {
-  const [showTip, setShowTip] = useState(false);
+  const [tipRect, setTipRect] = useState<{ x: number; y: number } | null>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
   const description = BLOCK_DESCRIPTIONS[type];
+
+  function handleMouseEnter() {
+    if (!btnRef.current) return;
+    const r = btnRef.current.getBoundingClientRect();
+    setTipRect({ x: r.left + r.width / 2, y: r.top });
+  }
+
   return (
-    <div className="relative">
+    <div>
       <button
+        ref={btnRef}
         type="button"
         disabled={disabled}
         onClick={() => onAdd(type)}
-        onMouseEnter={() => setShowTip(true)}
-        onMouseLeave={() => setShowTip(false)}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={() => setTipRect(null)}
         className="flex w-full flex-col items-center gap-1 rounded-xl border border-[var(--border-primary)] bg-[var(--bg-tertiary)] px-1.5 py-2.5 text-center transition-colors hover:border-indigo-500 hover:bg-indigo-500/10 disabled:pointer-events-none disabled:opacity-40"
       >
         <span className="[&>svg]:size-4 text-[var(--text-tertiary)]">{icon}</span>
         <span className="text-[10px] font-medium leading-tight text-[var(--text-secondary)]">{label}</span>
       </button>
-      {showTip && description && (
-        <div className="pointer-events-none absolute bottom-full left-1/2 z-50 mb-2 w-44 -translate-x-1/2 rounded-lg border border-[var(--border-primary)] bg-[var(--bg-primary)] px-3 py-2 shadow-xl">
-          <p className="mb-0.5 text-[11px] font-semibold text-[var(--text-primary)]">{label}</p>
-          <p className="text-[10px] leading-snug text-[var(--text-muted)]">{description}</p>
-        </div>
+      {tipRect && description && createPortal(
+        <div
+          className="pointer-events-none fixed z-[9999] w-48 -translate-x-1/2 rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-xl"
+          style={{ left: tipRect.x, top: tipRect.y - 8, transform: 'translate(-50%, -100%)' }}
+        >
+          <p className="mb-0.5 text-[11px] font-semibold text-slate-800">{label}</p>
+          <p className="text-[10px] leading-snug text-slate-500">{description}</p>
+        </div>,
+        document.body,
       )}
     </div>
   );

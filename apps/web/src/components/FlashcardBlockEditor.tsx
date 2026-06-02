@@ -1,11 +1,14 @@
 import { useState, useCallback } from 'react';
 import type { Id } from '~convex/_generated/dataModel';
 import { CreditCard, Plus, Trash2, GripVertical } from 'lucide-react';
+import { MediaUpload } from './MediaUpload';
 
 export type FlashCard = {
   id: string;
   front: string;
   back: string;
+  imageStorageId?: string;
+  audioStorageId?: string;
 };
 
 export type FlashcardPayload = {
@@ -38,6 +41,14 @@ export function FlashcardBlockEditor({
 
   function update(id: string, field: 'front' | 'back', value: string) {
     commit({ cards: payload.cards.map((c) => (c.id === id ? { ...c, [field]: value } : c)) });
+  }
+
+  function setMedia(id: string, field: 'imageStorageId' | 'audioStorageId', value: string | null) {
+    commit({
+      cards: payload.cards.map((c) =>
+        c.id === id ? { ...c, [field]: value ?? undefined } : c,
+      ),
+    });
   }
 
   function addCard() {
@@ -108,6 +119,20 @@ export function FlashcardBlockEditor({
                       placeholder="Answer or explanation…"
                       rows={2}
                       className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-400 resize-none"
+                    />
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <MediaUpload
+                      accept="image/*"
+                      storageId={card.imageStorageId ?? null}
+                      onChange={(id) => setMedia(card.id, 'imageStorageId', id)}
+                      onClear={() => setMedia(card.id, 'imageStorageId', null)}
+                    />
+                    <MediaUpload
+                      accept="audio/*"
+                      storageId={card.audioStorageId ?? null}
+                      onChange={(id) => setMedia(card.id, 'audioStorageId', id)}
+                      onClear={() => setMedia(card.id, 'audioStorageId', null)}
                     />
                   </div>
                 </div>
