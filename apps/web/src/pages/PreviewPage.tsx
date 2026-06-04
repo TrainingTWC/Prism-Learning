@@ -71,6 +71,7 @@ export function PreviewPage() {
 
   const content = useQuery(api.modules.getWithContent, { moduleId: modId });
   const workspace = useQuery(api.workspaces.getById, { workspaceId: wsId });
+  const allBlocksRaw = useQuery(api.blocks.listByModule, { moduleId: modId });
 
   const [lessonIdx, setLessonIdx] = useState(0);
   const [viewMode, setViewMode] = useState<ViewMode>('phone');
@@ -79,7 +80,7 @@ export function PreviewPage() {
   // ── Build export-compatible data structures ────────────────────────────
 
   const lessons = useMemo(() => content?.lessons ?? [], [content]);
-  const allBlocks = useMemo(() => content?.blocks ?? [], [content]);
+  const allBlocks = useMemo(() => allBlocksRaw ?? [], [allBlocksRaw]);
 
   const exportMod = useMemo<ExportModule | null>(() => {
     if (!content) return null;

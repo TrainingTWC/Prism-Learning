@@ -179,6 +179,8 @@ export function ModuleEditorPage() {
   const wsId = workspaceId as Id<'workspaces'>;
   const modId = moduleId as Id<'modules'>;
 
+  const [activeLessonId, setActiveLessonId] = useState<Id<'lessons'> | null>(null);
+
   const content = useQuery(api.modules.getWithContent, { moduleId: modId });
   // Blocks are fetched per active lesson — this means a block save by any user
   // only invalidates the subscribers on THAT lesson, not all 5-7 co-editors.
@@ -205,7 +207,6 @@ export function ModuleEditorPage() {
 
   const pingPresence = useMutation(api.presence.ping);
 
-  const [activeLessonId, setActiveLessonId] = useState<Id<'lessons'> | null>(null);
   const [renamingLessonId, setRenamingLessonId] = useState<string | null>(null);
   const [renameLessonValue, setRenameLessonValue] = useState('');
   const [renamingModule, setRenamingModule] = useState(false);
