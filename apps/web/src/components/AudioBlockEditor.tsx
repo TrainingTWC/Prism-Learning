@@ -2,7 +2,7 @@ import { useRef, useState, useCallback, useEffect } from 'react';
 import { useMutation, useQuery } from 'convex/react';
 import { api } from '~convex/_generated/api';
 import type { Id } from '~convex/_generated/dataModel';
-import { Loader2, Upload, Music, X } from 'lucide-react';
+import { Loader2, Upload, Music, X, CloudUpload } from 'lucide-react';
 
 type Payload = { storageId: string; title: string; transcript: string };
 
@@ -73,8 +73,21 @@ export function AudioBlockEditor({
                 : 'border-[var(--border-primary)] bg-[var(--bg-tertiary)] text-[var(--text-muted)] hover:border-pink-400 hover:text-pink-400'
             }`}
           >
-            {uploading ? <Loader2 className="size-6 animate-spin" /> : <Upload className="size-6" />}
-            {uploading ? 'Uploading…' : dragOver ? 'Drop to upload' : 'Upload audio file (MP3, WAV, M4A)'}
+            {uploading ? (
+              <Loader2 className="size-6 animate-spin" />
+            ) : dragOver ? (
+              <CloudUpload className="size-8" />
+            ) : (
+              <Upload className="size-6" />
+            )}
+            {uploading
+              ? 'Uploading…'
+              : dragOver
+              ? 'Drop audio file here'
+              : 'Drag & drop audio file here, or click to browse'}
+            {!uploading && !dragOver && (
+              <span className="text-xs font-normal opacity-60">MP3, WAV, M4A, OGG</span>
+            )}
           </div>
         ) : (
           <>
