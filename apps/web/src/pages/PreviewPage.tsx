@@ -241,7 +241,7 @@ export function PreviewPage() {
             <iframe
               srcDoc={iframeHtml}
               title="Learner preview"
-              sandbox="allow-scripts allow-same-origin"
+              sandbox="allow-scripts allow-same-origin allow-popups"
               className="block w-full border-0 bg-white"
               style={{
                 height:

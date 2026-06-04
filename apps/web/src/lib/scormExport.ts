@@ -62,6 +62,35 @@ function escapeHtml(s: string) {
     .replace(/"/g, '&quot;');
 }
 
+function toEmbedUrl(raw: string): string | null {
+  try {
+    const u = new URL(raw);
+    const h = u.hostname;
+    if (h === 'www.youtube.com' || h === 'youtube.com') {
+      if (u.pathname.startsWith('/embed/')) return raw;
+      const id = u.searchParams.get('v') ?? '';
+      return /^[a-zA-Z0-9_-]{11}$/.test(id) ? `https://www.youtube.com/embed/${id}?rel=0` : null;
+    }
+    if (h === 'youtu.be') {
+      const id = u.pathname.slice(1).split('?')[0] ?? '';
+      return /^[a-zA-Z0-9_-]{11}$/.test(id) ? `https://www.youtube.com/embed/${id}?rel=0` : null;
+    }
+    if (h === 'vimeo.com') {
+      const id = u.pathname.split('/').filter(Boolean)[0] ?? '';
+      return /^\d+$/.test(id) ? `https://player.vimeo.com/video/${id}` : null;
+    }
+    if (h === 'player.vimeo.com') return raw;
+    return null;
+  } catch { return null; }
+}
+
+const CALLOUT_ICONS: Record<string, string> = {
+  info: `<svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" aria-hidden="true"><path fill-rule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm8.706-1.442c1.146-.573 2.437.463 2.126 1.706l-.709 2.836.042-.02a.75.75 0 01.67 1.34l-.04.022c-1.147.573-2.438-.463-2.127-1.706l.71-2.836-.042.02a.75.75 0 11-.671-1.34l.041-.022zM12 9a.75.75 0 100-1.5.75.75 0 000 1.5z" clip-rule="evenodd"/></svg>`,
+  warning: `<svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" aria-hidden="true"><path fill-rule="evenodd" d="M9.401 3.003c1.155-2 4.043-2 5.197 0l7.355 12.748c1.154 2-.29 4.5-2.599 4.5H4.645c-2.309 0-3.752-2.5-2.598-4.5L9.4 3.003zM12 8.25a.75.75 0 01.75.75v3.75a.75.75 0 01-1.5 0V9a.75.75 0 01.75-.75zm0 8.25a.75.75 0 100-1.5.75.75 0 000 1.5z" clip-rule="evenodd"/></svg>`,
+  success: `<svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" aria-hidden="true"><path fill-rule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm13.36-1.814a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z" clip-rule="evenodd"/></svg>`,
+  tip: `<svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" aria-hidden="true"><path fill-rule="evenodd" d="M9 4.5a.75.75 0 01.721.544l.813 2.846a3.75 3.75 0 002.576 2.576l2.846.813a.75.75 0 010 1.442l-2.846.813a3.75 3.75 0 00-2.576 2.576l-.813 2.846a.75.75 0 01-1.442 0l-.813-2.846a3.75 3.75 0 00-2.576-2.576l-2.846-.813a.75.75 0 010-1.442l2.846-.813A3.75 3.75 0 007.466 7.89l.813-2.846A.75.75 0 019 4.5zM18 1.5a.75.75 0 01.728.568l.258 1.036c.236.94.97 1.674 1.91 1.91l1.036.258a.75.75 0 010 1.456l-1.036.258c-.94.236-1.674.97-1.91 1.91l-.258 1.036a.75.75 0 01-1.456 0l-.258-1.036a2.625 2.625 0 00-1.91-1.91l-1.036-.258a.75.75 0 010-1.456l1.036-.258a2.625 2.625 0 001.91-1.91l.258-1.036A.75.75 0 0118 1.5z" clip-rule="evenodd"/></svg>`,
+};
+
 // ── Block → HTML ───────────────────────────────────────────────────────────
 
 function renderBlock(block: ExportBlock, assetMap: Record<string, string>): string {
@@ -100,16 +129,10 @@ function renderBlock(block: ExportBlock, assetMap: Record<string, string>): stri
       const src = p.srcType === 'storage' ? (assetMap[p.src ?? ''] ?? p.src ?? '') : (p.src ?? '');
       if (!src) return '';
       if (p.srcType === 'embed') {
-        // Only allow whitelisted embed domains (YouTube and Vimeo)
-        const allowedEmbedHosts = ['www.youtube.com', 'player.vimeo.com'];
-        let isAllowed = false;
-        try {
-          const embedHost = new URL(src).hostname;
-          isAllowed = allowedEmbedHosts.includes(embedHost);
-        } catch { /* invalid URL */ }
-        if (!isAllowed) return '';
+        const embedSrc = toEmbedUrl(src);
+        if (!embedSrc) return '';
         return `<figure class="prism-video">
-  <div class="prism-video-wrap"><iframe src="${escapeHtml(src)}" allowfullscreen></iframe></div>
+  <div class="prism-video-wrap"><iframe src="${escapeHtml(embedSrc)}" allowfullscreen></iframe></div>
   ${p.caption ? `<figcaption>${escapeHtml(p.caption)}</figcaption>` : ''}
 </figure>`;
       }
@@ -180,9 +203,13 @@ function renderBlock(block: ExportBlock, assetMap: Record<string, string>): stri
       let p: { variant?: string; title?: string; body?: string } = {};
       try { p = JSON.parse(c) as typeof p; } catch { /* */ }
       const variant = p.variant ?? 'info';
+      const icon = CALLOUT_ICONS[variant] ?? CALLOUT_ICONS['info'];
       return `<div class="prism-callout prism-callout--${escapeHtml(variant)}">
-  ${p.title ? `<p class="prism-callout-title">${escapeHtml(p.title)}</p>` : ''}
-  <p>${escapeHtml(p.body ?? '')}</p>
+  <span class="prism-callout-icon">${icon}</span>
+  <div>
+    ${p.title ? `<p class="prism-callout-title">${escapeHtml(p.title)}</p>` : ''}
+    <p>${escapeHtml(p.body ?? '')}</p>
+  </div>
 </div>`;
     }
 
@@ -716,7 +743,8 @@ html[data-theme="dark"] .prism-tf-btns button.selected-bad{color:#fca5a5}
 .prism-quote{border-left:4px solid var(--prism-primary);background:var(--prism-surface-2);border-radius:0 12px 12px 0;padding:1.25rem 1.25rem 1.25rem 1.5rem;margin:1.75rem 0;font-size:1.1rem;font-style:italic;color:var(--prism-text-2);line-height:1.75}
 .prism-quote p{margin:0}
 .prism-quote cite{display:block;margin-top:.7rem;font-size:.8rem;font-style:normal;font-weight:700;color:var(--prism-text-muted);letter-spacing:.03em}
-.prism-callout{border-radius:14px;padding:1rem 1.125rem;margin:1.75rem 0;border-width:1.5px;border-style:solid}
+.prism-callout{border-radius:14px;padding:1rem 1.125rem;margin:1.75rem 0;border-width:1.5px;border-style:solid;display:flex;gap:0.75rem;align-items:flex-start}
+.prism-callout-icon{flex-shrink:0;margin-top:0.1rem;display:flex}
 .prism-callout--info{background:color-mix(in srgb,#3b82f6 8%,var(--prism-surface));border-color:color-mix(in srgb,#3b82f6 35%,transparent);color:#1e40af}
 .prism-callout--warning{background:color-mix(in srgb,#f59e0b 10%,var(--prism-surface));border-color:color-mix(in srgb,#f59e0b 40%,transparent);color:#92400e}
 .prism-callout--success{background:color-mix(in srgb,#10b981 10%,var(--prism-surface));border-color:color-mix(in srgb,#10b981 35%,transparent);color:#166534}
@@ -727,10 +755,10 @@ html[data-theme="dark"] .prism-callout--success{color:#86efac}
 html[data-theme="dark"] .prism-callout--tip{color:#d8b4fe}
 .prism-callout-title{font-weight:700;margin-bottom:.375rem;font-size:.95rem}
 .prism-callout p{font-size:.9rem;line-height:1.6;margin:0}
-.prism-divider--line{border:none;border-top:2px solid var(--prism-border);margin:1.75rem 0}
-.prism-divider--space{height:2rem;margin:0}
-.prism-divider--dots{text-align:center;color:var(--prism-text-faint);font-size:1.5rem;letter-spacing:.4em;margin:1.5rem 0;display:block}
-.prism-divider--label{display:flex;align-items:center;gap:.75rem;margin:1.75rem 0;color:var(--prism-text-muted);font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em}
+.prism-divider--line{border:none;border-top:2px solid var(--prism-border);margin:3rem 0}
+.prism-divider--space{height:2rem;margin:1rem 0}
+.prism-divider--dots{text-align:center;color:var(--prism-text-faint);font-size:1.5rem;letter-spacing:.4em;margin:3rem 0;display:block}
+.prism-divider--label{display:flex;align-items:center;gap:.75rem;margin:3rem 0;color:var(--prism-text-muted);font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em}
 .prism-divider--label::before,.prism-divider--label::after{content:'';flex:1;border-top:1.5px solid var(--prism-border)}
 .prism-flashcards{background:var(--prism-surface-2);border:1px solid var(--prism-border);border-radius:20px;padding:1.25rem;margin:1.75rem 0}
 .prism-fc-inner{min-height:10rem;background:var(--prism-surface);border-radius:14px;border:1.5px solid var(--prism-border);padding:1.5rem;display:flex;align-items:center;justify-content:center;text-align:center;margin-bottom:.875rem;box-shadow:var(--prism-shadow-soft);color:var(--prism-text)}

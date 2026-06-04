@@ -96,7 +96,7 @@ export function MCQBlockRenderer({ block }: Props) {
                 className={optClass + ' w-full text-left'}
               >
                 <span
-                  className={`mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border-2 text-xs font-bold ${
+                  className={`mt-0.5 flex size-5 shrink-0 items-center justify-center ${multiSelect ? 'rounded' : 'rounded-full'} border-2 text-xs font-bold ${
                     isSelected ? 'border-current' : 'border-slate-300'
                   } ${isSelected ? 'prism-marker-pop' : ''}`}
                 >

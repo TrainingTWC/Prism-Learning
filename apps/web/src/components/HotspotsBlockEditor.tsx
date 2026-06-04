@@ -167,6 +167,27 @@ export function HotspotsBlockEditor({
               )}
             </div>
 
+            {hotspots.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">Select:</span>
+                {hotspots.map((h, idx) => (
+                  <button
+                    key={h.id}
+                    type="button"
+                    onClick={() => setActiveId(activeId === h.id ? null : h.id)}
+                    className={`flex items-center gap-1.5 rounded-lg border px-2 py-1 text-xs font-semibold transition-all ${
+                      activeId === h.id
+                        ? 'border-rose-400 bg-rose-500/10 text-rose-500'
+                        : 'border-[var(--border-primary)] bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:border-rose-300 hover:text-rose-400'
+                    }`}
+                  >
+                    <span className="flex size-4 items-center justify-center rounded-full bg-rose-400 text-[9px] font-bold text-white">{idx + 1}</span>
+                    <span className="max-w-[5rem] truncate">{h.title || `Hotspot ${idx + 1}`}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+
             <div className="flex items-center gap-2">
               <button type="button" onClick={() => fileInputRef.current?.click()} className="flex items-center gap-2 rounded-lg border border-[var(--border-primary)] bg-[var(--bg-tertiary)] px-3 py-2 text-xs font-semibold text-[var(--text-secondary)] hover:bg-[var(--card-bg-hover)]">
                 <Upload className="size-3.5" /> Replace
