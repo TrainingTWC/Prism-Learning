@@ -22,6 +22,7 @@ export function AudioBlockEditor({
   const [title, setTitle] = useState(initial?.title ?? '');
   const [transcript, setTranscript] = useState(initial?.transcript ?? '');
   const [uploading, setUploading] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
   const ref = useRef<HTMLInputElement>(null);
   const generateUploadUrl = useMutation(api.files.generateUploadUrl);
   const url = useQuery(api.files.getFileUrl, storageId ? { storageId } : 'skip');
@@ -53,15 +54,28 @@ export function AudioBlockEditor({
       </div>
       <div className="p-4 space-y-3">
         {!storageId ? (
-          <button
-            type="button"
-            onClick={() => ref.current?.click()}
-            disabled={uploading}
-            className="flex h-32 w-full flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-[var(--border-primary)] bg-[var(--bg-tertiary)] text-sm font-semibold text-[var(--text-muted)] hover:border-pink-400 hover:text-pink-400"
+          <div
+            role="button"
+            tabIndex={0}
+            onClick={() => !uploading && ref.current?.click()}
+            onKeyDown={(e) => e.key === 'Enter' && !uploading && ref.current?.click()}
+            onDragOver={(e) => { e.preventDefault(); if (!uploading) setDragOver(true); }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              setDragOver(false);
+              const f = e.dataTransfer.files[0];
+              if (f && !uploading) void handleFile(f);
+            }}
+            className={`flex h-32 w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed text-sm font-semibold transition-colors ${
+              dragOver
+                ? 'border-pink-400 bg-pink-400/10 text-pink-400'
+                : 'border-[var(--border-primary)] bg-[var(--bg-tertiary)] text-[var(--text-muted)] hover:border-pink-400 hover:text-pink-400'
+            }`}
           >
             {uploading ? <Loader2 className="size-6 animate-spin" /> : <Upload className="size-6" />}
-            {uploading ? 'Uploading…' : 'Upload audio file (MP3, WAV, M4A)'}
-          </button>
+            {uploading ? 'Uploading…' : dragOver ? 'Drop to upload' : 'Upload audio file (MP3, WAV, M4A)'}
+          </div>
         ) : (
           <>
             <div className="flex items-center gap-3 rounded-xl border border-[var(--border-primary)] bg-[var(--bg-tertiary)] p-3">

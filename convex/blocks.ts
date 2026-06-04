@@ -217,3 +217,34 @@ export const remove = mutation({
     await ctx.db.delete(blockId);
   },
 });
+
+/** Move a block to a different lesson (appended at the end). */
+export const moveToLesson = mutation({
+  args: { blockId: v.id('blocks'), targetLessonId: v.id('lessons') },
+  handler: async (ctx, { blockId, targetLessonId }) => {
+    const block = await ctx.db.get(blockId);
+    if (!block) throw new Error('Not found');
+
+    // Verify membership on both lessons
+    await requireLessonMember(ctx, block.lessonId);
+    const { userId } = await requireLessonMember(ctx, targetLessonId);
+
+    const targetLesson = await ctx.db.get(targetLessonId);
+    if (!targetLesson) throw new Error('Not found');
+
+    // Compute order at end of target lesson
+    const targetBlocks = await ctx.db
+      .query('blocks')
+      .withIndex('by_lesson', (q) => q.eq('lessonId', targetLessonId))
+      .collect();
+    const maxOrder = targetBlocks.reduce((max, b) => Math.max(max, b.order), 0);
+
+    await ctx.db.patch(blockId, {
+      lessonId: targetLessonId,
+      moduleId: targetLesson.moduleId,
+      order: maxOrder + 1000,
+      updatedAt: Date.now(),
+      lastEditedBy: userId,
+    });
+  },
+});

@@ -188,34 +188,41 @@ export function ImageBlockEditor({
   // ── Image already uploaded ──────────────────────────────────────────────
   if (storageId) {
     return (
-      <div className="space-y-2 rounded-xl border border-slate-200 bg-white p-3">
-        <ImageDisplay
-          storageId={storageId}
-          altText={altText}
-          caption={caption}
-          onClear={() => void handleClear()}
-        />
-        <div className="flex gap-2">
-          <input
-            type="text"
-            placeholder="Alt text…"
-            value={altText}
-            onChange={(e) => {
-              setAltText(e.target.value);
-              if (storageId) save(storageId, e.target.value, caption);
-            }}
-            className="flex-1 rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-700 placeholder-slate-400 outline-none focus:border-indigo-300 focus:ring-1 focus:ring-indigo-200"
+      <div className="rounded-2xl border-2 border-[var(--border-primary)] bg-[var(--bg-secondary)] overflow-hidden">
+        <div className="flex items-center border-b-2 border-[var(--border-subtle)] bg-[var(--bg-tertiary)] px-4 py-3">
+          <div className="flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-[var(--text-secondary)]">
+            <ImageIcon className="size-4 text-blue-400" /> Image
+          </div>
+        </div>
+        <div className="p-3 space-y-2">
+          <ImageDisplay
+            storageId={storageId}
+            altText={altText}
+            caption={caption}
+            onClear={() => void handleClear()}
           />
-          <input
-            type="text"
-            placeholder="Caption…"
-            value={caption}
-            onChange={(e) => {
-              setCaption(e.target.value);
-              if (storageId) save(storageId, altText, e.target.value);
-            }}
-            className="flex-1 rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-700 placeholder-slate-400 outline-none focus:border-indigo-300 focus:ring-1 focus:ring-indigo-200"
-          />
+          <div className="flex gap-2">
+            <input
+              type="text"
+              placeholder="Alt text…"
+              value={altText}
+              onChange={(e) => {
+                setAltText(e.target.value);
+                if (storageId) save(storageId, e.target.value, caption);
+              }}
+              className="flex-1 rounded-lg border border-[var(--border-primary)] bg-[var(--input-bg)] px-2 py-1 text-xs text-[var(--text-primary)] placeholder-[var(--text-muted)] outline-none focus:border-blue-400"
+            />
+            <input
+              type="text"
+              placeholder="Caption…"
+              value={caption}
+              onChange={(e) => {
+                setCaption(e.target.value);
+                if (storageId) save(storageId, altText, e.target.value);
+              }}
+              className="flex-1 rounded-lg border border-[var(--border-primary)] bg-[var(--input-bg)] px-2 py-1 text-xs text-[var(--text-primary)] placeholder-[var(--text-muted)] outline-none focus:border-blue-400"
+            />
+          </div>
         </div>
       </div>
     );
@@ -225,7 +232,13 @@ export function ImageBlockEditor({
   const canGenerate = !!moduleId;
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-3">
+    <div className="rounded-2xl border-2 border-[var(--border-primary)] bg-[var(--bg-secondary)] overflow-hidden">
+      <div className="flex items-center border-b-2 border-[var(--border-subtle)] bg-[var(--bg-tertiary)] px-4 py-3">
+        <div className="flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-[var(--text-secondary)]">
+          <ImageIcon className="size-4 text-blue-400" /> Image
+        </div>
+      </div>
+      <div className="p-3">
       {canGenerate && (
         <div className="mb-3 flex gap-1 rounded-lg bg-slate-100 p-1">
           <button
@@ -325,6 +338,7 @@ export function ImageBlockEditor({
           </button>
         </div>
       )}
+      </div>
     </div>
   );
 }

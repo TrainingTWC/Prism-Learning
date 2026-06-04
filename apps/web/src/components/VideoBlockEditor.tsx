@@ -144,7 +144,13 @@ export function VideoBlockEditor({
   if (payload) {
     const embedSrc = payload.srcType === 'embed' ? getEmbedUrl(payload.src) : null;
     return (
-      <div className="space-y-2 rounded-xl border border-slate-200 bg-white p-3">
+      <div className="rounded-2xl border-2 border-[var(--border-primary)] bg-[var(--bg-secondary)] overflow-hidden">
+        <div className="flex items-center border-b-2 border-[var(--border-subtle)] bg-[var(--bg-tertiary)] px-4 py-3">
+          <div className="flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-[var(--text-secondary)]">
+            <Video className="size-4 text-indigo-400" /> Video
+          </div>
+        </div>
+        <div className="p-3 space-y-2">
         <div className="relative group">
           {payload.srcType === 'embed' && embedSrc ? (
             <div className="rounded-xl overflow-hidden border border-slate-200 aspect-video">
@@ -181,15 +187,22 @@ export function VideoBlockEditor({
             setCaption(e.target.value);
             save(payload.srcType, payload.src, e.target.value);
           }}
-          className="w-full rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-700 placeholder-slate-400 outline-none focus:border-indigo-300 focus:ring-1 focus:ring-indigo-200"
+          className="w-full rounded-lg border border-[var(--border-primary)] bg-[var(--input-bg)] px-2 py-1 text-xs text-[var(--text-primary)] placeholder-[var(--text-muted)] outline-none focus:border-indigo-400"
         />
+        </div>
       </div>
     );
   }
 
   // ── No content yet — show mode picker ─────────────────────────────────
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-3">
+    <div className="rounded-2xl border-2 border-[var(--border-primary)] bg-[var(--bg-secondary)] overflow-hidden">
+      <div className="flex items-center border-b-2 border-[var(--border-subtle)] bg-[var(--bg-tertiary)] px-4 py-3">
+        <div className="flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-[var(--text-secondary)]">
+          <Video className="size-4 text-indigo-400" /> Video
+        </div>
+      </div>
+      <div className="p-4 space-y-3">
       {/* Mode tabs */}
       <div className="flex gap-1 rounded-lg bg-slate-100 p-0.5 w-fit">
         <button
@@ -285,6 +298,7 @@ export function VideoBlockEditor({
           />
         </div>
       )}
+      </div>
     </div>
   );
 }

@@ -201,6 +201,7 @@ export function ModuleEditorPage() {
   const removeBlock = useMutation(api.blocks.remove);
   const duplicateBlock = useMutation(api.blocks.duplicate);
   const reorderBlocks = useMutation(api.blocks.reorder);
+  const moveBlockToLesson = useMutation(api.blocks.moveToLesson);
 
   const pingPresence = useMutation(api.presence.ping);
 
@@ -641,12 +642,17 @@ export function ModuleEditorPage() {
                           )}
                           <SortableBlock
                             block={block}
+                            lessons={lessons}
                             onSave={(html) => handleSaveBlock(block._id, html)}
                             onDelete={async () => {
                               await removeBlock({ blockId: block._id });
                             }}
                             onDuplicate={async () => {
                               await duplicateBlock({ blockId: block._id });
+                            }}
+                            onMoveToLesson={async (targetLessonId) => {
+                              await moveBlockToLesson({ blockId: block._id, targetLessonId });
+                              setActiveLessonId(targetLessonId);
                             }}
                           />
                           {idx < blocksForLesson.length - 1 && (
@@ -905,15 +911,20 @@ function SortableLesson({
 
 function SortableBlock({
   block,
+  lessons,
   onSave,
   onDelete,
   onDuplicate,
+  onMoveToLesson,
 }: {
   block: Block;
+  lessons: Lesson[];
   onSave: (html: string) => void;
   onDelete: () => Promise<void>;
   onDuplicate: () => Promise<void>;
+  onMoveToLesson: (targetLessonId: Id<'lessons'>) => Promise<void>;
 }) {
+  const [showMoveMenu, setShowMoveMenu] = useState(false);
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: block._id,
   });
@@ -1084,6 +1095,47 @@ function SortableBlock({
         >
           <Copy className="size-5" />
         </button>
+        {/* Move to lesson */}
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setShowMoveMenu((o) => !o)}
+            className={`rounded-xl p-2.5 transition-colors ${
+              showMoveMenu
+                ? 'bg-indigo-500/15 text-indigo-400'
+                : 'bg-[var(--bg-tertiary)] text-[var(--text-tertiary)] hover:bg-[var(--card-bg-hover)] hover:text-[var(--text-primary)]'
+            }`}
+            title="Move to another lesson"
+          >
+            <Layers className="size-5" />
+          </button>
+          {showMoveMenu && (
+            <div className="absolute right-full top-0 mr-2 z-20 w-52 rounded-xl border border-[var(--border-primary)] bg-[var(--bg-secondary)] shadow-xl">
+              <p className="border-b border-[var(--border-subtle)] px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)]">
+                Move to lesson
+              </p>
+              {lessons.filter((l) => l._id !== block.lessonId).length === 0 ? (
+                <p className="px-3 py-2 text-xs text-[var(--text-muted)]">No other lessons</p>
+              ) : (
+                lessons
+                  .filter((l) => l._id !== block.lessonId)
+                  .map((l) => (
+                    <button
+                      key={l._id}
+                      type="button"
+                      onClick={async () => {
+                        setShowMoveMenu(false);
+                        await onMoveToLesson(l._id);
+                      }}
+                      className="flex w-full items-center gap-2 px-3 py-2.5 text-sm text-[var(--text-secondary)] transition-colors hover:bg-[var(--card-bg-hover)] hover:text-[var(--text-primary)] last:rounded-b-xl"
+                    >
+                      {l.title}
+                    </button>
+                  ))
+              )}
+            </div>
+          )}
+        </div>
         <button
           type="button"
           onClick={() => void onDelete()}
