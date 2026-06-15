@@ -1103,7 +1103,8 @@ html[data-theme="dark"] .prism-callout--tip{color:#d8b4fe}
 .prism-sc-choice:disabled{opacity:.5;cursor:not-allowed}
 .prism-sc-restart{background:var(--prism-accent);color:#fff;border:none;text-align:center;font-weight:700}
 /* ── Image lightbox ── */
-.prism-img img{cursor:zoom-in}
+.prism-lesson img{cursor:zoom-in}
+.prism-hotspots img, .prism-labeled-graphic img, .prism-compare img{cursor:default}
 .prism-lightbox{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.88);cursor:zoom-out;animation:prism-lb-in .18s ease both}
 @keyframes prism-lb-in{from{opacity:0}to{opacity:1}}
 .prism-lightbox img{max-width:100vw;max-height:100vh;width:100%;height:100%;object-fit:contain;border-radius:0;cursor:default}
@@ -1254,7 +1255,8 @@ document.querySelectorAll('.prism-tabs').forEach(function(tabs){
   });
 });
 // Image lightbox
-document.querySelectorAll('.prism-img img').forEach(function(img){
+document.querySelectorAll('.prism-lesson img').forEach(function(img){
+  if(img.closest('.prism-hotspots')||img.closest('.prism-labeled-graphic')||img.closest('.prism-compare'))return;
   img.addEventListener('click',function(){
     var lb=document.createElement('div');
     lb.className='prism-lightbox';
