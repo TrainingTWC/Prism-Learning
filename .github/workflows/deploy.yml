@@ -1,15 +1,12 @@
-name: Deploy to GitHub Pages
+name: CI
 
 on:
   push:
     branches: [master]
-  workflow_dispatch:
-
-permissions:
-  contents: write
+  pull_request:
 
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
 
     steps:
@@ -29,13 +26,3 @@ jobs:
         run: pnpm run build
         env:
           VITE_CONVEX_URL: https://merry-kingfisher-203.convex.cloud
-
-      - name: SPA fallback — copy index.html to 404.html
-        run: cp apps/web/dist/index.html apps/web/dist/404.html
-
-      - name: Deploy
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: apps/web/dist
-          cname: Learning.prismintelligence.in
