@@ -8,7 +8,7 @@
 
 **Name:** Prism Learning (learnflow)
 **Repository:** `C:\Users\Amritanshu\projects\learnflow`
-**Milestone:** v1 — internally-usable Rise-360-style authoring tool
+**Milestone:** v1.1 — Authoring & SCORM Bug Fix Sprint
 
 **Core Value:**
 > A team author can sit down, build a themed, multi-block lesson collaboratively in realtime, and export a working SCORM 1.2 zip that runs in their LMS — without writing code, fighting layout, or installing anything.
@@ -19,12 +19,12 @@
 
 ## Current Position
 
-**Phase:** — (none active — roadmap just created)
+**Phase:** — (none active — requirements defined)
 **Plan:** —
-**Status:** Roadmap ready; awaiting phase 1 kickoff.
-**Progress:** ░░░░░░░░░░ 0% (0/8 phases complete)
+**Status:** Defining requirements for v1.1 bug fix sprint
+**Progress:** ░░░░░░░░░░ 0% (0/1 phases complete)
 
-**Next action:** `/gsd-plan-phase 1` (Foundations & Auth — has `UI hint: yes`; consider `/gsd-ui-phase 1` first if a sign-in UI design pass is desired).
+**Next action:** `/gsd-plan-phase 9` (Critical Bug Fixes).
 
 ---
 

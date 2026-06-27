@@ -18,10 +18,27 @@
 - [ ] **Phase 6: Theming** — workspace theme editor, CSS-variable propagation, font loading, contrast warning
 - [ ] **Phase 7: Learner Preview** — full-screen iframe-isolated preview consuming `@prism/renderer`
 - [ ] **Phase 8: SCORM 1.2 Export & Hardening** — runtime bundle, manifest builder, Worker zip assembly, SCORM Cloud validation, responsive output, polish
+- [ ] **Phase 9: Critical Bug Fixes (v1.1)** — gallery carousel JS, Lottie self-contained export, SCORM API discovery, lesson title inline edit, Tabs rich text editor
 
 ---
 
-## Phase Details
+## v1.1 Phase Details
+
+### Phase 9: Critical Bug Fixes
+**Goal**: Fix five production-blocking bugs so exported SCORM packages work correctly in real LMS environments and authoring UX is smooth.
+**Depends on**: Phases 1–8 (live deployed app).
+**Requirements**: SCO-FIX-01, SCO-FIX-02, SCO-FIX-03, UX-FIX-01, UX-FIX-02
+**Success Criteria** (what must be TRUE):
+  1. A gallery block with carousel layout in an exported SCORM zip navigates correctly (Prev/Next and dots work); all other slides are hidden; no external JS is loaded.
+  2. A Lottie block in an exported SCORM zip plays without any network call; lottie-web is bundled as `assets/lottie.min.js`; animation JSON is embedded inline in the HTML.
+  3. A learner who completes the last lesson of a module and clicks "Finish" triggers correct `cmi.core.lesson_status` on the real LMS API (verified in SCORM Cloud or equivalent); the no-op API shim never intercepts when a real LMS API is present.
+  4. Clicking the lesson title `<h2>` in the main content area directly activates an editable input (identical behavior to the pencil icon).
+  5. A Tabs block content editor shows Tiptap toolbar (bold, color, heading, lists); formatted content is saved and rendered correctly by the Tabs block renderer.
+**Plans**: TBD
+
+---
+
+## v1 Phase Details
 
 ### Phase 1: Foundations & Auth
 **Goal**: A new author can sign in via magic link, land in a workspace, and invite collaborators.
@@ -142,6 +159,7 @@
 | 6. Theming | 0/0 | Not started | - |
 | 7. Learner Preview | 0/0 | Not started | - |
 | 8. SCORM Export & Hardening | 0/0 | Not started | - |
+| 9. Critical Bug Fixes (v1.1) | 0/0 | Not started | - |
 
 ---
 

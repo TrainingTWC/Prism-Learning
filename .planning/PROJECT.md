@@ -122,6 +122,17 @@ If theming, realtime co-editing, and a valid SCORM export all work, the product 
 | Async-with-locking dropped in favor of realtime co-edit | User explicitly chose realtime; Convex makes it cheap, so no reason to compromise | — Pending |
 | Tiptap (ProseMirror) for the rich-text editor | Industry standard for collaborative rich text; well-supported React bindings; works cleanly with Convex sync model | — Pending |
 
+## Current Milestone: v1.1 — Authoring & SCORM Bug Fix Sprint
+
+**Goal:** Fix five production-blocking bugs in the live app — three that break exported SCORM packages in real LMS environments, and two that impair the authoring UX.
+
+**Target fixes:**
+- Gallery/carousel block broken in exported SCORM (JS init pattern fails in LMS iframe)
+- Lottie animations missing in SCORM export (CDN dependency blocked by LMS CSP; R2 URL used as path)
+- SCORM completion/score not reported to LMS (minimal API shim shadows real LMS API)
+- Lesson title in main content area not clickable for inline rename (static h2, only pencil button works)
+- Tabs block content editor missing rich text (plain textarea instead of Tiptap editor)
+
 ## Evolution
 
 This document evolves at phase transitions and milestone boundaries.
