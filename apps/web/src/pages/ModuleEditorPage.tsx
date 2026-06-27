@@ -596,7 +596,13 @@ export function ModuleEditorPage() {
           ) : (
             <div className="mx-auto max-w-3xl px-8 py-8 space-y-4">
               <div className="flex items-center gap-3 pb-2 border-b border-[var(--border-primary)]">
-                <h2 className="text-xl font-bold text-[var(--text-primary)]">{activeLesson.title}</h2>
+                <h2
+                  className="text-xl font-bold text-[var(--text-primary)] cursor-pointer hover:text-[var(--text-secondary)] transition-colors"
+                  onClick={() => { setRenamingLessonId(activeLesson._id); setRenameLessonValue(activeLesson.title); }}
+                  title="Click to rename"
+                >
+                  {activeLesson.title}
+                </h2>
                 <button
                   type="button"
                   onClick={() => { setRenamingLessonId(activeLesson._id); setRenameLessonValue(activeLesson.title); }}

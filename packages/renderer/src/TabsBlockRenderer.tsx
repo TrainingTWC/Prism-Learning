@@ -44,9 +44,11 @@ export function TabsBlockRenderer({ block }: Props) {
       </div>
 
       {/* Content */}
-      <div className="px-5 py-5 text-sm leading-relaxed text-slate-600">
-        {tabs[activeIdx]?.content}
-      </div>
+      <div
+        className="px-5 py-5 text-sm leading-relaxed text-slate-600 prism-rich-content"
+        // eslint-disable-next-line react/no-danger
+        dangerouslySetInnerHTML={{ __html: tabs[activeIdx]?.content ?? '' }}
+      />
     </div>
   );
 }

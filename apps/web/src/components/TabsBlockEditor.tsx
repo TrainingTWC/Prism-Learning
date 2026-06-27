@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import type { Id } from '~convex/_generated/dataModel';
 import { PanelTop, Plus, Trash2 } from 'lucide-react';
 import { MediaUpload } from './MediaUpload';
+import { RichTextBlockEditor } from './RichTextBlockEditor';
 
 export type TabItem = {
   id: string;
@@ -133,12 +134,11 @@ export function TabsBlockEditor({
           </div>
           <div>
             <label className="mb-1 block text-xs font-medium text-slate-500">Content</label>
-            <textarea
-              value={activeTab.content}
-              onChange={(e) => updateContent(activeTab.id, e.target.value)}
-              placeholder="Tab content…"
-              rows={4}
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 resize-none"
+            <RichTextBlockEditor
+              key={activeTab.id}
+              blockId={`tab-${_blockId}-${activeTab.id}`}
+              initialContent={activeTab.content}
+              onSave={(html) => updateContent(activeTab.id, html)}
             />
           </div>
           <div className="flex flex-wrap gap-2">

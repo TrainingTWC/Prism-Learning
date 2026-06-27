@@ -62,6 +62,20 @@ function escapeHtml(s: string) {
     .replace(/"/g, '&quot;');
 }
 
+function defaultDividerPadding(style?: string) {
+  return style === 'space' ? 32 : 48;
+}
+
+function dividerPadding(value: unknown, style?: string) {
+  const numeric = typeof value === 'number' ? value : Number(value);
+  if (!Number.isFinite(numeric)) return defaultDividerPadding(style);
+  return Math.min(96, Math.max(0, Math.round(numeric)));
+}
+
+function dividerPaddingStyle(value: unknown, style?: string) {
+  return `--prism-divider-padding:${dividerPadding(value, style)}px`;
+}
+
 function toEmbedUrl(raw: string): string | null {
   try {
     const u = new URL(raw);
@@ -214,14 +228,15 @@ function renderBlock(block: ExportBlock, assetMap: Record<string, string>): stri
     }
 
     case 'divider': {
-      let p: { style?: string; label?: string } = {};
+      let p: { style?: string; label?: string; padding?: number } = {};
       try { p = JSON.parse(c) as typeof p; } catch { /* */ }
       const style = p.style ?? 'line';
-      if (style === 'space') return `<div class="prism-divider prism-divider--space"></div>`;
-      if (style === 'dots') return `<div class="prism-divider prism-divider--dots">···</div>`;
+      const paddingStyle = dividerPaddingStyle(p.padding, style);
+      if (style === 'space') return `<div class="prism-divider prism-divider--space" style="${paddingStyle}"></div>`;
+      if (style === 'dots') return `<div class="prism-divider prism-divider--dots" style="${paddingStyle}">&middot;&middot;&middot;</div>`;
       return p.label
-        ? `<div class="prism-divider prism-divider--label"><span>${escapeHtml(p.label)}</span></div>`
-        : `<hr class="prism-divider prism-divider--line" />`;
+        ? `<div class="prism-divider prism-divider--label" style="${paddingStyle}"><span>${escapeHtml(p.label)}</span></div>`
+        : `<div class="prism-divider prism-divider--line" style="${paddingStyle}"></div>`;
     }
 
     case 'flashcard': {
@@ -322,7 +337,7 @@ function renderBlock(block: ExportBlock, assetMap: Record<string, string>): stri
       }
       const slides = items.map((it, i) => `<div class="prism-g-slide${i === 0 ? ' active' : ''}"><img src="${escapeHtml(assetMap[it.storageId]!)}" alt="${escapeHtml(it.altText)}"/>${it.caption ? `<p>${escapeHtml(it.caption)}</p>` : ''}</div>`).join('');
       const dots = items.map((_, i) => `<button type="button" class="prism-g-dot${i === 0 ? ' active' : ''}" data-i="${i}" aria-label="Slide ${i + 1}"></button>`).join('');
-      return `<div class="prism-gallery"><div class="prism-g-slides">${slides}</div><div class="prism-g-controls"><button type="button" class="prism-g-prev" aria-label="Previous">‹</button><div class="prism-g-dots">${dots}</div><button type="button" class="prism-g-next" aria-label="Next">›</button></div><script>(function(){var r=document.currentScript.parentElement,i=0,n=${items.length};function go(j){i=(j+n)%n;r.querySelectorAll('.prism-g-slide').forEach(function(s,k){s.classList.toggle('active',k===i)});r.querySelectorAll('.prism-g-dot').forEach(function(d,k){d.classList.toggle('active',k===i)})}r.querySelector('.prism-g-prev').addEventListener('click',function(){go(i-1)});r.querySelector('.prism-g-next').addEventListener('click',function(){go(i+1)});r.querySelectorAll('.prism-g-dot').forEach(function(d){d.addEventListener('click',function(){go(parseInt(d.getAttribute('data-i')))})})})();</script></div>`;
+      return `<div class="prism-gallery" data-prism-gallery="${items.length}"><div class="prism-g-slides">${slides}</div><div class="prism-g-controls"><button type="button" class="prism-g-prev" aria-label="Previous">‹</button><div class="prism-g-dots">${dots}</div><button type="button" class="prism-g-next" aria-label="Next">›</button></div></div>`;
     }
 
     case 'compare': {
@@ -425,7 +440,7 @@ function renderBlock(block: ExportBlock, assetMap: Record<string, string>): stri
       const uid = `lottie_${Math.random().toString(36).slice(2, 9)}`;
       return `<div class="prism-lottie" style="max-width:480px;margin:1.5rem auto;text-align:center">
   <div id="${uid}"></div>
-  <script>(function(){function _init(){lottie.loadAnimation({container:document.getElementById('${uid}'),renderer:'svg',loop:${loop},autoplay:${autoplay},path:'${escapeHtml(src)}'});}if(window.lottie){_init();}else{var s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js';s.onload=_init;document.head.appendChild(s);}})();</script>
+  <script>(function(){function _init(){if(!window.lottie)return;lottie.loadAnimation({container:document.getElementById('${uid}'),renderer:'svg',loop:${loop},autoplay:${autoplay},path:'${escapeHtml(src)}'});}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',_init);}else{_init();}})();</script>
 </div>`;
     }
 
@@ -755,10 +770,12 @@ html[data-theme="dark"] .prism-callout--success{color:#86efac}
 html[data-theme="dark"] .prism-callout--tip{color:#d8b4fe}
 .prism-callout-title{font-weight:700;margin-bottom:.375rem;font-size:.95rem}
 .prism-callout p{font-size:.9rem;line-height:1.6;margin:0}
-.prism-divider--line{border:none;border-top:2px solid var(--prism-border);margin:3rem 0}
-.prism-divider--space{height:2rem;margin:1rem 0}
-.prism-divider--dots{text-align:center;color:var(--prism-text-faint);font-size:1.5rem;letter-spacing:.4em;margin:3rem 0;display:block}
-.prism-divider--label{display:flex;align-items:center;gap:.75rem;margin:3rem 0;color:var(--prism-text-muted);font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em}
+.prism-divider{--prism-divider-padding:48px}
+.prism-divider--line{padding:var(--prism-divider-padding) 0}
+.prism-divider--line::before{content:'';display:block;border-top:2px solid var(--prism-border)}
+.prism-divider--space{height:calc(var(--prism-divider-padding) * 2)}
+.prism-divider--dots{text-align:center;color:var(--prism-text-faint);font-size:1.5rem;letter-spacing:.4em;padding:var(--prism-divider-padding) 0;display:block}
+.prism-divider--label{display:flex;align-items:center;gap:.75rem;padding:var(--prism-divider-padding) 0;color:var(--prism-text-muted);font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em}
 .prism-divider--label::before,.prism-divider--label::after{content:'';flex:1;border-top:1.5px solid var(--prism-border)}
 .prism-flashcards{background:var(--prism-surface-2);border:1px solid var(--prism-border);border-radius:20px;padding:1.25rem;margin:1.75rem 0}
 .prism-fc-inner{min-height:10rem;background:var(--prism-surface);border-radius:14px;border:1.5px solid var(--prism-border);padding:1.5rem;display:flex;align-items:center;justify-content:center;text-align:center;margin-bottom:.875rem;box-shadow:var(--prism-shadow-soft);color:var(--prism-text)}
@@ -942,8 +959,8 @@ document.querySelectorAll('.prism-mcq').forEach(function(el){
     window.__prismTotal=(window.__prismTotal||0)+1;
     if(allOk)window.__prismCorrect=(window.__prismCorrect||0)+1;
     // SCORM score
-    if(typeof API!=='undefined'){
-      try{API.LMSSetValue('cmi.core.score.raw',allOk?'100':'0');API.LMSSetValue('cmi.core.score.min','0');API.LMSSetValue('cmi.core.score.max','100');API.LMSCommit('');}catch(e){}
+    if(window.__prismAPI){
+      try{window.__prismAPI.LMSSetValue('cmi.core.score.raw',allOk?'100':'0');window.__prismAPI.LMSSetValue('cmi.core.score.min','0');window.__prismAPI.LMSSetValue('cmi.core.score.max','100');window.__prismAPI.LMSCommit('');}catch(e){}
     }
   });
   retry.addEventListener('click',function(){
@@ -972,7 +989,7 @@ document.querySelectorAll('.prism-tf').forEach(function(el){
       if(retry)retry.style.display='inline';
       window.__prismTotal=(window.__prismTotal||0)+1;
       if(ok)window.__prismCorrect=(window.__prismCorrect||0)+1;
-      if(typeof API!=='undefined'){try{API.LMSCommit('');}catch(e){}}
+      if(window.__prismAPI){try{window.__prismAPI.LMSCommit('');}catch(e){}}
     });
   });
   if(retry)retry.addEventListener('click',function(){
@@ -1045,6 +1062,15 @@ document.querySelectorAll('.prism-tabs').forEach(function(tabs){
       if(panels[idx])panels[idx].style.display='';
     });
   });
+});
+// Gallery carousel
+document.querySelectorAll('.prism-gallery[data-prism-gallery]').forEach(function(r){
+  var i=0,n=parseInt(r.getAttribute('data-prism-gallery')||'1',10);
+  function go(j){i=(j+n)%n;r.querySelectorAll('.prism-g-slide').forEach(function(s,k){s.classList.toggle('active',k===i)});r.querySelectorAll('.prism-g-dot').forEach(function(d,k){d.classList.toggle('active',k===i)})}
+  var prev=r.querySelector('.prism-g-prev'),next=r.querySelector('.prism-g-next');
+  if(prev)prev.addEventListener('click',function(){go(i-1)});
+  if(next)next.addEventListener('click',function(){go(i+1)});
+  r.querySelectorAll('.prism-g-dot').forEach(function(d){d.addEventListener('click',function(){go(parseInt(d.getAttribute('data-i')||'0',10))})});
 });
 // Image lightbox
 document.querySelectorAll('.prism-lesson img').forEach(function(img){
@@ -1127,7 +1153,7 @@ function buildWelcomePage(mod: ExportModule, _theme: ExportTheme, hasLogo: boole
 <script src="assets/scorm12.min.js"></script>
 <script>
 (function(){
-  var api=(typeof API!=='undefined')?API:(window.parent&&window.parent.API)||(window.top&&window.top.API)||null;
+  var api=(function(){function findAPI(w){var n=0;while(w.parent&&w.parent!==w&&n<7){n++;if(w.parent.API)return w.parent.API;w=w.parent;}return null;}return window.API||findAPI(window)||(window.opener&&(window.opener.API||findAPI(window.opener)))||window.__prismFallbackAPI||null;})();
   if(api){try{api.LMSInitialize('');api.LMSSetValue('cmi.core.lesson_status','not attempted');api.LMSCommit('');}catch(e){}}
   document.getElementById('startBtn').addEventListener('click',function(){
     var inner=document.querySelector('.prism-welcome-inner');
@@ -1173,7 +1199,7 @@ function buildGoodbyePage(_theme: ExportTheme): string {
 <script src="assets/scorm12.min.js"></script>
 <script>
 (function(){
-  var api=(typeof API!=='undefined')?API:(window.parent&&window.parent.API)||(window.top&&window.top.API)||null;
+  var api=(function(){function findAPI(w){var n=0;while(w.parent&&w.parent!==w&&n<7){n++;if(w.parent.API)return w.parent.API;w=w.parent;}return null;}return window.API||findAPI(window)||(window.opener&&(window.opener.API||findAPI(window.opener)))||window.__prismFallbackAPI||null;})();
   if(api){try{api.LMSCommit('');api.LMSFinish('');}catch(e){}}
 })();
 </script>
@@ -1231,6 +1257,7 @@ function buildLessonPage(
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
 <title>${escapeHtml(lesson.title)} · ${escapeHtml(mod.title)}</title>
 <link rel="stylesheet" href="styles.css"/>
+<script src="assets/lottie.min.js"></script>
 <script>(function(){try{var t=localStorage.getItem('prism-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);else if(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();</script>
 </head>
 <body data-criteria="${options.completionCriteria}" data-passing="${options.passingScore}">
@@ -1290,7 +1317,7 @@ function buildLessonPage(
 <script src="assets/scorm12.min.js"></script>
 <script>
 (function(){
-  var api=(typeof API!=='undefined')?API:(window.parent&&window.parent.API)||(window.top&&window.top.API)||null;
+  var api=(function(){function findAPI(w){var n=0;while(w.parent&&w.parent!==w&&n<7){n++;if(w.parent.API)return w.parent.API;w=w.parent;}return null;}return window.API||findAPI(window)||(window.opener&&(window.opener.API||findAPI(window.opener)))||window.__prismFallbackAPI||null;})();
   window.__prismAPI=api;
   window.__prismCorrect=0;window.__prismTotal=0;
   if(api){try{api.LMSInitialize('');api.LMSSetValue('cmi.core.lesson_status','incomplete');api.LMSCommit('');}catch(e){}}
@@ -1727,6 +1754,19 @@ export async function buildScormPackage(
     assetsFolder.file('scorm12.min.js', minimalScormShim());
   }
 
+  // Bundle lottie-web locally so lesson pages don't depend on external CDN
+  try {
+    const lottieRes = await fetch('https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js');
+    if (lottieRes.ok) {
+      const lottieJs = await lottieRes.text();
+      assetsFolder.file('lottie.min.js', lottieJs);
+    } else {
+      assetsFolder.file('lottie.min.js', '/* lottie-web unavailable */');
+    }
+  } catch {
+    assetsFolder.file('lottie.min.js', '/* lottie-web unavailable */');
+  }
+
   assetsFolder.file('interaction.js', buildInteractionJs());
 
   // Shared CSS
@@ -1750,7 +1790,7 @@ export async function buildScormPackage(
 // ── Minimal SCORM 1.2 shim (fallback if scorm-again import fails) ──────────
 
 function minimalScormShim(): string {
-  return `var API={
+  return `window.__prismFallbackAPI={
   LMSInitialize:function(){return"true"},
   LMSFinish:function(){return"true"},
   LMSGetValue:function(){return""},
