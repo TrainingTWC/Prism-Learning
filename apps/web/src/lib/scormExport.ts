@@ -284,10 +284,10 @@ function renderBlock(block: ExportBlock, assetMap: Record<string, string>): stri
       const tabs = p.tabs ?? [];
       if (!tabs.length) return '';
       const tabBtns = tabs.map((t, i) =>
-        `<button type="button" class="prism-tab-btn${i === 0 ? ' active' : ''}" data-idx="${i}">${escapeHtml(t.title)}</button>`,
+        `<button type="button" class="prism-tab-btn${i === 0 ? ' active' : ''}" data-idx="${i}" style="all:unset;flex-shrink:0;padding:.85rem 1.1rem;font:inherit;font-size:.875rem;font-weight:600;border:0;border-bottom:2px solid ${i === 0 ? 'var(--prism-primary)' : 'transparent'};background:none;cursor:pointer;color:${i === 0 ? 'var(--prism-primary)' : 'var(--prism-text-muted)'};white-space:nowrap;transition:color .15s,border-color .15s">${t.title || `Tab ${i + 1}`}</button>`,
       ).join('');
       const tabPanels = tabs.map((t, i) =>
-        `<div class="prism-tab-panel" data-idx="${i}" style="${i > 0 ? 'display:none' : ''}"><p>${escapeHtml(t.content)}</p></div>`,
+        `<div class="prism-tab-panel prism-rich-content" data-idx="${i}" style="${i > 0 ? 'display:none' : ''}">${t.content}</div>`,
       ).join('');
       return `<div class="prism-tabs">
   <div class="prism-tabs-bar">${tabBtns}</div>
@@ -470,7 +470,7 @@ function buildManifest(mod: ExportModule): string {
     </resource>`;
   const resources = welcomeResource + '\n' + mod.lessons
     .map(
-      (l, i) => `    <resource identifier="res_${i}" type="webcontent" adlcp:scormtype="sco"
+      (_, i) => `    <resource identifier="res_${i}" type="webcontent" adlcp:scormtype="sco"
       href="lesson_${i}.html">
       <file href="lesson_${i}.html"/>
     </resource>`,
@@ -1320,7 +1320,9 @@ function buildLessonPage(
   var api=(function(){function findAPI(w){var n=0;while(w.parent&&w.parent!==w&&n<7){n++;if(w.parent.API)return w.parent.API;w=w.parent;}return null;}return window.API||findAPI(window)||(window.opener&&(window.opener.API||findAPI(window.opener)))||window.__prismFallbackAPI||null;})();
   window.__prismAPI=api;
   window.__prismCorrect=0;window.__prismTotal=0;
-  if(api){try{api.LMSInitialize('');api.LMSSetValue('cmi.core.lesson_status','incomplete');api.LMSCommit('');}catch(e){}}
+  if(api){try{api.LMSInitialize('');api.LMSSetValue('cmi.core.lesson_status',${isLast ? "'completed'" : "'incomplete'"});api.LMSCommit('');}catch(e){}}
+  // Safety net: commit+finish whenever this page unloads (covers tab-close, navigation away)
+  window.addEventListener('pagehide',function(){if(api){try{api.LMSCommit('');api.LMSFinish('');}catch(e){}}});
 })();
 </script>
 <script>
@@ -1362,7 +1364,7 @@ function buildLessonPage(
     var passing=parseInt(document.body.dataset.passing||'80',10);
     var score=window.__prismTotal>0?Math.round(window.__prismCorrect/window.__prismTotal*100):100;
     var status=crit==='completed'?'completed':(score>=passing?'passed':'failed');
-    var api=window.__prismAPI;if(api){try{if(window.__prismTotal>0){api.LMSSetValue('cmi.core.score.raw',String(score));api.LMSSetValue('cmi.core.score.min','0');api.LMSSetValue('cmi.core.score.max','100');}api.LMSSetValue('cmi.core.lesson_status',status);api.LMSCommit('');}catch(e){}}
+    var api=window.__prismAPI;if(api){try{if(window.__prismTotal>0){api.LMSSetValue('cmi.core.score.raw',String(score));api.LMSSetValue('cmi.core.score.min','0');api.LMSSetValue('cmi.core.score.max','100');}api.LMSSetValue('cmi.core.lesson_status',status);api.LMSCommit('');api.LMSFinish('');}catch(e){}}
   }
   function fireConfetti(){
     var wrap=document.createElement('div');wrap.className='prism-confetti';document.body.appendChild(wrap);
@@ -1695,8 +1697,32 @@ export async function buildScormPackage(
       if (!block.content) continue;
       try {
         const p = JSON.parse(block.content) as Record<string, unknown>;
+        // Top-level single asset fields
         if (typeof p.storageId === 'string') storageIds.add(p.storageId);
         if (typeof p.src === 'string' && p.srcType === 'storage') storageIds.add(p.src);
+        // Compare block (before/after)
+        if (typeof p.beforeStorageId === 'string') storageIds.add(p.beforeStorageId);
+        if (typeof p.afterStorageId === 'string') storageIds.add(p.afterStorageId);
+        // Gallery block — items array
+        if (Array.isArray(p.items)) {
+          for (const item of p.items as Array<Record<string, unknown>>) {
+            if (typeof item.storageId === 'string') storageIds.add(item.storageId);
+          }
+        }
+        // Tabs block — per-tab media
+        if (Array.isArray(p.tabs)) {
+          for (const tab of p.tabs as Array<Record<string, unknown>>) {
+            if (typeof tab.imageStorageId === 'string') storageIds.add(tab.imageStorageId);
+            if (typeof tab.audioStorageId === 'string') storageIds.add(tab.audioStorageId);
+          }
+        }
+        // Flashcard / carousel-style blocks with cards array
+        if (Array.isArray(p.cards)) {
+          for (const card of p.cards as Array<Record<string, unknown>>) {
+            if (typeof card.storageId === 'string') storageIds.add(card.storageId);
+            if (typeof card.imageStorageId === 'string') storageIds.add(card.imageStorageId);
+          }
+        }
       } catch { /* not JSON */ }
     }
   }

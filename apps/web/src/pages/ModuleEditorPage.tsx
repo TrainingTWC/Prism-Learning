@@ -596,21 +596,42 @@ export function ModuleEditorPage() {
           ) : (
             <div className="mx-auto max-w-3xl px-8 py-8 space-y-4">
               <div className="flex items-center gap-3 pb-2 border-b border-[var(--border-primary)]">
-                <h2
-                  className="text-xl font-bold text-[var(--text-primary)] cursor-pointer hover:text-[var(--text-secondary)] transition-colors"
-                  onClick={() => { setRenamingLessonId(activeLesson._id); setRenameLessonValue(activeLesson.title); }}
-                  title="Click to rename"
-                >
-                  {activeLesson.title}
-                </h2>
-                <button
-                  type="button"
-                  onClick={() => { setRenamingLessonId(activeLesson._id); setRenameLessonValue(activeLesson.title); }}
-                  className="rounded p-1 text-[var(--text-muted)] hover:bg-[var(--card-bg-hover)] hover:text-[var(--text-secondary)]"
-                  title="Rename lesson"
-                >
-                  <Pencil className="size-4" />
-                </button>
+                {renamingLessonId === activeLesson._id ? (
+                  <input
+                    autoFocus
+                    className="flex-1 text-xl font-bold text-[var(--text-primary)] bg-transparent border-b-2 border-indigo-500 outline-none"
+                    value={renameLessonValue}
+                    onChange={(e) => setRenameLessonValue(e.target.value)}
+                    onBlur={async () => {
+                      if (renameLessonValue.trim()) {
+                        await renameLesson({ lessonId: activeLesson._id, title: renameLessonValue.trim() });
+                      }
+                      setRenamingLessonId(null);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+                      if (e.key === 'Escape') setRenamingLessonId(null);
+                    }}
+                  />
+                ) : (
+                  <>
+                    <h2
+                      className="text-xl font-bold text-[var(--text-primary)] cursor-pointer hover:text-[var(--text-secondary)] transition-colors"
+                      onClick={() => { setRenamingLessonId(activeLesson._id); setRenameLessonValue(activeLesson.title); }}
+                      title="Click to rename"
+                    >
+                      {activeLesson.title}
+                    </h2>
+                    <button
+                      type="button"
+                      onClick={() => { setRenamingLessonId(activeLesson._id); setRenameLessonValue(activeLesson.title); }}
+                      className="rounded p-1 text-[var(--text-muted)] hover:bg-[var(--card-bg-hover)] hover:text-[var(--text-secondary)]"
+                      title="Rename lesson"
+                    >
+                      <Pencil className="size-4" />
+                    </button>
+                  </>
+                )}
               </div>
 
               {/* Blocks */}

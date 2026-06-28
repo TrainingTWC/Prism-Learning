@@ -1,6 +1,11 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import type { Id } from '~convex/_generated/dataModel';
-import { PanelTop, Plus, Trash2 } from 'lucide-react';
+import { PanelTop, Plus, Trash2, Bold, Italic, UnderlineIcon } from 'lucide-react';
+import { useEditor, EditorContent } from '@tiptap/react';
+import StarterKit from '@tiptap/starter-kit';
+import Underline from '@tiptap/extension-underline';
+import { TextStyle } from '@tiptap/extension-text-style';
+import { Color } from '@tiptap/extension-color';
 import { MediaUpload } from './MediaUpload';
 import { RichTextBlockEditor } from './RichTextBlockEditor';
 
@@ -23,6 +28,85 @@ function parse(content?: string): TabsPayload {
   try { return JSON.parse(content) as TabsPayload; } catch {
     return { tabs: [{ id: uid(), title: 'Tab 1', content: '' }, { id: uid(), title: 'Tab 2', content: '' }] };
   }
+}
+
+// ── Mini inline label editor with Bold/Italic/Underline/Color ─────────────
+function InlineLabelEditor({ value, onChange, tabId }: { value: string; onChange: (html: string) => void; tabId: string }) {
+  const editor = useEditor({
+    extensions: [
+      StarterKit.configure({
+        heading: false, blockquote: false, codeBlock: false,
+        bulletList: false, orderedList: false, horizontalRule: false, hardBreak: false,
+      }),
+      Underline,
+      TextStyle,
+      Color,
+    ],
+    content: value.includes('<') ? value : `<p>${value}</p>`,
+    onUpdate: ({ editor }) => {
+      // Strip outer <p> wrapper so label stays as inline HTML
+      const raw = editor.getHTML();
+      const stripped = raw.replace(/^<p>([\s\S]*)<\/p>$/, '$1');
+      onChange(stripped);
+    },
+    editorProps: {
+      attributes: { class: 'outline-none text-sm text-slate-700 min-h-[24px]' },
+    },
+  });
+
+  // Reset editor when switching tabs
+  useEffect(() => {
+    if (!editor || editor.isDestroyed) return;
+    const content = value.includes('<') ? value : `<p>${value}</p>`;
+    editor.commands.setContent(content);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tabId]);
+
+  if (!editor) return null;
+
+  return (
+    <div className="rounded-lg border border-slate-200 overflow-hidden">
+      <div className="flex items-center gap-0.5 border-b border-slate-100 bg-slate-50 px-2 py-1">
+        <button
+          type="button"
+          onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleBold().run(); }}
+          className={`rounded p-1 ${editor.isActive('bold') ? 'bg-slate-200 text-slate-800' : 'text-slate-500 hover:bg-slate-200'}`}
+          title="Bold"
+        >
+          <Bold className="size-3" />
+        </button>
+        <button
+          type="button"
+          onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleItalic().run(); }}
+          className={`rounded p-1 ${editor.isActive('italic') ? 'bg-slate-200 text-slate-800' : 'text-slate-500 hover:bg-slate-200'}`}
+          title="Italic"
+        >
+          <Italic className="size-3" />
+        </button>
+        <button
+          type="button"
+          onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleUnderline().run(); }}
+          className={`rounded p-1 ${editor.isActive('underline') ? 'bg-slate-200 text-slate-800' : 'text-slate-500 hover:bg-slate-200'}`}
+          title="Underline"
+        >
+          <UnderlineIcon className="size-3" />
+        </button>
+        <div className="ml-1 flex items-center gap-1">
+          <span className="text-[10px] text-slate-400">Color:</span>
+          <input
+            type="color"
+            defaultValue="#000000"
+            className="h-5 w-5 cursor-pointer rounded border border-slate-200 bg-transparent p-0"
+            onChange={(e) => editor.chain().focus().setColor(e.target.value).run()}
+            title="Text color"
+          />
+        </div>
+      </div>
+      <div className="px-3 py-2">
+        <EditorContent editor={editor} />
+      </div>
+    </div>
+  );
 }
 
 export function TabsBlockEditor({
@@ -93,9 +177,9 @@ export function TabsBlockEditor({
               className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-colors ${
                 activeIdx === i ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:bg-slate-200'
               }`}
-            >
-              {tab.title || `Tab ${i + 1}`}
-            </button>
+              // eslint-disable-next-line react/no-danger
+              dangerouslySetInnerHTML={{ __html: tab.title || `Tab ${i + 1}` }}
+            />
             {payload.tabs.length > 1 && (
               <button
                 type="button"
@@ -124,12 +208,11 @@ export function TabsBlockEditor({
         <div className="p-4 space-y-3">
           <div>
             <label className="mb-1 block text-xs font-medium text-slate-500">Tab label</label>
-            <input
-              type="text"
+            <InlineLabelEditor
+              key={activeTab.id}
+              tabId={activeTab.id}
               value={activeTab.title}
-              onChange={(e) => updateTitle(activeTab.id, e.target.value)}
-              placeholder="Tab title"
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+              onChange={(html) => updateTitle(activeTab.id, html)}
             />
           </div>
           <div>
