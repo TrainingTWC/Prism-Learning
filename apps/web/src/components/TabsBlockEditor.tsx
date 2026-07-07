@@ -8,6 +8,7 @@ import { TextStyle } from '@tiptap/extension-text-style';
 import { Color } from '@tiptap/extension-color';
 import { MediaUpload } from './MediaUpload';
 import { RichTextBlockEditor } from './RichTextBlockEditor';
+import { FontSize, FontSizeControl } from '~/lib/tiptap/fontSize';
 
 export type TabItem = {
   id: string;
@@ -41,6 +42,7 @@ function InlineLabelEditor({ value, onChange, tabId }: { value: string; onChange
       Underline,
       TextStyle,
       Color,
+      FontSize,
     ],
     content: value.includes('<') ? value : `<p>${value}</p>`,
     onUpdate: ({ editor }) => {
@@ -100,6 +102,9 @@ function InlineLabelEditor({ value, onChange, tabId }: { value: string; onChange
             onChange={(e) => editor.chain().focus().setColor(e.target.value).run()}
             title="Text color"
           />
+        </div>
+        <div className="ml-1 flex items-center gap-0.5">
+          <FontSizeControl editor={editor} />
         </div>
       </div>
       <div className="px-3 py-2">
