@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { AccordionBlock } from './types';
+import { sanitizeInline } from './sanitizeInline';
 
 interface Section {
   id: string;
@@ -52,9 +53,11 @@ export function AccordionBlockRenderer({ block }: Props) {
           </button>
           <div className="prism-accordion-panel" data-open={open.has(s.id)}>
             <div>
-              <div className="border-t border-slate-100 px-5 py-4 text-sm leading-relaxed text-slate-600">
-                {s.content}
-              </div>
+              <div
+                className="border-t border-slate-100 px-5 py-4 text-sm leading-relaxed text-slate-600"
+                // eslint-disable-next-line react/no-danger -- sanitized via sanitizeInline
+                dangerouslySetInnerHTML={{ __html: sanitizeInline(s.content) }}
+              />
             </div>
           </div>
         </div>

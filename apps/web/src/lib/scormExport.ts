@@ -63,17 +63,42 @@ function escapeHtml(s: string) {
 }
 
 /**
- * Sanitize inline caption HTML for the exported package (image / gallery
- * captions authored with the rich CaptionEditor). Legacy plain-string
- * captions (no `<`) are escaped as before.
+ * Sanitize inline/block rich-text HTML for the exported package (image /
+ * gallery captions, and — as of the remaining-text-surfaces conversion —
+ * accordion/callout/quote/flashcard/process/quiz fields authored via
+ * InlineRichText). `p` is allowed so multiline fields keep paragraph breaks.
+ * Legacy plain-string content (no `<`) is escaped as before.
  */
 function sanitizeInlineHtml(s: string) {
   if (!s.includes('<')) return escapeHtml(s);
   return DOMPurify.sanitize(s, {
-    ALLOWED_TAGS: ['span', 'strong', 'em', 'b', 'i', 'u', 's', 'br', 'a'],
+    ALLOWED_TAGS: ['p', 'span', 'strong', 'em', 'b', 'i', 'u', 's', 'br', 'a'],
     ALLOWED_ATTR: ['style', 'class', 'href', 'target', 'rel'],
     ALLOW_DATA_ATTR: false,
   });
+}
+
+/**
+ * Render a multiline (paragraph-capable) rich-text field for direct HTML
+ * embedding, optionally with a styling class.
+ *
+ * Rich content authored via `InlineRichText` (multiline mode) already
+ * carries its own Tiptap-produced `<p>` wrapper(s). Nesting that inside a
+ * `<p class="...">` template (as the legacy plain-text shape used) would be
+ * invalid HTML — browsers auto-close the outer `<p>` the moment they see a
+ * nested `<p>` start tag, silently dropping the outer tag's class. So:
+ *  - Legacy plain-string content (no `<`): wrapped in `<p class="...">` —
+ *    byte-identical to the original escapeHtml-based template.
+ *  - Rich content (has `<`): wrapped in a `<div class="...">` instead so the
+ *    class survives; CSS written as plain class selectors (not tag-qualified
+ *    `p.foo`) or as `.container p{...}` descendant selectors keeps applying
+ *    via inheritance / descendant matching either way.
+ */
+function sanitizeMultilineHtml(s: string, cls?: string): string {
+  const clsAttr = cls ? ` class="${cls}"` : '';
+  if (!s.includes('<')) return `<p${clsAttr}>${escapeHtml(s)}</p>`;
+  const body = sanitizeInlineHtml(s);
+  return cls ? `<div${clsAttr}>${body}</div>` : body;
 }
 
 function defaultDividerPadding(style?: string) {
@@ -211,7 +236,7 @@ function renderBlock(block: ExportBlock, assetMap: Record<string, string>): stri
       const sections = (p.sections ?? []).map((s, i) =>
         `<div class="prism-acc-item">
   <button type="button" class="prism-acc-btn" data-idx="${i}">${escapeHtml(s.title)}<span class="prism-acc-arrow">▼</span></button>
-  <div class="prism-acc-body" style="display:none"><p>${escapeHtml(s.content)}</p></div>
+  <div class="prism-acc-body" style="display:none">${sanitizeMultilineHtml(s.content)}</div>
 </div>`,
       ).join('');
       return `<div class="prism-acc">${sections}</div>`;
@@ -222,8 +247,8 @@ function renderBlock(block: ExportBlock, assetMap: Record<string, string>): stri
       try { p = JSON.parse(c) as typeof p; } catch { /* */ }
       if (!p.text) return '';
       return `<blockquote class="prism-quote">
-  <p>${escapeHtml(p.text)}</p>
-  ${p.attribution ? `<cite>${escapeHtml(p.attribution)}</cite>` : ''}
+  ${sanitizeMultilineHtml(p.text)}
+  ${p.attribution ? `<cite>${sanitizeInlineHtml(p.attribution)}</cite>` : ''}
 </blockquote>`;
     }
 
@@ -235,8 +260,8 @@ function renderBlock(block: ExportBlock, assetMap: Record<string, string>): stri
       return `<div class="prism-callout prism-callout--${escapeHtml(variant)}">
   <span class="prism-callout-icon">${icon}</span>
   <div>
-    ${p.title ? `<p class="prism-callout-title">${escapeHtml(p.title)}</p>` : ''}
-    <p>${escapeHtml(p.body ?? '')}</p>
+    ${p.title ? sanitizeMultilineHtml(p.title, 'prism-callout-title') : ''}
+    ${sanitizeMultilineHtml(p.body ?? '')}
   </div>
 </div>`;
     }
@@ -261,8 +286,8 @@ function renderBlock(block: ExportBlock, assetMap: Record<string, string>): stri
       const cardsHtml = cards.map((card, i) =>
         `<div class="prism-fc-card" data-idx="${i}" style="${i > 0 ? 'display:none' : ''}">
   <div class="prism-fc-inner" data-flipped="false">
-    <div class="prism-fc-front"><p>${escapeHtml(card.front)}</p></div>
-    <div class="prism-fc-back" style="display:none"><p>${escapeHtml(card.back)}</p></div>
+    <div class="prism-fc-front">${sanitizeMultilineHtml(card.front)}</div>
+    <div class="prism-fc-back" style="display:none">${sanitizeMultilineHtml(card.back)}</div>
   </div>
   <button type="button" class="prism-fc-flip">Tap to reveal</button>
 </div>`,
@@ -285,7 +310,7 @@ function renderBlock(block: ExportBlock, assetMap: Record<string, string>): stri
   <div class="prism-process-num">${i + 1}</div>
   <div class="prism-process-body">
     <p class="prism-process-title">${escapeHtml(step.title)}</p>
-    ${step.body ? `<p class="prism-process-desc">${escapeHtml(step.body)}</p>` : ''}
+    ${step.body ? sanitizeMultilineHtml(step.body, 'prism-process-desc') : ''}
   </div>
 </div>`,
       ).join('');

@@ -2,6 +2,8 @@ import { useState, useCallback } from 'react';
 import type { Id } from '~convex/_generated/dataModel';
 import { CreditCard, Plus, Trash2, GripVertical } from 'lucide-react';
 import { MediaUpload } from './MediaUpload';
+import { InlineRichText } from './InlineRichText';
+import { stripHtml } from '~/lib/sanitizeInline';
 
 export type FlashCard = {
   id: string;
@@ -86,7 +88,7 @@ export function FlashcardBlockEditor({
                   onClick={() => setExpandedId(isOpen ? null : card.id)}
                   className="flex-1 text-left text-xs font-medium text-slate-600 hover:text-slate-800 truncate"
                 >
-                  Card {idx + 1}{card.front ? `: ${card.front.slice(0, 40)}${card.front.length > 40 ? '…' : ''}` : ''}
+                  Card {idx + 1}{card.front ? `: ${stripHtml(card.front).slice(0, 40)}${stripHtml(card.front).length > 40 ? '…' : ''}` : ''}
                 </button>
                 <button
                   type="button"
@@ -103,22 +105,20 @@ export function FlashcardBlockEditor({
                 <div className="px-4 pb-4 space-y-2">
                   <div>
                     <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-400">Front (question)</label>
-                    <textarea
+                    <InlineRichText
                       value={card.front}
-                      onChange={(e) => update(card.id, 'front', e.target.value)}
+                      onChange={(html) => update(card.id, 'front', html)}
                       placeholder="Question or prompt…"
-                      rows={2}
-                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-400 resize-none"
+                      multiline
                     />
                   </div>
                   <div>
                     <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-400">Back (answer)</label>
-                    <textarea
+                    <InlineRichText
                       value={card.back}
-                      onChange={(e) => update(card.id, 'back', e.target.value)}
+                      onChange={(html) => update(card.id, 'back', html)}
                       placeholder="Answer or explanation…"
-                      rows={2}
-                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-400 resize-none"
+                      multiline
                     />
                   </div>
                   <div className="flex flex-wrap gap-2">

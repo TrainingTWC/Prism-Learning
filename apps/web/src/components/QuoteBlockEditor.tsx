@@ -1,6 +1,8 @@
 import { useState, useCallback } from 'react';
 import type { Id } from '~convex/_generated/dataModel';
 import { Quote } from 'lucide-react';
+import { InlineRichText } from './InlineRichText';
+import { sanitizeInline } from '~/lib/sanitizeInline';
 
 export type QuotePayload = {
   text: string;
@@ -37,29 +39,38 @@ export function QuoteBlockEditor({
       <div className="p-4 space-y-3">
         <div>
           <label className="mb-1 block text-xs font-medium text-slate-500">Quote text</label>
-          <textarea
+          <InlineRichText
             value={payload.text}
-            onChange={(e) => commit({ ...payload, text: e.target.value })}
+            onChange={(html) => commit({ ...payload, text: html })}
             placeholder="Enter the quote text…"
-            rows={3}
-            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 resize-none"
+            multiline
           />
         </div>
         <div>
           <label className="mb-1 block text-xs font-medium text-slate-500">Attribution (optional)</label>
-          <input
-            type="text"
+          <InlineRichText
             value={payload.attribution}
-            onChange={(e) => commit({ ...payload, attribution: e.target.value })}
+            onChange={(html) => commit({ ...payload, attribution: html })}
             placeholder="— Name, Title"
-            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-400"
           />
         </div>
         {/* Preview */}
         {payload.text && (
           <div className="mt-2 rounded-xl border-l-4 border-indigo-400 bg-slate-50 py-3 pl-4 pr-3">
-            <p className="text-sm italic text-slate-600">{payload.text}</p>
-            {payload.attribution && <p className="mt-1.5 text-xs font-medium text-slate-400">— {payload.attribution}</p>}
+            <p
+              className="text-sm italic text-slate-600"
+              // eslint-disable-next-line react/no-danger -- sanitized via sanitizeInline
+              dangerouslySetInnerHTML={{ __html: sanitizeInline(payload.text) }}
+            />
+            {payload.attribution && (
+              <p className="mt-1.5 text-xs font-medium text-slate-400">
+                {'— '}
+                <span
+                  // eslint-disable-next-line react/no-danger -- sanitized via sanitizeInline
+                  dangerouslySetInnerHTML={{ __html: sanitizeInline(payload.attribution) }}
+                />
+              </p>
+            )}
           </div>
         )}
       </div>

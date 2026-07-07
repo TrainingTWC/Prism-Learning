@@ -1,4 +1,5 @@
 import type { ProcessBlock } from './types';
+import { sanitizeInline } from './sanitizeInline';
 
 interface Step {
   id: string;
@@ -43,7 +44,11 @@ export function ProcessBlockRenderer({ block }: Props) {
             <div className={`flex-1 ${isLast ? 'pb-0' : 'pb-6'}`}>
               <p className="font-semibold text-sm leading-none text-slate-800 mt-1">{step.title}</p>
               {step.body && (
-                <p className="mt-2 text-sm leading-relaxed text-slate-500">{step.body}</p>
+                <p
+                  className="mt-2 text-sm leading-relaxed text-slate-500"
+                  // eslint-disable-next-line react/no-danger -- sanitized via sanitizeInline
+                  dangerouslySetInnerHTML={{ __html: sanitizeInline(step.body) }}
+                />
               )}
             </div>
           </li>
