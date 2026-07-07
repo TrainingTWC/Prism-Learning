@@ -8,13 +8,15 @@ const ESCAPE: Record<string, string> = {
 };
 
 /**
- * Sanitize inline/block rich-text HTML (image / gallery captions, and — as of
- * the remaining-text-surfaces conversion — accordion/callout/quote/flashcard/
- * process/quiz fields authored via `InlineRichText`).
+ * Sanitize inline/block rich-text HTML for in-editor live previews
+ * (Callout/Quote/Flashcard block editors). Mirrors
+ * `packages/renderer/src/sanitizeInline.ts` — kept as a local copy in
+ * apps/web following the precedent set by ImageBlockEditor (editor-side
+ * previews sanitize locally rather than importing the renderer package).
  *
- * - Rich content (contains HTML): DOMPurify-sanitized down to a small inline
- *   + paragraph allowlist. `style` is allowed so font-size / color spans
- *   survive. `p` is allowed so multiline fields keep paragraph breaks.
+ * - Rich content (contains HTML): DOMPurify-sanitized down to a small
+ *   inline + paragraph allowlist. `style` is allowed so font-size/color
+ *   spans survive.
  * - Legacy plain-string content (no `<`): returned as escaped plain text so
  *   existing modules render unchanged, with no data migration.
  */
@@ -29,7 +31,7 @@ export function sanitizeInline(html: string): string {
   });
 }
 
-/** Strip all HTML tags, returning plain text (for aria-labels / non-HTML sinks). */
+/** Strip all HTML tags, returning plain text (for aria-labels / truncated previews). */
 export function stripHtml(html: string): string {
   return html.replace(/<[^>]*>/g, '');
 }

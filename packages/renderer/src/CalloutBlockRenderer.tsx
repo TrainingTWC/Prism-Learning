@@ -1,4 +1,5 @@
 import type { CalloutBlock } from './types';
+import { sanitizeInline } from './sanitizeInline';
 
 interface Payload {
   variant?: 'info' | 'warning' | 'success' | 'tip';
@@ -59,10 +60,20 @@ export function CalloutBlockRenderer({ block }: Props) {
       <span style={{ color: v.text }}>{v.icon}</span>
       <div className="min-w-0">
         {payload.title && (
-          <p className="font-semibold text-sm mb-1" style={{ color: v.text }}>{payload.title}</p>
+          <p
+            className="font-semibold text-sm mb-1"
+            style={{ color: v.text }}
+            // eslint-disable-next-line react/no-danger -- sanitized via sanitizeInline
+            dangerouslySetInnerHTML={{ __html: sanitizeInline(payload.title) }}
+          />
         )}
         {payload.body && (
-          <p className="text-sm leading-relaxed" style={{ color: v.text, opacity: 0.85 }}>{payload.body}</p>
+          <p
+            className="text-sm leading-relaxed"
+            style={{ color: v.text, opacity: 0.85 }}
+            // eslint-disable-next-line react/no-danger -- sanitized via sanitizeInline
+            dangerouslySetInnerHTML={{ __html: sanitizeInline(payload.body) }}
+          />
         )}
       </div>
     </div>

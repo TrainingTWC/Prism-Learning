@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 import type { Id } from '~convex/_generated/dataModel';
 import { ChevronDown, ChevronRight, Plus, Trash2, GripVertical } from 'lucide-react';
 import { MediaUpload } from './MediaUpload';
+import { InlineRichText } from './InlineRichText';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 export type AccordionSection = {
@@ -179,16 +180,12 @@ export function AccordionBlockEditor({
                   <label className="block text-[11px] font-semibold uppercase tracking-wide text-slate-400 mb-1.5">
                     Content
                   </label>
-                  <textarea
-                    rows={4}
+                  <InlineRichText
                     value={section.content}
-                    onChange={(e) => setContent(section.id, e.target.value)}
+                    onChange={(html) => setContent(section.id, html)}
                     placeholder="Content revealed when the learner expands this section…"
-                    className="w-full resize-y rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 placeholder-slate-400 outline-none focus:border-amber-300 focus:ring-1 focus:ring-amber-200"
+                    multiline
                   />
-                  <p className="mt-1 text-[11px] text-slate-400">
-                    Plain text — rich text support coming in preview phase.
-                  </p>
                   <div className="mt-2 flex flex-wrap gap-2">
                     <MediaUpload
                       accept="image/*"

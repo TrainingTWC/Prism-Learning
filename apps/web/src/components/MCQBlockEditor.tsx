@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import type { Id } from '~convex/_generated/dataModel';
 import { Plus, Trash2, CheckCircle2, Circle, GripVertical, ChevronDown, ChevronUp } from 'lucide-react';
+import { InlineRichText } from './InlineRichText';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 export type MCQOption = {
@@ -164,12 +165,11 @@ export function MCQBlockEditor({
           <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">
             Question
           </label>
-          <textarea
-            rows={3}
+          <InlineRichText
             value={payload.question}
-            onChange={(e) => setQuestion(e.target.value)}
+            onChange={(html) => setQuestion(html)}
             placeholder="Enter the question…"
-            className="w-full resize-none rounded-lg border border-slate-200 px-4 py-3 text-base text-slate-800 placeholder-slate-400 outline-none focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100"
+            multiline
           />
         </div>
 
@@ -213,13 +213,13 @@ export function MCQBlockEditor({
                     )}
                   </button>
 
-                  <input
-                    type="text"
-                    value={opt.text}
-                    onChange={(e) => setOptionText(opt.id, e.target.value)}
-                    placeholder={`Option ${opt.id.toUpperCase()}…`}
-                    className="flex-1 bg-transparent text-base text-slate-700 placeholder-slate-400 outline-none"
-                  />
+                  <div className="flex-1">
+                    <InlineRichText
+                      value={opt.text}
+                      onChange={(html) => setOptionText(opt.id, html)}
+                      placeholder={`Option ${opt.id.toUpperCase()}…`}
+                    />
+                  </div>
 
                   {/* Feedback toggle */}
                   {payload.showFeedback && (
@@ -257,12 +257,10 @@ export function MCQBlockEditor({
                 {/* Feedback row */}
                 {payload.showFeedback && expandedFeedback === opt.id && (
                   <div className="mt-1.5 ml-12 mr-2">
-                    <input
-                      type="text"
+                    <InlineRichText
                       value={opt.feedback}
-                      onChange={(e) => setOptionFeedback(opt.id, e.target.value)}
+                      onChange={(html) => setOptionFeedback(opt.id, html)}
                       placeholder="Feedback shown after selection…"
-                      className="w-full rounded-lg border border-slate-200 px-4 py-2 text-sm text-slate-700 placeholder-slate-400 outline-none focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100"
                     />
                   </div>
                 )}

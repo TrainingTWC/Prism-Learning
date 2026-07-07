@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { FlashcardBlock } from './types';
+import { sanitizeInline, stripHtml } from './sanitizeInline';
 
 interface Card {
   id: string;
@@ -34,7 +35,11 @@ export function FlashcardBlockRenderer({ block }: Props) {
       <div
         role="button"
         tabIndex={0}
-        aria-label={flipped ? `Back: ${card.back}` : `Front: ${card.front}. Click to reveal answer.`}
+        aria-label={
+          flipped
+            ? `Back: ${stripHtml(card.back)}`
+            : `Front: ${stripHtml(card.front)}. Click to reveal answer.`
+        }
         onClick={() => setFlipped((f) => !f)}
         onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && setFlipped((f) => !f)}
         className="cursor-pointer rounded-2xl border-2 border-slate-200 bg-white shadow-md transition-shadow hover:shadow-lg active:scale-[0.99]"
@@ -46,9 +51,11 @@ export function FlashcardBlockRenderer({ block }: Props) {
         >
           {flipped ? 'Answer' : 'Question'}
         </span>
-        <p className="text-base font-medium leading-relaxed text-slate-700">
-          {flipped ? card.back : card.front}
-        </p>
+        <p
+          className="text-base font-medium leading-relaxed text-slate-700"
+          // eslint-disable-next-line react/no-danger -- sanitized via sanitizeInline
+          dangerouslySetInnerHTML={{ __html: sanitizeInline(flipped ? card.back : card.front) }}
+        />
         <p className="mt-3 text-xs text-slate-400">{flipped ? 'Click to see question' : 'Click to reveal answer'}</p>
       </div>
 

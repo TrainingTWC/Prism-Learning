@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { MCQBlock } from './types';
+import { sanitizeInline } from './sanitizeInline';
 
 interface MCQOption {
   id: string;
@@ -67,7 +68,11 @@ export function MCQBlockRenderer({ block }: Props) {
 
   return (
     <div className="prism-mcq my-6 rounded-2xl border border-slate-200 bg-slate-50/90 p-5 shadow-sm sm:p-6">
-      <p className="mb-4 text-base font-semibold leading-6 text-slate-800">{question}</p>
+      <p
+        className="mb-4 text-base font-semibold leading-6 text-slate-800"
+        // eslint-disable-next-line react/no-danger -- sanitized via sanitizeInline
+        dangerouslySetInnerHTML={{ __html: sanitizeInline(question) }}
+      />
       <div className="space-y-2">
         {options.map((opt) => {
           const isSelected = selected.has(opt.id);
@@ -102,15 +107,19 @@ export function MCQBlockRenderer({ block }: Props) {
                 >
                   {isSelected ? (correct ? '✓' : '✗') : ''}
                 </span>
-                <span className="flex-1">{opt.text}</span>
+                <span
+                  className="flex-1"
+                  // eslint-disable-next-line react/no-danger -- sanitized via sanitizeInline
+                  dangerouslySetInnerHTML={{ __html: sanitizeInline(opt.text) }}
+                />
               </button>
               {showResult && showFeedback && opt.feedback && (
                 <p
                   className="prism-feedback-enter mt-2 ml-8 rounded-lg bg-white/70 px-3 py-2 text-xs leading-5 shadow-sm"
                   style={{ color: correct ? 'var(--prism-correct, #16a34a)' : 'var(--prism-incorrect, #dc2626)' }}
-                >
-                  {opt.feedback}
-                </p>
+                  // eslint-disable-next-line react/no-danger -- sanitized via sanitizeInline
+                  dangerouslySetInnerHTML={{ __html: sanitizeInline(opt.feedback) }}
+                />
               )}
             </div>
           );

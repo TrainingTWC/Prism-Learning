@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { TrueFalseBlock } from './types';
+import { sanitizeInline } from './sanitizeInline';
 
 interface TFPayload {
   statement?: string;
@@ -30,7 +31,11 @@ export function TrueFalseBlockRenderer({ block }: Props) {
 
   return (
     <div className="prism-true-false my-6 rounded-2xl border border-slate-200 bg-slate-50/90 p-5 shadow-sm sm:p-6">
-      <p className="mb-5 text-base font-semibold leading-6 text-slate-800">{statement}</p>
+      <p
+        className="mb-5 text-base font-semibold leading-6 text-slate-800"
+        // eslint-disable-next-line react/no-danger -- sanitized via sanitizeInline
+        dangerouslySetInnerHTML={{ __html: sanitizeInline(statement) }}
+      />
       <div className="grid grid-cols-1 gap-3 min-[380px]:grid-cols-2">
         {[true, false].map((val) => {
           const label = val ? 'True' : 'False';
@@ -67,7 +72,10 @@ export function TrueFalseBlockRenderer({ block }: Props) {
           style={{ color: isRight ? 'var(--prism-correct, #16a34a)' : 'var(--prism-incorrect, #dc2626)' }}
         >
           {isRight ? '✓ Correct! ' : '✗ Not quite. '}
-          {feedback}
+          <span
+            // eslint-disable-next-line react/no-danger -- sanitized via sanitizeInline
+            dangerouslySetInnerHTML={{ __html: sanitizeInline(feedback) }}
+          />
         </div>
       )}
       {answer !== null && (
