@@ -259,7 +259,7 @@ Prism Learning supports **25 block types** across four categories:
 | **Lottie Animation** | `lottie` | `{ storageId, loop, autoplay }` |
 | **Quote** | `quote` | `{ text, attribution? }` |
 | **Callout** | `callout` | `{ variant: 'info'\|'warning'\|'success'\|'tip', title?, body }` |
-| **Divider** | `divider` | `{ style: 'line'\|'space'\|'dots', label? }` |
+| **Divider** | `divider` | `{ style: 'line'\|'space'\|'dots', label?, padding? }` |
 | **Button** | `button` | `{ label, url?, style: 'primary'\|'outline'\|'ghost', align }` |
 | **Custom HTML** | `customHtml` | `{ html, notes? }` |
 
@@ -346,7 +346,7 @@ Every block type has a dedicated editor component in `apps/web/src/components/`.
 | `AccordionBlockEditor` | `accordion` — Add/remove/reorder sections, each with title + body |
 | `QuoteBlockEditor` | `quote` — Quote text + attribution |
 | `CalloutBlockEditor` | `callout` — Variant selector (info/warning/success/tip), title + body |
-| `DividerBlockEditor` | `divider` — Style selector (line/space/dots), optional label |
+| `DividerBlockEditor` | `divider` — Style selector (line/space/dots), optional label, vertical padding |
 | `FlashcardBlockEditor` | `flashcard` — Add/remove cards, front/back per card |
 | `ProcessBlockEditor` | `process` — Add/remove/reorder steps, title + body per step |
 | `TabsBlockEditor` | `tabs` — Add/remove/reorder tabs, title + content per tab |

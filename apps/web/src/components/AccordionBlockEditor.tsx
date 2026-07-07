@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import type { Id } from '~convex/_generated/dataModel';
 import { ChevronDown, ChevronRight, Plus, Trash2, GripVertical } from 'lucide-react';
 import { MediaUpload } from './MediaUpload';
@@ -32,7 +32,16 @@ function defaultPayload(): AccordionPayload {
 function parse(content?: string): AccordionPayload {
   if (!content) return defaultPayload();
   try {
-    return JSON.parse(content) as AccordionPayload;
+    const raw = JSON.parse(content) as AccordionPayload;
+    // Deduplicate section IDs — duplicate IDs cause both sections to open
+    // simultaneously and sync their content when typed into.
+    const seenIds = new Set<string>();
+    const sections = (raw.sections ?? []).map((s) => {
+      if (!s.id || seenIds.has(s.id)) return { ...s, id: uid() };
+      seenIds.add(s.id);
+      return s;
+    });
+    return { ...raw, sections };
   } catch {
     return defaultPayload();
   }
@@ -48,10 +57,24 @@ export function AccordionBlockEditor({
   initialContent?: string;
   onSave: (content: string) => void;
 }) {
+  // Parse once so both payload and expandedId use the same deduplicated IDs.
   const [payload, setPayload] = useState<AccordionPayload>(() => parse(initialContent));
   const [expandedId, setExpandedId] = useState<string | null>(
     () => parse(initialContent).sections[0]?.id ?? null,
   );
+
+  // If the stored data had duplicate IDs, persist the fixed version immediately.
+  useEffect(() => {
+    if (!initialContent) return;
+    try {
+      const raw = JSON.parse(initialContent) as AccordionPayload;
+      const ids = (raw.sections ?? []).map((s) => s.id);
+      if (new Set(ids).size < ids.length) {
+        onSave(JSON.stringify(payload));
+      }
+    } catch { /* not JSON, nothing to fix */ }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const commit = useCallback(
     (next: AccordionPayload) => {

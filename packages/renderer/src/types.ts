@@ -107,7 +107,7 @@ export interface CalloutBlock {
 export interface DividerBlock {
   id: string;
   type: 'divider';
-  content: string; // JSON: { style: 'line'|'space'|'dots'; label?: string }
+  content: string; // JSON: { style: 'line'|'space'|'dots'; label?: string; padding?: number }
 }
 
 export interface FlashcardBlock {
