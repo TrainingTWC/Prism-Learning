@@ -62,6 +62,20 @@ function escapeHtml(s: string) {
     .replace(/"/g, '&quot;');
 }
 
+/**
+ * Sanitize inline caption HTML for the exported package (image / gallery
+ * captions authored with the rich CaptionEditor). Legacy plain-string
+ * captions (no `<`) are escaped as before.
+ */
+function sanitizeInlineHtml(s: string) {
+  if (!s.includes('<')) return escapeHtml(s);
+  return DOMPurify.sanitize(s, {
+    ALLOWED_TAGS: ['span', 'strong', 'em', 'b', 'i', 'u', 's', 'br', 'a'],
+    ALLOWED_ATTR: ['style', 'class', 'href', 'target', 'rel'],
+    ALLOW_DATA_ATTR: false,
+  });
+}
+
 function defaultDividerPadding(style?: string) {
   return style === 'space' ? 32 : 48;
 }
@@ -133,7 +147,7 @@ function renderBlock(block: ExportBlock, assetMap: Record<string, string>): stri
       if (!src) return '';
       return `<figure class="prism-img">
   <img src="${escapeHtml(src)}" alt="${escapeHtml(p.altText ?? '')}" />
-  ${p.caption ? `<figcaption>${escapeHtml(p.caption)}</figcaption>` : ''}
+  ${p.caption ? `<figcaption>${sanitizeInlineHtml(p.caption)}</figcaption>` : ''}
 </figure>`;
     }
 
@@ -333,9 +347,9 @@ function renderBlock(block: ExportBlock, assetMap: Record<string, string>): stri
       const items = (p.items ?? []).filter((it) => assetMap[it.storageId]);
       if (items.length === 0) return '';
       if (p.layout === 'grid') {
-        return `<div class="prism-gallery-grid">${items.map((it) => `<figure><img src="${escapeHtml(assetMap[it.storageId]!)}" alt="${escapeHtml(it.altText)}"/>${it.caption ? `<figcaption>${escapeHtml(it.caption)}</figcaption>` : ''}</figure>`).join('')}</div>`;
+        return `<div class="prism-gallery-grid">${items.map((it) => `<figure><img src="${escapeHtml(assetMap[it.storageId]!)}" alt="${escapeHtml(it.altText)}"/>${it.caption ? `<figcaption>${sanitizeInlineHtml(it.caption)}</figcaption>` : ''}</figure>`).join('')}</div>`;
       }
-      const slides = items.map((it, i) => `<div class="prism-g-slide${i === 0 ? ' active' : ''}"><img src="${escapeHtml(assetMap[it.storageId]!)}" alt="${escapeHtml(it.altText)}"/>${it.caption ? `<p>${escapeHtml(it.caption)}</p>` : ''}</div>`).join('');
+      const slides = items.map((it, i) => `<div class="prism-g-slide${i === 0 ? ' active' : ''}"><img src="${escapeHtml(assetMap[it.storageId]!)}" alt="${escapeHtml(it.altText)}"/>${it.caption ? `<p>${sanitizeInlineHtml(it.caption)}</p>` : ''}</div>`).join('');
       const dots = items.map((_, i) => `<button type="button" class="prism-g-dot${i === 0 ? ' active' : ''}" data-i="${i}" aria-label="Slide ${i + 1}"></button>`).join('');
       return `<div class="prism-gallery" data-prism-gallery="${items.length}"><div class="prism-g-slides">${slides}</div><div class="prism-g-controls"><button type="button" class="prism-g-prev" aria-label="Previous">‹</button><div class="prism-g-dots">${dots}</div><button type="button" class="prism-g-next" aria-label="Next">›</button></div></div>`;
     }
