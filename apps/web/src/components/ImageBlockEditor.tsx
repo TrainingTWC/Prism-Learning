@@ -3,7 +3,9 @@ import { useAction, useMutation, useQuery } from 'convex/react';
 import { api } from '~convex/_generated/api';
 import type { Id } from '~convex/_generated/dataModel';
 import { ImageIcon, Loader2, Sparkles, Upload, Wand2, X } from 'lucide-react';
+import DOMPurify from 'dompurify';
 import { toWebP } from '~/lib/toWebP';
+import { CaptionEditor } from './CaptionEditor';
 
 // ── Payload type stored as JSON in block.content ───────────────────────────
 export type ImagePayload = {
@@ -65,7 +67,16 @@ function ImageDisplay({
     <div className="relative group rounded-xl overflow-hidden border border-slate-200">
       <img src={url} alt={altText || 'Block image'} className="w-full object-cover max-h-96" />
       {caption && (
-        <p className="px-3 py-1.5 text-center text-xs text-slate-500 bg-slate-50">{caption}</p>
+        <p
+          className="px-3 py-1.5 text-center text-xs text-slate-500 bg-slate-50"
+          // eslint-disable-next-line react/no-danger -- sanitized inline caption HTML
+          dangerouslySetInnerHTML={{
+            __html: DOMPurify.sanitize(caption, {
+              ALLOWED_TAGS: ['span', 'strong', 'em', 'b', 'i', 'u', 's', 'br', 'a'],
+              ALLOWED_ATTR: ['style', 'class', 'href', 'target', 'rel'],
+            }),
+          }}
+        />
       )}
       <button
         type="button"
@@ -201,7 +212,7 @@ export function ImageBlockEditor({
             caption={caption}
             onClear={() => void handleClear()}
           />
-          <div className="flex gap-2">
+          <div className="space-y-2">
             <input
               type="text"
               placeholder="Alt text…"
@@ -210,17 +221,14 @@ export function ImageBlockEditor({
                 setAltText(e.target.value);
                 if (storageId) save(storageId, e.target.value, caption);
               }}
-              className="flex-1 rounded-lg border border-[var(--border-primary)] bg-[var(--input-bg)] px-2 py-1 text-xs text-[var(--text-primary)] placeholder-[var(--text-muted)] outline-none focus:border-blue-400"
+              className="w-full rounded-lg border border-[var(--border-primary)] bg-[var(--input-bg)] px-2 py-1 text-xs text-[var(--text-primary)] placeholder-[var(--text-muted)] outline-none focus:border-blue-400"
             />
-            <input
-              type="text"
-              placeholder="Caption…"
+            <CaptionEditor
               value={caption}
-              onChange={(e) => {
-                setCaption(e.target.value);
-                if (storageId) save(storageId, altText, e.target.value);
+              onChange={(html) => {
+                setCaption(html);
+                if (storageId) save(storageId, altText, html);
               }}
-              className="flex-1 rounded-lg border border-[var(--border-primary)] bg-[var(--input-bg)] px-2 py-1 text-xs text-[var(--text-primary)] placeholder-[var(--text-muted)] outline-none focus:border-blue-400"
             />
           </div>
         </div>
