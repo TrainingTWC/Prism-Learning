@@ -64,6 +64,12 @@
 - [ ] Phase 1 prerequisite: Resend (or equivalent) API key for magic-link email delivery.
 - [ ] Before Phase 8: name target commercial LMS(s) for cross-LMS validation.
 
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260707-gtl | Rich-text captions (image/gallery) + per-character font size in all Tiptap surfaces, preview + SCORM render | 2026-07-07 | 5ef77c0 | [260707-gtl-rich-text-captions-with-per-character-fo](./quick/260707-gtl-rich-text-captions-with-per-character-fo/) |
+
 ---
 
 ## Phase History
@@ -75,6 +81,7 @@
 ## Session Continuity
 
 **Last session ended:** 2026-05-27 — roadmap created and committed.
+**Last activity:** 2026-07-07 - Completed quick task 260707-gtl: rich-text captions + font-size control; also fixed new-lesson-title rename bug (6bbb0b9).
 **Resume with:** `/gsd-plan-phase 1` (or `/gsd-ui-phase 1` for the sign-in UI design first).
 
 **Files just created/updated:**
