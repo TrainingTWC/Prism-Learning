@@ -101,6 +101,22 @@ function sanitizeMultilineHtml(s: string, cls?: string): string {
   return cls ? `<div${clsAttr}>${body}</div>` : body;
 }
 
+/**
+ * Sanitize rich-text HTML for embedding inside an HTML attribute value that
+ * will later be read via `getAttribute()`/`dataset` and assigned directly to
+ * `.innerHTML` in the exported runtime (quiz per-option / true-false
+ * feedback). The body HTML is sanitized FIRST (via `sanitizeInlineHtml`),
+ * then HTML-attribute-encoded exactly once so the browser's attribute
+ * parser decodes it back to the exact sanitized string when read at
+ * runtime — safe because that string was already DOMPurify-sanitized
+ * before this encoding pass (nested-encoding, not double-escaping: the
+ * attribute parse step and the later innerHTML-assignment step each decode
+ * exactly one of the two encoding passes).
+ */
+function sanitizeForFeedbackAttr(s: string): string {
+  return escapeHtml(sanitizeInlineHtml(s));
+}
+
 function defaultDividerPadding(style?: string) {
   return style === 'space' ? 32 : 48;
 }
@@ -198,15 +214,23 @@ function renderBlock(block: ExportBlock, assetMap: Record<string, string>): stri
     case 'mcq': {
       let p: { question?: string; options?: Array<{ id: string; text: string; isCorrect: boolean; feedback?: string }>; multiSelect?: boolean; showFeedback?: boolean } = {};
       try { p = JSON.parse(c) as typeof p; } catch { /* */ }
-      const opts = (p.options ?? []).map((o) =>
-        `<li>
-  <button type="button" class="prism-opt" data-id="${escapeHtml(o.id)}" data-correct="${o.isCorrect}" data-feedback="${escapeHtml(o.feedback ?? '')}">
-    <span class="prism-opt-marker"></span>${escapeHtml(o.text)}
+      const opts = (p.options ?? []).map((o) => {
+        // Feedback HTML is sanitized at build time and stored in a data
+        // attribute; the exported runtime reads it via getAttribute() and
+        // assigns it to innerHTML only after the learner selects this option
+        // (see buildInteractionJs) — see sanitizeForFeedbackAttr for why the
+        // nested sanitize+escape encoding round-trips safely.
+        const feedbackAttr = o.feedback ? ` data-feedback="${sanitizeForFeedbackAttr(o.feedback)}"` : '';
+        const feedbackCls = `prism-opt-feedback ${o.isCorrect ? 'prism-opt-feedback--ok' : 'prism-opt-feedback--bad'}`;
+        return `<li>
+  <button type="button" class="prism-opt" data-id="${escapeHtml(o.id)}" data-correct="${o.isCorrect}">
+    <span class="prism-opt-marker"></span>${sanitizeInlineHtml(o.text)}
   </button>
-</li>`,
-      ).join('');
+  ${o.feedback ? `<p class="${feedbackCls}"${feedbackAttr} style="display:none"></p>` : ''}
+</li>`;
+      }).join('');
       return `<div class="prism-mcq" data-multi="${p.multiSelect ?? false}" data-feedback="${p.showFeedback ?? true}">
-  <p class="prism-q">${escapeHtml(p.question ?? '')}</p>
+  ${sanitizeMultilineHtml(p.question ?? '', 'prism-q')}
   <ul class="prism-opts">${opts}</ul>
   <div class="prism-actions">
     <button type="button" class="prism-submit" disabled>Submit</button>
@@ -219,8 +243,11 @@ function renderBlock(block: ExportBlock, assetMap: Record<string, string>): stri
     case 'trueFalse': {
       let p: { statement?: string; correctAnswer?: boolean; trueFeedback?: string; falseFeedback?: string } = {};
       try { p = JSON.parse(c) as typeof p; } catch { /* */ }
-      return `<div class="prism-tf" data-correct="${p.correctAnswer ?? true}" data-tf="${escapeHtml(p.trueFeedback ?? '')}" data-ff="${escapeHtml(p.falseFeedback ?? '')}">
-  <p class="prism-q">${escapeHtml(p.statement ?? '')}</p>
+      // tf/ff feedback is sanitized at build time and stored in data-tf/data-ff;
+      // the exported runtime reads it and assigns it to innerHTML (see
+      // buildInteractionJs + sanitizeForFeedbackAttr for the encoding rationale).
+      return `<div class="prism-tf" data-correct="${p.correctAnswer ?? true}" data-tf="${sanitizeForFeedbackAttr(p.trueFeedback ?? '')}" data-ff="${sanitizeForFeedbackAttr(p.falseFeedback ?? '')}">
+  ${sanitizeMultilineHtml(p.statement ?? '', 'prism-q')}
   <div class="prism-tf-btns">
     <button type="button" data-answer="true">True</button>
     <button type="button" data-answer="false">False</button>
@@ -738,6 +765,9 @@ html[data-theme="dark"] .prism-opt.correct{color:#6ee7b7}
 html[data-theme="dark"] .prism-opt.wrong{color:#fca5a5}
 .prism-opt-marker{width:1.25rem;height:1.25rem;margin-top:.15rem;border-radius:50%;border:2px solid currentColor;display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;flex-shrink:0}
 .prism-opt-marker:not(:empty){animation:prism-marker-pop var(--prism-motion-base) var(--prism-ease-emphasized) both}
+.prism-opt-feedback{margin-top:8px;margin-left:2.5rem;margin-right:.5rem;padding:.5rem .75rem;border-radius:8px;background:color-mix(in srgb, var(--prism-surface) 70%, transparent);font-size:.8rem;line-height:1.4;box-shadow:var(--prism-shadow-soft);animation:prism-feedback-enter var(--prism-motion-base) var(--prism-ease-emphasized) both}
+.prism-opt-feedback--ok{color:var(--prism-correct,#16a34a)}
+.prism-opt-feedback--bad{color:var(--prism-incorrect,#dc2626)}
 .prism-actions{margin-top:14px;display:flex;align-items:center;gap:.75rem}
 .prism-submit{min-height:44px;background:linear-gradient(135deg,var(--prism-primary),var(--prism-accent));color:#fff;border:0;border-radius:12px;padding:.6rem 1.25rem;font:inherit;font-size:.9rem;font-weight:700;cursor:pointer;box-shadow:0 10px 22px -10px var(--prism-primary);transition:transform var(--prism-motion-fast),opacity var(--prism-motion-base),filter var(--prism-motion-fast)}
 .prism-submit:hover:not(:disabled){filter:brightness(1.05)}
@@ -984,10 +1014,21 @@ document.querySelectorAll('.prism-mcq').forEach(function(el){
       var id=btn.dataset.id;
       var correct=btn.dataset.correct==='true';
       var marker=btn.querySelector('.prism-opt-marker');
-      if(selected.has(id)){
+      var isSel=selected.has(id);
+      if(isSel){
         if(correct){btn.classList.add('correct');if(marker)marker.textContent='✓';}
         else{btn.classList.add('wrong');if(marker)marker.textContent='✗';allOk=false;}
-      } else if(correct && !selected.has(id)){allOk=false;}
+      } else if(correct){allOk=false;}
+      // Per-option feedback: only reveal for the option the learner picked,
+      // and only when the author enabled feedback (fb). The feedback HTML
+      // was DOMPurify-sanitized at build time (see sanitizeForFeedbackAttr);
+      // reading it back via getAttribute() and assigning to innerHTML here
+      // is safe because it was never raw/untrusted at this point.
+      var fbEl=btn.parentElement?btn.parentElement.querySelector('.prism-opt-feedback'):null;
+      if(fbEl){
+        if(fb&&isSel){fbEl.innerHTML=fbEl.getAttribute('data-feedback')||'';fbEl.style.display='';}
+        else{fbEl.style.display='none';fbEl.innerHTML='';}
+      }
     });
     result.textContent=allOk?'✓ Nailed it!':'✗ Not quite — give it another go!';
     result.className='prism-result '+(allOk?'ok':'bad');
@@ -997,7 +1038,10 @@ document.querySelectorAll('.prism-mcq').forEach(function(el){
     retry.style.display='inline';
     window.__prismTotal=(window.__prismTotal||0)+1;
     if(allOk)window.__prismCorrect=(window.__prismCorrect||0)+1;
-    // SCORM score
+    // SCORM score — only numeric score/status are written to CMI, never
+    // authored question/option/feedback text. If cmi.interactions.* writes
+    // are ever added here, any authored text must be tag-stripped first
+    // (never write raw or sanitized-HTML strings to CMI).
     if(window.__prismAPI){
       try{window.__prismAPI.LMSSetValue('cmi.core.score.raw',allOk?'100':'0');window.__prismAPI.LMSSetValue('cmi.core.score.min','0');window.__prismAPI.LMSSetValue('cmi.core.score.max','100');window.__prismAPI.LMSCommit('');}catch(e){}
     }
@@ -1005,7 +1049,12 @@ document.querySelectorAll('.prism-mcq').forEach(function(el){
   retry.addEventListener('click',function(){
     el.dataset.submitted='0';
     selected.clear();
-    opts.forEach(function(btn){btn.classList.remove('selected','correct','wrong');var m=btn.querySelector('.prism-opt-marker');if(m)m.textContent='';});
+    opts.forEach(function(btn){
+      btn.classList.remove('selected','correct','wrong');
+      var m=btn.querySelector('.prism-opt-marker');if(m)m.textContent='';
+      var fbEl=btn.parentElement?btn.parentElement.querySelector('.prism-opt-feedback'):null;
+      if(fbEl){fbEl.style.display='none';fbEl.innerHTML='';}
+    });
     result.textContent='';submit.style.display='';submit.disabled=true;retry.style.display='none';
   });
 });
@@ -1024,7 +1073,10 @@ document.querySelectorAll('.prism-tf').forEach(function(el){
       btn.className=ok?'selected-ok':'selected-bad';
       if(ok){btn.classList.remove('prism-correct-pop');void btn.offsetWidth;btn.classList.add('prism-correct-pop');}
       else{btn.classList.remove('prism-shake');void btn.offsetWidth;btn.classList.add('prism-shake');}
-      if(res){res.textContent=(ok?'Correct! ':'Not quite. ')+(answer?tf:ff);res.style.display='';}
+      // tf/ff were DOMPurify-sanitized at build time (see
+      // sanitizeForFeedbackAttr); the fixed prefix is a literal string, so
+      // this innerHTML assignment carries no unsanitized author content.
+      if(res){res.innerHTML=(ok?'Correct! ':'Not quite. ')+(answer?tf:ff);res.style.display='';}
       if(retry)retry.style.display='inline';
       window.__prismTotal=(window.__prismTotal||0)+1;
       if(ok)window.__prismCorrect=(window.__prismCorrect||0)+1;

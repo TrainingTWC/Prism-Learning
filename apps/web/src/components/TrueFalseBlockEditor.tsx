@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import type { Id } from '~convex/_generated/dataModel';
 import { ToggleLeft } from 'lucide-react';
+import { InlineRichText } from './InlineRichText';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 export type TrueFalsePayload = {
@@ -64,12 +65,11 @@ export function TrueFalseBlockEditor({
           <label className="block text-[11px] font-semibold uppercase tracking-wide text-slate-400 mb-1">
             Statement
           </label>
-          <textarea
-            rows={2}
+          <InlineRichText
             value={payload.statement}
-            onChange={(e) => commit({ ...payload, statement: e.target.value })}
+            onChange={(html) => commit({ ...payload, statement: html })}
             placeholder="Enter a true or false statement…"
-            className="w-full resize-none rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800 placeholder-slate-400 outline-none focus:border-violet-300 focus:ring-1 focus:ring-violet-200"
+            multiline
           />
         </div>
 
@@ -104,24 +104,20 @@ export function TrueFalseBlockEditor({
             <label className="block text-[11px] font-semibold uppercase tracking-wide text-slate-400 mb-1">
               "True" feedback
             </label>
-            <input
-              type="text"
+            <InlineRichText
               value={payload.trueFeedback}
-              onChange={(e) => commit({ ...payload, trueFeedback: e.target.value })}
+              onChange={(html) => commit({ ...payload, trueFeedback: html })}
               placeholder={`Shown when learner picks True…`}
-              className="w-full rounded-lg border border-slate-200 px-3 py-1.5 text-xs text-slate-700 placeholder-slate-400 outline-none focus:border-violet-300 focus:ring-1 focus:ring-violet-200"
             />
           </div>
           <div>
             <label className="block text-[11px] font-semibold uppercase tracking-wide text-slate-400 mb-1">
               "False" feedback
             </label>
-            <input
-              type="text"
+            <InlineRichText
               value={payload.falseFeedback}
-              onChange={(e) => commit({ ...payload, falseFeedback: e.target.value })}
+              onChange={(html) => commit({ ...payload, falseFeedback: html })}
               placeholder={`Shown when learner picks False…`}
-              className="w-full rounded-lg border border-slate-200 px-3 py-1.5 text-xs text-slate-700 placeholder-slate-400 outline-none focus:border-violet-300 focus:ring-1 focus:ring-violet-200"
             />
           </div>
         </div>
