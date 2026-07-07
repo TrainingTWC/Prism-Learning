@@ -9,6 +9,7 @@ import { TextStyle } from '@tiptap/extension-text-style';
 import { Color } from '@tiptap/extension-color';
 import Subscript from '@tiptap/extension-subscript';
 import Superscript from '@tiptap/extension-superscript';
+import { FontSize, FontSizeControl } from '~/lib/tiptap/fontSize';
 import {
   Bold,
   Italic,
@@ -108,6 +109,7 @@ export function RichTextBlockEditor({
       Superscript,
       LineHeight,
       LetterSpacing,
+      FontSize,
     ],
     content: initialContent,
     autofocus: autoFocus ? 'end' : false,
@@ -274,6 +276,9 @@ export function RichTextBlockEditor({
             <option key={o.value} value={o.value}>{o.label}</option>
           ))}
         </select>
+        <Divider />
+        {/* Font size */}
+        <FontSizeControl editor={editor} />
       </div>
 
       {/* Editor area */}
