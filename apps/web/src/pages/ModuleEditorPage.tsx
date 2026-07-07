@@ -535,7 +535,12 @@ export function ModuleEditorPage() {
                     key={lesson._id}
                     lesson={lesson}
                     isActive={activeLessonId === lesson._id}
-                    isRenaming={renamingLessonId === lesson._id}
+                    // For the ACTIVE lesson the canvas header renders its own inline
+                    // rename input (also autoFocus). Mounting both inputs at once makes
+                    // the second focus() blur the first, whose onBlur commits + closes
+                    // rename mode instantly. Suppress the sidebar input for the active
+                    // lesson so exactly one rename input ever mounts.
+                    isRenaming={renamingLessonId === lesson._id && lesson._id !== activeLessonId}
                     renameValue={renameLessonValue}
                     onSelect={() => setActiveLessonId(lesson._id)}
                     onStartRename={() => {
