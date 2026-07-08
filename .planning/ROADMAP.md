@@ -163,6 +163,19 @@
 
 ---
 
+## Backlog
+
+### Phase 999.1: PDF and HTML export formats (BACKLOG)
+
+**Goal:** [Captured for future planning] Add PDF export and standalone HTML export as additional export formats alongside SCORM 1.2, so authors can produce a lesson/module output without an LMS. Design/research properly once the v1.1 critical-bug-fixes milestone ships — bigger in scope than the current bug-fix work.
+**Requirements:** TBD
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (promote with /gsd:review-backlog when ready)
+
+---
+
 ## Open Decisions (carried from research)
 
 - **Realtime sync strategy** — default is per-field LWW (Position A); revisit at the start of Phase 3 with a 3-tab dogfooding test. If Pitfall #6 failure modes appear (cursor jumping, lost keystrokes, cross-user undo), swap to Y.js *for the rich-text block only*.
