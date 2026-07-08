@@ -25,15 +25,17 @@
 ## v1.1 Phase Details
 
 ### Phase 9: Critical Bug Fixes
-**Goal**: Fix five production-blocking bugs so exported SCORM packages work correctly in real LMS environments and authoring UX is smooth.
+**Goal**: Fix seven production-blocking bugs so exported SCORM packages work correctly in real LMS environments and authoring UX is smooth.
 **Depends on**: Phases 1–8 (live deployed app).
-**Requirements**: SCO-FIX-01, SCO-FIX-02, SCO-FIX-03, UX-FIX-01, UX-FIX-02
+**Requirements**: SCO-FIX-01, SCO-FIX-02, SCO-FIX-03, SCO-FIX-04, UX-FIX-01, UX-FIX-02, UX-FIX-03
 **Success Criteria** (what must be TRUE):
   1. A gallery block with carousel layout in an exported SCORM zip navigates correctly (Prev/Next and dots work); all other slides are hidden; no external JS is loaded.
   2. A Lottie block in an exported SCORM zip plays without any network call; lottie-web is bundled as `assets/lottie.min.js`; animation JSON is embedded inline in the HTML.
   3. A learner who completes the last lesson of a module and clicks "Finish" triggers correct `cmi.core.lesson_status` on the real LMS API (verified in SCORM Cloud or equivalent); the no-op API shim never intercepts when a real LMS API is present.
   4. Clicking the lesson title `<h2>` in the main content area directly activates an editable input (identical behavior to the pencil icon).
   5. A Tabs block content editor shows Tiptap toolbar (bold, color, heading, lists); formatted content is saved and rendered correctly by the Tabs block renderer.
+  6. Image, video, audio, and gallery blocks that render correctly in the authoring preview also render in the exported SCORM package — the export's asset-collection pass (`scormExport.ts`) resolves every asset-backed block's `storageId` into `assetMap` so `renderBlock` never silently falls through to an empty string for a block with valid content.
+  7. A carousel-layout gallery block's caption field shows the Tiptap toolbar and saves/renders formatted text correctly — same InlineRichText behavior other caption/text fields already have (currently regressed or broken specifically for carousel captions despite the underlying wiring).
 **Plans**: TBD
 
 ---
