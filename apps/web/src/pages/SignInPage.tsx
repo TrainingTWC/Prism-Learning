@@ -11,7 +11,7 @@ import {
   normalizeEmployeeId,
 } from '../lib/employeeLogin';
 
-type Step = 'form' | 'sent' | 'completing';
+type Step = 'form' | 'sent' | 'completing' | 'sending-invite';
 
 export function SignInPage() {
   const { isAuthenticated, isLoading } = useConvexAuth();
@@ -26,8 +26,26 @@ export function SignInPage() {
   // Detect magic-link ?code= param — ConvexAuthProvider auto-handles it
   const hasCode = typeof window !== 'undefined' && window.location.search.includes('code=');
 
-  const [step, setStep] = useState<Step>(hasCode ? 'completing' : 'form');
-  const [email, setEmail] = useState('');
+  // Detect a workspace-invite link (?inviteId=...&email=...). This is NOT an
+  // auth token — it's just an identifier the invite email carries so we can
+  // recognize "this visit came from an invite" and skip the EMPID/company
+  // code employee-login gate (irrelevant for externally invited members;
+  // acceptPendingInvites grants membership purely by email match after any
+  // successful auth). We still need a REAL magic-link (?code=) to actually
+  // sign the user in, so on an invite visit we auto-send one for the
+  // invited email instead of showing the manual employee-login form.
+  const inviteEmail =
+    typeof window !== 'undefined'
+      ? new URLSearchParams(window.location.search).get('email')
+      : null;
+  const inviteId =
+    typeof window !== 'undefined'
+      ? new URLSearchParams(window.location.search).get('inviteId')
+      : null;
+  const isInviteVisit = !hasCode && Boolean(inviteId && inviteEmail);
+
+  const [step, setStep] = useState<Step>(hasCode ? 'completing' : isInviteVisit ? 'sending-invite' : 'form');
+  const [email, setEmail] = useState(inviteEmail ?? '');
   const [employeeId, setEmployeeId] = useState('');
   const [companyCode, setCompanyCode] = useState(DEFAULT_COMPANY_CODE);
   const [password, setPassword] = useState('');
@@ -42,6 +60,31 @@ export function SignInPage() {
       void navigate({ to: redirectTo as '/', replace: true });
     }
   }, [isAuthenticated, navigate, redirectTo]);
+
+  // Invite-link visit: auto-send a real magic-link (?code=) for the invited
+  // email so the user can actually complete sign-in. acceptPendingInvites
+  // (called from AppLayout post-auth) then grants membership by email match —
+  // no EMPID/company code needed for this path.
+  useEffect(() => {
+    if (!isInviteVisit || !inviteEmail) return;
+
+    let cancelled = false;
+    void signIn('email', { email: inviteEmail })
+      .then(() => {
+        if (!cancelled) setStep('sent');
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        setError(err instanceof Error ? err.message : 'Could not send your invite sign-in link. Please try again.');
+        setStep('form');
+      });
+
+    return () => {
+      cancelled = true;
+    };
+    // Only run once for this invite visit.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Already loading (could be code completion)
   if (isLoading && hasCode) {
@@ -161,7 +204,12 @@ export function SignInPage() {
           </h1>
         </div>
 
-        {step === 'completing' ? (
+        {step === 'sending-invite' ? (
+          <div className="glass p-8 text-center">
+            <Loader2 className="mx-auto mb-4 size-8 animate-spin text-[var(--ember-400)]" />
+            <p className="text-[var(--text-tertiary)]">Preparing your invite…</p>
+          </div>
+        ) : step === 'completing' ? (
           <div className="glass p-8 text-center">
             <Loader2 className="mx-auto mb-4 size-8 animate-spin text-[var(--ember-400)]" />
             <p className="text-[var(--text-tertiary)]">Completing sign in…</p>
