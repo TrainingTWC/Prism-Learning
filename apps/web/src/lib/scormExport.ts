@@ -1772,13 +1772,19 @@ export function buildPreviewHtml(
 
 // ── Main export function ───────────────────────────────────────────────────
 
+export interface ScormExportResult {
+  blob: Blob;
+  /** Human-readable warnings for assets that failed to bundle (block still exported, minus that asset) */
+  warnings: string[];
+}
+
 export async function buildScormPackage(
   mod: ExportModule,
   theme: ExportTheme,
   options: ExportOptions,
   /** Map of storageId → resolved URL for assets used in the module */
   resolveAssetUrl: (storageId: string) => Promise<string>,
-): Promise<Blob> {
+): Promise<ScormExportResult> {
   const zip = new JSZip();
 
   // Collect all storageIds needed
@@ -1833,26 +1839,41 @@ export async function buildScormPackage(
     }
   } catch { /* skip */ }
 
+  const assetWarnings: string[] = [];
+
+  async function downloadAsset(id: string): Promise<void> {
+    const url = await resolveAssetUrl(id);
+    if (!url) throw new Error('no URL resolved');
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30_000);
+    let res: Response;
+    try {
+      res = await fetch(url, { signal: controller.signal });
+    } finally {
+      clearTimeout(timeoutId);
+    }
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const blob = await res.blob();
+    const ext = blob.type.split('/')[1] ?? 'bin';
+    const filename = `${id}.${ext}`;
+    assetsFolder.file(filename, blob);
+    assetMap[id] = `assets/${filename}`;
+  }
+
   await Promise.all(
     [...storageIds].map(async (id) => {
       try {
-        const url = await resolveAssetUrl(id);
-        if (!url) return;
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10_000);
-        let res: Response;
+        await downloadAsset(id);
+      } catch {
+        // one retry — transient network hiccups and timeouts are common on larger assets
         try {
-          res = await fetch(url, { signal: controller.signal });
-        } finally {
-          clearTimeout(timeoutId);
+          await downloadAsset(id);
+        } catch (err) {
+          const reason = err instanceof Error ? err.message : String(err);
+          assetWarnings.push(`Asset ${id} failed to bundle: ${reason}`);
+          console.error(`[scormExport] asset ${id} failed to bundle`, err);
         }
-        if (!res.ok) return;
-        const blob = await res.blob();
-        const ext = blob.type.split('/')[1] ?? 'bin';
-        const filename = `${id}.${ext}`;
-        assetsFolder.file(filename, blob);
-        assetMap[id] = `assets/${filename}`;
-      } catch { /* skip unreachable assets */ }
+      }
     }),
   );
 
@@ -1901,7 +1922,8 @@ export async function buildScormPackage(
     zip.file(`lesson_${i}.html`, buildLessonPage(mod, i, assetMap, theme, options, logoPath));
   }
 
-  return zip.generateAsync({ type: 'blob', compression: 'DEFLATE' });
+  const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE' });
+  return { blob, warnings: assetWarnings };
 }
 
 // ── Minimal SCORM 1.2 shim (fallback if scorm-again import fails) ──────────

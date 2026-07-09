@@ -61,6 +61,7 @@ import {
   GitMerge,
   ArrowUpDown,
   GitBranch,
+  AlertTriangle,
 } from 'lucide-react';
 import { RichTextBlockEditor } from '../components/RichTextBlockEditor';
 import { ImageBlockEditor } from '../components/ImageBlockEditor';
@@ -216,6 +217,7 @@ export function ModuleEditorPage() {
   const [insertAfterOrder, setInsertAfterOrder] = useState<number | null | undefined>(undefined);
   const [exporting, setExporting] = useState(false);
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [exportWarnings, setExportWarnings] = useState<string[]>([]);
   const [exportOptions, setExportOptions] = useState<ExportOptions>({ passingScore: 80, completionCriteria: 'completed' });
   const [theme, setTheme] = useState<'dark' | 'light'>(
     () => localStorage.getItem('prism-theme') === 'light' ? 'light' : 'dark'
@@ -236,7 +238,7 @@ export function ModuleEditorPage() {
       };
       // Fetch all blocks at export time (one-shot, not a live subscription)
       const allBlocks = (await convex.query(api.blocks.listByModule, { moduleId: modId })) as Block[];
-      const blob = await buildScormPackage(
+      const { blob, warnings } = await buildScormPackage(
         {
           id: modId,
           title: content.module.title,
@@ -257,6 +259,7 @@ export function ModuleEditorPage() {
       );
       const slug = content.module.title.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
       downloadBlob(blob, `${slug}_scorm12.zip`);
+      setExportWarnings(warnings);
     } finally {
       setExporting(false);
     }
@@ -825,6 +828,27 @@ export function ModuleEditorPage() {
               <Download className="size-4" /> Export
             </button>
           </div>
+        </div>
+      </div>
+    )}
+
+    {exportWarnings.length > 0 && (
+      <div className="fixed bottom-6 right-6 z-50 max-w-sm rounded-xl border border-amber-500/40 bg-[var(--card-bg)] px-4 py-3 shadow-xl">
+        <div className="flex items-start gap-3">
+          <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-500" />
+          <div className="flex-1 text-sm text-[var(--text-primary)]">
+            <p className="font-semibold">Export completed with warnings</p>
+            <ul className="mt-1 list-disc pl-4 text-[var(--text-secondary)]">
+              {exportWarnings.map((w) => <li key={w}>{w}</li>)}
+            </ul>
+          </div>
+          <button
+            type="button"
+            onClick={() => setExportWarnings([])}
+            className="text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
+          >
+            <X className="size-3.5" />
+          </button>
         </div>
       </div>
     )}
