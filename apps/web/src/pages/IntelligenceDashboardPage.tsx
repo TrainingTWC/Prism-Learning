@@ -1543,14 +1543,14 @@ export function IntelligenceDashboardPage() {
 
   if (workspaces.length === 0) {
     return (
-      <PrismWorkspaceShell active="intelligence" title="Prism Learning" showPageHeader={false}>
+      <PrismWorkspaceShell active="intelligence" title="Prism Authoring" showPageHeader={false}>
         <div className="flex flex-col items-center gap-6 py-20 text-center">
           <div className="prism-icon-tile size-16 rounded-2xl">
             <Layers className="size-7" />
           </div>
           <div>
             <h2 className="text-xl font-bold text-[var(--text-primary)]">
-              Welcome to Prism Learning
+              Welcome to Prism Authoring
             </h2>
             <p className="mt-2 max-w-sm text-sm text-[var(--text-muted)]">
               Create your first workspace to start building learning modules and connecting Prism

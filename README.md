@@ -1,6 +1,6 @@
-# Prism Learning
+# Prism Authoring
 
-**Prism Learning** is a Rise-360-style collaborative learning module authoring tool for small teams. Authors build themed, block-based learning modules in real-time and export them as **SCORM 1.2 packages** that drop into any LMS — no code, no design effort, no installation required.
+**Prism Authoring** is a Rise-360-style collaborative learning module authoring tool for small teams. Authors build themed, block-based learning modules in real-time and export them as **SCORM 1.2 packages** that drop into any LMS — no code, no design effort, no installation required.
 
 > **Core value:** A team author can sit down, build a themed multi-block lesson collaboratively in real-time, and export a working SCORM 1.2 zip that runs in their LMS — without writing code, fighting layout, or installing anything.
 
@@ -39,7 +39,7 @@
 
 ## Project Overview
 
-Prism Learning solves a specific problem: small instructional design teams lack a clean, opinionated tool for producing modular learning content collaboratively without design effort or infrastructure overhead.
+Prism Authoring solves a specific problem: small instructional design teams lack a clean, opinionated tool for producing modular learning content collaboratively without design effort or infrastructure overhead.
 
 **What it does:**
 - Provides a multi-workspace authoring environment where teams can create and manage learning content.
@@ -247,7 +247,7 @@ Indexes: `by_lesson`, `by_module`
 
 ## Block Types
 
-Prism Learning supports **25 block types** across four categories:
+Prism Authoring supports **25 block types** across four categories:
 
 ### Content Blocks
 

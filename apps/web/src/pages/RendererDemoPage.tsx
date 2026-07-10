@@ -15,7 +15,7 @@ const SAMPLE_BLOCKS: Block[] = [
     id: 'b1',
     type: 'rich-text',
     content: `
-      <h1>Welcome to Prism Learning</h1>
+      <h1>Welcome to Prism Authoring</h1>
       <p>This demo shows the renderer consuming identical content rendered under two different workspace themes.</p>
       <h2>What you can build</h2>
       <ul>

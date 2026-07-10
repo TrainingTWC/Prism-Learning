@@ -1,5 +1,5 @@
 /**
- * Prism Learning — presign Worker (skeleton).
+ * Prism Authoring — presign Worker (skeleton).
  *
  * Phase 4 will implement:
  *   - POST /presign  → verify Convex session → return scoped R2 PUT URL

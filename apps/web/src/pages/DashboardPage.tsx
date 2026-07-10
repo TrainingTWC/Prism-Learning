@@ -56,14 +56,14 @@ export function DashboardPage() {
     <PrismWorkspaceShell
       active="home"
       overline="AI-native SCORM authoring"
-      title="Prism Learning"
+      title="Prism Authoring"
       subtitle="Build mobile-first learning modules, generate structured course content from documents, and export SCORM packages from one operational authoring system."
       showPageHeader={false}
     >
         <section className="animate-fadeInUp pt-10 lg:pt-16">
           <p className="mb-5 text-overline">AI-native SCORM authoring</p>
           <h2 className="text-[clamp(3rem,8vw,5.5rem)] font-extrabold uppercase leading-none tracking-tight text-[var(--obsidian-50)]">
-            Prism <span className="text-gradient-ember">Learning</span>
+            Prism <span className="text-gradient-ember">Authoring</span>
           </h2>
           <p className="mt-5 max-w-3xl text-sm leading-7 text-[var(--text-tertiary)]">
             Build mobile-first learning modules, generate structured course content from documents,

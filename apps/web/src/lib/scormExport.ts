@@ -572,7 +572,7 @@ ${resources}
 // ── CSS ────────────────────────────────────────────────────────────────────
 
 function buildCss(theme: ExportTheme): string {
-  return `/* Prism Learning — premium SCORM theme */
+  return `/* Prism Authoring — premium SCORM theme */
 :root {
   --prism-primary: ${theme.primary};
   --prism-accent: ${theme.accent};

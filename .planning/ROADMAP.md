@@ -1,4 +1,4 @@
-# Prism Learning — Roadmap
+# Prism Authoring — Roadmap
 
 > Maps every v1 requirement to exactly one phase. Phase ordering follows the architecture's dependency graph: renderer purity boundary BEFORE block CRUD, asset pipeline BEFORE image/Lottie blocks, theming BEFORE preview and export, export depends on everything above it.
 

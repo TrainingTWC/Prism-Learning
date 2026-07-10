@@ -162,7 +162,7 @@ export default defineSchema({
 
   // ── Analytics layer ─────────────────────────────────────────────────────
 
-  /** Links a PL workspace to a Prism Intelligence company */
+  /** Links a PA workspace to a Prism Intelligence company */
   analyticsLinks: defineTable({
     workspaceId: v.id('workspaces'),
     companyCode: v.optional(v.string()),

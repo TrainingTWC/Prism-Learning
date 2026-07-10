@@ -25,7 +25,7 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
         const siteUrl = process.env.SITE_URL ?? 'http://localhost:5173';
         const magicLink = `${siteUrl}/sign-in?code=${token}`;
         const from =
-          process.env.AUTH_EMAIL_FROM ?? 'Prism Learning <noreply@example.com>';
+          process.env.AUTH_EMAIL_FROM ?? 'Prism Authoring <noreply@example.com>';
 
         // Dev mode: if no Resend key, log the magic link to the Convex function
         // logs so you can sign in without an email provider.
@@ -38,10 +38,10 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
         const { error } = await resend.emails.send({
           from,
           to: email,
-          subject: 'Sign in to Prism Learning',
+          subject: 'Sign in to Prism Authoring',
           html: `
             <div style="font-family:ui-sans-serif,system-ui,sans-serif;max-width:480px;margin:0 auto;padding:32px 24px">
-              <h2 style="margin:0 0 8px;font-size:20px;font-weight:600;color:#111">Sign in to Prism Learning</h2>
+              <h2 style="margin:0 0 8px;font-size:20px;font-weight:600;color:#111">Sign in to Prism Authoring</h2>
               <p style="margin:0 0 24px;color:#555">Click the button below to sign in. This link expires in 1 hour and can only be used once.</p>
               <a href="${magicLink}" style="display:inline-block;background:#6366f1;color:#fff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:500;font-size:15px">Sign in</a>
               <p style="margin:24px 0 0;color:#888;font-size:12px">Or paste this URL: ${magicLink}</p>

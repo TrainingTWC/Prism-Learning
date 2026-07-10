@@ -1,4 +1,4 @@
-# Prism Learning — Project State
+# Prism Authoring — Project State
 
 > Living memory across sessions. Updated after every phase transition and at session boundaries.
 
@@ -6,7 +6,7 @@
 
 ## Project Reference
 
-**Name:** Prism Learning (learnflow)
+**Name:** Prism Authoring (learnflow)
 **Repository:** `C:\Users\Amritanshu\projects\learnflow`
 **Milestone:** v1.1 — Authoring & SCORM Bug Fix Sprint
 
@@ -63,6 +63,7 @@
 - [ ] Phase 1 prerequisite: provision Cloudflare account + R2 + Workers project (manual, one-time).
 - [ ] Phase 1 prerequisite: Resend (or equivalent) API key for magic-link email delivery.
 - [ ] Before Phase 8: name target commercial LMS(s) for cross-LMS validation.
+- [ ] Once `authoring.prismintelligence.in` custom domain is live: run `npx convex env set SITE_URL https://authoring.prismintelligence.in --prod` — magic links and invite links are still built from the old `learning.prismintelligence.in`.
 
 ### Quick Tasks Completed
 
@@ -70,6 +71,7 @@
 |---|-------------|------|--------|-----------|
 | 260707-gtl | Rich-text captions (image/gallery) + per-character font size in all Tiptap surfaces, preview + SCORM render | 2026-07-07 | 5ef77c0 | [260707-gtl-rich-text-captions-with-per-character-fo](./quick/260707-gtl-rich-text-captions-with-per-character-fo/) |
 | 260707-hbg | Rich text + font size for accordion/callout/quote/flashcard/process bodies and MCQ/TrueFalse quiz text, preview + SCORM render | 2026-07-07 | c07dc82 | [260707-hbg-convert-remaining-text-surfaces-to-rich-](./quick/260707-hbg-convert-remaining-text-surfaces-to-rich-/) |
+| 260710-eyl | Rename app "Prism Learning" → "Prism Authoring" (UI, emails, package.json, docs) | 2026-07-10 | TBD | [260710-eyl-rename-prism-authoring](./quick/260710-eyl-rename-prism-authoring/) |
 
 ---
 
@@ -82,7 +84,7 @@
 ## Session Continuity
 
 **Last session ended:** 2026-05-27 — roadmap created and committed.
-**Last activity:** 2026-07-07 - Completed quick task 260707-hbg: rich text + per-character font size across remaining block editors (accordion, callout, quote, flashcard, process, MCQ, TrueFalse); also completed 260707-gtl (captions) and fixed new-lesson-title rename bug (6bbb0b9).
+**Last activity:** 2026-07-10 - Completed quick task 260710-eyl: renamed app "Prism Learning" → "Prism Authoring" across UI, emails, package.json, and docs.
 **Resume with:** `/gsd-plan-phase 1` (or `/gsd-ui-phase 1` for the sign-in UI design first).
 
 **Files just created/updated:**

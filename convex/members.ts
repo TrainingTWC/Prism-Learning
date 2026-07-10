@@ -120,7 +120,7 @@ export const invite = action({
     // Send invite email
     const siteUrl = process.env.SITE_URL ?? 'http://localhost:5173';
     const inviteLink = `${siteUrl}/sign-in?inviteId=${inviteId}&email=${encodeURIComponent(normalizedEmail)}`;
-    const from = process.env.AUTH_EMAIL_FROM ?? 'Prism Learning <noreply@example.com>';
+    const from = process.env.AUTH_EMAIL_FROM ?? 'Prism Authoring <noreply@example.com>';
 
     if (!process.env.AUTH_RESEND_KEY) {
       console.log(`[DEV] Invite link for ${normalizedEmail}:\n${inviteLink}`);
@@ -129,13 +129,13 @@ export const invite = action({
       const { error } = await resend.emails.send({
         from,
         to: normalizedEmail,
-        subject: `${inviterName} invited you to ${workspaceName} on Prism Learning`,
+        subject: `${inviterName} invited you to ${workspaceName} on Prism Authoring`,
         html: `
           <div style="font-family:ui-sans-serif,system-ui,sans-serif;max-width:480px;margin:0 auto;padding:32px 24px">
             <h2 style="margin:0 0 8px;font-size:20px;font-weight:600;color:#111">You've been invited to collaborate</h2>
             <p style="margin:0 0 8px;color:#555">
               <strong>${inviterName}</strong> has invited you to join
-              <strong>${workspaceName}</strong> on Prism Learning.
+              <strong>${workspaceName}</strong> on Prism Authoring.
             </p>
             <p style="margin:0 0 24px;color:#555">
               Click the button below to accept the invitation and sign in.

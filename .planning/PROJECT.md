@@ -1,8 +1,8 @@
-# Prism Learning
+# Prism Authoring
 
 ## What This Is
 
-Prism Learning is a Rise-360-style learning module authoring tool for small teams. Authors collaborate in realtime to build polished, themed, block-based learning modules — text, images, video embeds, quizzes, accordions, and Lottie animations — and export them as SCORM 1.2 packages that drop straight into any LMS.
+Prism Authoring is a Rise-360-style learning module authoring tool for small teams. Authors collaborate in realtime to build polished, themed, block-based learning modules — text, images, video embeds, quizzes, accordions, and Lottie animations — and export them as SCORM 1.2 packages that drop straight into any LMS.
 
 The product is for a small team of authors (the user + a few collaborators) who currently lack a clean, opinionated tool for producing modular learning content without design effort.
 

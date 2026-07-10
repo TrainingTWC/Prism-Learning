@@ -1,11 +1,11 @@
 /**
- * Analytics layer — bridges Prism Intelligence (PI) audit data to Prism Learning (PL).
+ * Analytics layer — bridges Prism Intelligence (PI) audit data to Prism Authoring (PA).
  *
- * PI and PL are SEPARATE Convex deployments on the same team. PI tables are NOT
- * accessible via ctx.db from PL. All PI data is fetched via Convex's HTTP API:
+ * PI and PA are SEPARATE Convex deployments on the same team. PI tables are NOT
+ * accessible via ctx.db from PA. All PI data is fetched via Convex's HTTP API:
  *   POST {PI_CONVEX_URL}/api/query  { path, args: { apiToken, ...rest } }
  *
- * Required env vars in the PL Convex dashboard:
+ * Required env vars in the PA Convex dashboard:
  *   PI_CONVEX_URL  — PI deployment URL, e.g. https://abc123.convex.cloud
  *   PI_API_TOKEN   — static token accepted by PI's validateRequest() guard
  */
