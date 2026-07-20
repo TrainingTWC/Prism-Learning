@@ -72,6 +72,7 @@
 | 260707-gtl | Rich-text captions (image/gallery) + per-character font size in all Tiptap surfaces, preview + SCORM render | 2026-07-07 | 5ef77c0 | [260707-gtl-rich-text-captions-with-per-character-fo](./quick/260707-gtl-rich-text-captions-with-per-character-fo/) |
 | 260707-hbg | Rich text + font size for accordion/callout/quote/flashcard/process bodies and MCQ/TrueFalse quiz text, preview + SCORM render | 2026-07-07 | c07dc82 | [260707-hbg-convert-remaining-text-surfaces-to-rich-](./quick/260707-hbg-convert-remaining-text-surfaces-to-rich-/) |
 | 260710-eyl | Rename app "Prism Learning" → "Prism Authoring" (UI, emails, package.json, docs) | 2026-07-10 | TBD | [260710-eyl-rename-prism-authoring](./quick/260710-eyl-rename-prism-authoring/) |
+| 260720-fe0 | Fix hotspot popover overflow (pin to bottom) + MCQ selection marker (neutral pre-submit fill, gate correctness reveal behind submit) in learner-preview renderers | 2026-07-20 | 3bc5954 | [260720-fe0-fix-hotspot-popover-overflow-and-mcq-sel](./quick/260720-fe0-fix-hotspot-popover-overflow-and-mcq-sel/) |
 
 ---
 
@@ -84,7 +85,7 @@
 ## Session Continuity
 
 **Last session ended:** 2026-05-27 — roadmap created and committed.
-**Last activity:** 2026-07-10 - Completed quick task 260710-eyl: renamed app "Prism Learning" → "Prism Authoring" across UI, emails, package.json, and docs.
+**Last activity:** 2026-07-20 - Completed quick task 260720-fe0: fixed hotspot popover overflow and MCQ selection marker in learner-preview renderers.
 **Resume with:** `/gsd-plan-phase 1` (or `/gsd-ui-phase 1` for the sign-in UI design first).
 
 **Files just created/updated:**
