@@ -105,7 +105,13 @@ export function MCQBlockRenderer({ block }: Props) {
                     isSelected ? 'border-current' : 'border-slate-300'
                   } ${isSelected ? 'prism-marker-pop' : ''}`}
                 >
-                  {isSelected ? (correct ? '✓' : '✗') : ''}
+                  {submitted && isSelected
+                    ? (correct ? '✓' : '✗')
+                    : !submitted && isSelected && multiSelect
+                      ? '✓'
+                      : !submitted && isSelected && !multiSelect
+                        ? <span style={{ width: 10, height: 10, borderRadius: '50%', background: 'currentColor' }} />
+                        : ''}
                 </span>
                 <span
                   className="flex-1"
