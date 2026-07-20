@@ -388,7 +388,7 @@ function renderBlock(block: ExportBlock, assetMap: Record<string, string>): stri
       if (!src) return '';
       const hs = p.hotspots ?? [];
       const dots = hs.map((h, i) => `<button type="button" class="prism-hs-dot" data-hid="${escapeHtml(h.id)}" style="left:${h.xPct}%;top:${h.yPct}%">${i + 1}</button>`).join('');
-      const pops = hs.map((h) => `<div class="prism-hs-pop" data-hid="${escapeHtml(h.id)}" style="left:${h.xPct}%;top:${h.yPct}%;transform:translate(${h.xPct > 50 ? 'calc(-100% - 24px)' : '24px'},-50%)"><div class="prism-hs-pop-h"><strong>${escapeHtml(h.title)}</strong><button type="button" class="prism-hs-close" aria-label="Close">×</button></div>${h.body ? `<p>${escapeHtml(h.body)}</p>` : ''}</div>`).join('');
+      const pops = hs.map((h) => `<div class="prism-hs-pop" data-hid="${escapeHtml(h.id)}"><div class="prism-hs-pop-h"><strong>${escapeHtml(h.title)}</strong><button type="button" class="prism-hs-close" aria-label="Close">×</button></div>${h.body ? `<p>${escapeHtml(h.body)}</p>` : ''}</div>`).join('');
       return `<div class="prism-hotspots"><img src="${escapeHtml(src)}" alt="${escapeHtml(p.altText ?? '')}"/>${dots}${pops}<script>(function(){var r=document.currentScript.parentElement;r.querySelectorAll('.prism-hs-dot').forEach(function(d){d.addEventListener('click',function(){var id=d.getAttribute('data-hid');r.querySelectorAll('.prism-hs-pop').forEach(function(p){p.style.display=p.getAttribute('data-hid')===id&&p.style.display!=='block'?'block':'none'})})});r.querySelectorAll('.prism-hs-close').forEach(function(b){b.addEventListener('click',function(e){e.stopPropagation();b.closest('.prism-hs-pop').style.display='none'})})})();</script></div>`;
     }
 
@@ -765,6 +765,7 @@ html[data-theme="dark"] .prism-opt.correct{color:#6ee7b7}
 html[data-theme="dark"] .prism-opt.wrong{color:#fca5a5}
 .prism-opt-marker{width:1.25rem;height:1.25rem;margin-top:.15rem;border-radius:50%;border:2px solid currentColor;display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;flex-shrink:0}
 .prism-opt-marker:not(:empty){animation:prism-marker-pop var(--prism-motion-base) var(--prism-ease-emphasized) both}
+.prism-opt-marker.filled{background:currentColor;animation:prism-marker-pop var(--prism-motion-base) var(--prism-ease-emphasized) both}
 .prism-opt-feedback{margin-top:8px;margin-left:2.5rem;margin-right:.5rem;padding:.5rem .75rem;border-radius:8px;background:color-mix(in srgb, var(--prism-surface) 70%, transparent);font-size:.8rem;line-height:1.4;box-shadow:var(--prism-shadow-soft);animation:prism-feedback-enter var(--prism-motion-base) var(--prism-ease-emphasized) both}
 .prism-opt-feedback--ok{color:var(--prism-correct,#16a34a)}
 .prism-opt-feedback--bad{color:var(--prism-incorrect,#dc2626)}
@@ -886,7 +887,7 @@ html[data-theme="dark"] .prism-callout--tip{color:#d8b4fe}
 .prism-hotspots img{width:100%;display:block}
 .prism-hs-dot{position:absolute;transform:translate(-50%,-50%);width:36px;height:36px;border-radius:50%;background:var(--prism-accent);color:#fff;border:none;cursor:pointer;font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 6px rgba(0,0,0,.1),0 4px 12px rgba(0,0,0,.3);animation:prism-hs-pulse 2s ease-in-out infinite}
 @keyframes prism-hs-pulse{0%,100%{box-shadow:0 0 0 6px rgba(0,0,0,.1),0 4px 12px rgba(0,0,0,.3)}50%{box-shadow:0 0 0 12px rgba(0,0,0,.05),0 4px 12px rgba(0,0,0,.3)}}
-.prism-hs-pop{position:absolute;max-width:280px;min-width:200px;background:#fff;color:#1a1a2e;border-radius:12px;padding:16px;box-shadow:0 10px 30px rgba(0,0,0,.25);display:none;z-index:5}
+.prism-hs-pop{position:absolute;left:12px;right:12px;bottom:12px;background:#fff;color:#1a1a2e;border-radius:12px;padding:16px;box-shadow:0 10px 30px rgba(0,0,0,.25);display:none;z-index:5}
 .prism-hs-pop-h{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
 .prism-hs-pop-h strong{font-size:14px;color:var(--prism-accent)}
 .prism-hs-close{background:none;border:none;cursor:pointer;color:#999;font-size:18px;line-height:1}
@@ -1000,10 +1001,11 @@ document.querySelectorAll('.prism-mcq').forEach(function(el){
   opts.forEach(function(btn){
     btn.addEventListener('click',function(){
       if(el.dataset.submitted==='1')return;
-      if(!multi){selected.clear();opts.forEach(function(b){b.classList.remove('selected')});}
+      if(!multi){selected.clear();opts.forEach(function(b){b.classList.remove('selected');var bm=b.querySelector('.prism-opt-marker');if(bm){bm.textContent='';bm.classList.remove('filled');}});}
       var id=btn.dataset.id;
-      if(selected.has(id)){selected.delete(id);btn.classList.remove('selected');}
-      else{selected.add(id);btn.classList.add('selected');}
+      var marker=btn.querySelector('.prism-opt-marker');
+      if(selected.has(id)){selected.delete(id);btn.classList.remove('selected');if(marker){marker.textContent='';marker.classList.remove('filled');}}
+      else{selected.add(id);btn.classList.add('selected');if(marker){if(multi){marker.classList.remove('filled');marker.textContent='✓';}else{marker.textContent='';marker.classList.add('filled');}}}
       submit.disabled=selected.size===0;
     });
   });
@@ -1016,6 +1018,7 @@ document.querySelectorAll('.prism-mcq').forEach(function(el){
       var marker=btn.querySelector('.prism-opt-marker');
       var isSel=selected.has(id);
       if(isSel){
+        if(marker)marker.classList.remove('filled');
         if(correct){btn.classList.add('correct');if(marker)marker.textContent='✓';}
         else{btn.classList.add('wrong');if(marker)marker.textContent='✗';allOk=false;}
       } else if(correct){allOk=false;}
@@ -1051,7 +1054,7 @@ document.querySelectorAll('.prism-mcq').forEach(function(el){
     selected.clear();
     opts.forEach(function(btn){
       btn.classList.remove('selected','correct','wrong');
-      var m=btn.querySelector('.prism-opt-marker');if(m)m.textContent='';
+      var m=btn.querySelector('.prism-opt-marker');if(m){m.textContent='';m.classList.remove('filled');}
       var fbEl=btn.parentElement?btn.parentElement.querySelector('.prism-opt-feedback'):null;
       if(fbEl){fbEl.style.display='none';fbEl.innerHTML='';}
     });
