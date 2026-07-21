@@ -70,7 +70,7 @@ export function CustomHtmlBlockEditor({
           />
           <div className="border-t border-slate-100 bg-slate-50 px-4 py-2">
             <p className="text-[11px] text-slate-400">
-              HTML is sanitized in preview. Scripts are stripped — use the SCORM export for full execution.
+              Raw HTML — runs unsanitized, scripts included, in both preview and the SCORM export.
             </p>
           </div>
         </>
