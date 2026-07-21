@@ -9,8 +9,10 @@ export type FlashCard = {
   id: string;
   front: string;
   back: string;
-  imageStorageId?: string;
-  audioStorageId?: string;
+  frontImageStorageId?: string;
+  frontAudioStorageId?: string;
+  backImageStorageId?: string;
+  backAudioStorageId?: string;
 };
 
 export type FlashcardPayload = {
@@ -19,9 +21,27 @@ export type FlashcardPayload = {
 
 function uid() { return Math.random().toString(36).slice(2, 7); }
 
+/**
+ * Older cards stored a single imageStorageId/audioStorageId shared by both
+ * faces. Fold those into the back face (this project's original use case:
+ * text on front, image on back) so existing cards keep their media instead
+ * of it silently disappearing once front/back become independent.
+ */
+function migrateCard(c: FlashCard & { imageStorageId?: string; audioStorageId?: string }): FlashCard {
+  const { imageStorageId, audioStorageId, ...rest } = c;
+  return {
+    ...rest,
+    backImageStorageId: rest.frontImageStorageId || rest.backImageStorageId ? rest.backImageStorageId : imageStorageId,
+    backAudioStorageId: rest.frontAudioStorageId || rest.backAudioStorageId ? rest.backAudioStorageId : audioStorageId,
+  };
+}
+
 function parse(content?: string): FlashcardPayload {
   if (!content) return { cards: [{ id: uid(), front: '', back: '' }] };
-  try { return JSON.parse(content) as FlashcardPayload; } catch { return { cards: [{ id: uid(), front: '', back: '' }] }; }
+  try {
+    const p = JSON.parse(content) as FlashcardPayload;
+    return { cards: (p.cards ?? []).map(migrateCard) };
+  } catch { return { cards: [{ id: uid(), front: '', back: '' }] }; }
 }
 
 export function FlashcardBlockEditor({
@@ -45,7 +65,11 @@ export function FlashcardBlockEditor({
     commit({ cards: payload.cards.map((c) => (c.id === id ? { ...c, [field]: value } : c)) });
   }
 
-  function setMedia(id: string, field: 'imageStorageId' | 'audioStorageId', value: string | null) {
+  function setMedia(
+    id: string,
+    field: 'frontImageStorageId' | 'frontAudioStorageId' | 'backImageStorageId' | 'backAudioStorageId',
+    value: string | null,
+  ) {
     commit({
       cards: payload.cards.map((c) =>
         c.id === id ? { ...c, [field]: value ?? undefined } : c,
@@ -111,6 +135,22 @@ export function FlashcardBlockEditor({
                       placeholder="Question or prompt…"
                       multiline
                     />
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      <MediaUpload
+                        accept="image/*"
+                        storageId={card.frontImageStorageId ?? null}
+                        onChange={(id) => setMedia(card.id, 'frontImageStorageId', id)}
+                        onClear={() => setMedia(card.id, 'frontImageStorageId', null)}
+                        label="Front image"
+                      />
+                      <MediaUpload
+                        accept="audio/*"
+                        storageId={card.frontAudioStorageId ?? null}
+                        onChange={(id) => setMedia(card.id, 'frontAudioStorageId', id)}
+                        onClear={() => setMedia(card.id, 'frontAudioStorageId', null)}
+                        label="Front audio"
+                      />
+                    </div>
                   </div>
                   <div>
                     <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-400">Back (answer)</label>
@@ -120,20 +160,22 @@ export function FlashcardBlockEditor({
                       placeholder="Answer or explanation…"
                       multiline
                     />
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <MediaUpload
-                      accept="image/*"
-                      storageId={card.imageStorageId ?? null}
-                      onChange={(id) => setMedia(card.id, 'imageStorageId', id)}
-                      onClear={() => setMedia(card.id, 'imageStorageId', null)}
-                    />
-                    <MediaUpload
-                      accept="audio/*"
-                      storageId={card.audioStorageId ?? null}
-                      onChange={(id) => setMedia(card.id, 'audioStorageId', id)}
-                      onClear={() => setMedia(card.id, 'audioStorageId', null)}
-                    />
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      <MediaUpload
+                        accept="image/*"
+                        storageId={card.backImageStorageId ?? null}
+                        onChange={(id) => setMedia(card.id, 'backImageStorageId', id)}
+                        onClear={() => setMedia(card.id, 'backImageStorageId', null)}
+                        label="Back image"
+                      />
+                      <MediaUpload
+                        accept="audio/*"
+                        storageId={card.backAudioStorageId ?? null}
+                        onChange={(id) => setMedia(card.id, 'backAudioStorageId', id)}
+                        onClear={() => setMedia(card.id, 'backAudioStorageId', null)}
+                        label="Back audio"
+                      />
+                    </div>
                   </div>
                 </div>
               )}

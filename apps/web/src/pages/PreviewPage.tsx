@@ -47,7 +47,16 @@ function extractStorageIds(blocks: Array<{ type: string; content?: string }>): s
         }
       }
       if (Array.isArray(p.cards)) {
-        for (const card of p.cards as Array<{ imageStorageId?: string; audioStorageId?: string }>) {
+        for (const card of p.cards as Array<{
+          frontImageStorageId?: string; frontAudioStorageId?: string;
+          backImageStorageId?: string; backAudioStorageId?: string;
+          imageStorageId?: string; audioStorageId?: string;
+        }>) {
+          if (typeof card.frontImageStorageId === 'string') ids.push(card.frontImageStorageId);
+          if (typeof card.frontAudioStorageId === 'string') ids.push(card.frontAudioStorageId);
+          if (typeof card.backImageStorageId === 'string') ids.push(card.backImageStorageId);
+          if (typeof card.backAudioStorageId === 'string') ids.push(card.backAudioStorageId);
+          // legacy: shared image/audio authored before front/back became independent
           if (typeof card.imageStorageId === 'string') ids.push(card.imageStorageId);
           if (typeof card.audioStorageId === 'string') ids.push(card.audioStorageId);
         }

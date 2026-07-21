@@ -6,8 +6,10 @@ interface Card {
   id: string;
   front: string;
   back: string;
-  imageStorageId?: string;
-  audioStorageId?: string;
+  frontImageStorageId?: string;
+  frontAudioStorageId?: string;
+  backImageStorageId?: string;
+  backAudioStorageId?: string;
 }
 
 interface Payload {
@@ -100,8 +102,10 @@ export function FlashcardBlockRenderer({ block, resolveAsset }: Props) {
 
   const card = cards[cardIdx]!;
   const total = cards.length;
-  const imageSrc = card.imageStorageId ? resolveAsset(card.imageStorageId) : undefined;
-  const audioSrc = card.audioStorageId ? resolveAsset(card.audioStorageId) : undefined;
+  const frontImageSrc = card.frontImageStorageId ? resolveAsset(card.frontImageStorageId) : undefined;
+  const frontAudioSrc = card.frontAudioStorageId ? resolveAsset(card.frontAudioStorageId) : undefined;
+  const backImageSrc = card.backImageStorageId ? resolveAsset(card.backImageStorageId) : undefined;
+  const backAudioSrc = card.backAudioStorageId ? resolveAsset(card.backAudioStorageId) : undefined;
 
   return (
     <div className="prism-flashcard my-6 select-none">
@@ -135,8 +139,8 @@ export function FlashcardBlockRenderer({ block, resolveAsset }: Props) {
             labelBg="#eff6ff"
             labelColor="#2563eb"
             html={card.front}
-            imageSrc={imageSrc}
-            audioSrc={audioSrc}
+            imageSrc={frontImageSrc}
+            audioSrc={frontAudioSrc}
             hint="Click to reveal answer"
             isBack={false}
           />
@@ -145,8 +149,8 @@ export function FlashcardBlockRenderer({ block, resolveAsset }: Props) {
             labelBg="#ecfdf5"
             labelColor="#059669"
             html={card.back}
-            imageSrc={imageSrc}
-            audioSrc={audioSrc}
+            imageSrc={backImageSrc}
+            audioSrc={backAudioSrc}
             hint="Click to see question"
             isBack
           />

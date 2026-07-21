@@ -306,22 +306,40 @@ function renderBlock(block: ExportBlock, assetMap: Record<string, string>): stri
     }
 
     case 'flashcard': {
-      let p: { cards?: Array<{ id: string; front: string; back: string; imageStorageId?: string; audioStorageId?: string }> } = {};
+      let p: { cards?: Array<{
+        id: string; front: string; back: string;
+        frontImageStorageId?: string; frontAudioStorageId?: string;
+        backImageStorageId?: string; backAudioStorageId?: string;
+        /** legacy: shared image/audio authored before front/back became independent */
+        imageStorageId?: string; audioStorageId?: string;
+      }> } = {};
       try { p = JSON.parse(c) as typeof p; } catch { /* */ }
       const cards = p.cards ?? [];
       if (!cards.length) return '';
       const cardsHtml = cards.map((card, i) => {
-        const imgSrc = card.imageStorageId ? assetMap[card.imageStorageId] : undefined;
-        const audioSrc = card.audioStorageId ? assetMap[card.audioStorageId] : undefined;
-        const imageHtml = imgSrc ? `<img src="${escapeHtml(imgSrc)}" alt="" />` : '';
-        const audioHtml = audioSrc
-          ? `<audio controls src="${escapeHtml(audioSrc)}" onclick="event.stopPropagation()"></audio>`
+        // Legacy cards stored one shared image/audio for both faces — fold
+        // those into the back face (this project's original use case) so
+        // cards authored before front/back became independent keep showing
+        // their media without needing a re-save in the editor.
+        const backImageId = card.frontImageStorageId || card.backImageStorageId ? card.backImageStorageId : card.imageStorageId;
+        const backAudioId = card.frontAudioStorageId || card.backAudioStorageId ? card.backAudioStorageId : card.audioStorageId;
+        const frontImgSrc = card.frontImageStorageId ? assetMap[card.frontImageStorageId] : undefined;
+        const frontAudioSrc = card.frontAudioStorageId ? assetMap[card.frontAudioStorageId] : undefined;
+        const backImgSrc = backImageId ? assetMap[backImageId] : undefined;
+        const backAudioSrc = backAudioId ? assetMap[backAudioId] : undefined;
+        const frontImageHtml = frontImgSrc ? `<img src="${escapeHtml(frontImgSrc)}" alt="" />` : '';
+        const frontAudioHtml = frontAudioSrc
+          ? `<audio controls src="${escapeHtml(frontAudioSrc)}" onclick="event.stopPropagation()"></audio>`
+          : '';
+        const backImageHtml = backImgSrc ? `<img src="${escapeHtml(backImgSrc)}" alt="" />` : '';
+        const backAudioHtml = backAudioSrc
+          ? `<audio controls src="${escapeHtml(backAudioSrc)}" onclick="event.stopPropagation()"></audio>`
           : '';
         return `<div class="prism-fc-card" data-idx="${i}" style="${i > 0 ? 'display:none' : ''}">
   <div class="prism-fc-scene">
     <div class="prism-fc-inner" data-flipped="false">
-      <div class="prism-fc-face prism-fc-front">${imageHtml}${sanitizeMultilineHtml(card.front)}${audioHtml}</div>
-      <div class="prism-fc-face prism-fc-back">${imageHtml}${sanitizeMultilineHtml(card.back)}${audioHtml}</div>
+      <div class="prism-fc-face prism-fc-front">${frontImageHtml}${sanitizeMultilineHtml(card.front)}${frontAudioHtml}</div>
+      <div class="prism-fc-face prism-fc-back">${backImageHtml}${sanitizeMultilineHtml(card.back)}${backAudioHtml}</div>
     </div>
   </div>
   <button type="button" class="prism-fc-flip">Tap to reveal</button>
@@ -1838,6 +1856,11 @@ export async function buildScormPackage(
         if (Array.isArray(p.cards)) {
           for (const card of p.cards as Array<Record<string, unknown>>) {
             if (typeof card.storageId === 'string') storageIds.add(card.storageId);
+            if (typeof card.frontImageStorageId === 'string') storageIds.add(card.frontImageStorageId);
+            if (typeof card.frontAudioStorageId === 'string') storageIds.add(card.frontAudioStorageId);
+            if (typeof card.backImageStorageId === 'string') storageIds.add(card.backImageStorageId);
+            if (typeof card.backAudioStorageId === 'string') storageIds.add(card.backAudioStorageId);
+            // legacy: shared image/audio authored before front/back became independent
             if (typeof card.imageStorageId === 'string') storageIds.add(card.imageStorageId);
             if (typeof card.audioStorageId === 'string') storageIds.add(card.audioStorageId);
           }
