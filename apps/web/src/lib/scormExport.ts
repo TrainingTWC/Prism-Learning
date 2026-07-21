@@ -1578,31 +1578,6 @@ function buildLessonPage(
     });
   });
 
-  // ── Touch swipe navigation ──
-  var swipeEl=document.querySelector('[data-prism-content]');
-  if(swipeEl){
-    var _sx=0,_sy=0,_sw=false;
-    swipeEl.addEventListener('touchstart',function(e){
-      _sx=e.touches[0].clientX;_sy=e.touches[0].clientY;_sw=true;
-    },{passive:true});
-    swipeEl.addEventListener('touchend',function(e){
-      if(!_sw)return;_sw=false;
-      var dx=e.changedTouches[0].clientX-_sx;
-      var dy=e.changedTouches[0].clientY-_sy;
-      if(Math.abs(dx)>Math.abs(dy)&&Math.abs(dx)>64){
-        var target=dx<0?document.querySelector('[data-prism-next]'):document.querySelector('[data-prism-prev]');
-        if(target){
-          var dir2=dx<0?'next':'prev';
-          var href2=target.getAttribute('href');
-          if(href2)navigateTo(href2,dir2);else target.click();
-        }
-      }
-    },{passive:true});
-    // Cancel swipe on scroll
-    swipeEl.addEventListener('touchmove',function(e){
-      if(_sw&&Math.abs(e.touches[0].clientY-_sy)>10)_sw=false;
-    },{passive:true});
-  }
 })();
 </script>
 <script src="assets/interaction.js"></script>
@@ -1811,22 +1786,6 @@ export function buildPreviewHtml(
     btn.addEventListener('click',function(e){addRipple(btn,e);});
   });
 
-  // Touch swipe
-  var swipeEl=document.querySelector('[data-prism-content]');
-  if(swipeEl){
-    var _sx=0,_sy=0,_sw=false;
-    swipeEl.addEventListener('touchstart',function(e){_sx=e.touches[0].clientX;_sy=e.touches[0].clientY;_sw=true;},{passive:true});
-    swipeEl.addEventListener('touchend',function(e){
-      if(!_sw)return;_sw=false;
-      var dx=e.changedTouches[0].clientX-_sx;
-      var dy=e.changedTouches[0].clientY-_sy;
-      if(Math.abs(dx)>Math.abs(dy)&&Math.abs(dx)>64){
-        if(dx<0){if(nextBtn)nextBtn.click();else if(finishBtn)finishBtn.click();}
-        else{if(prevBtn)prevBtn.click();}
-      }
-    },{passive:true});
-    swipeEl.addEventListener('touchmove',function(e){if(_sw&&Math.abs(e.touches[0].clientY-_sy)>10)_sw=false;},{passive:true});
-  }
 })();
 </script>
 </body>
