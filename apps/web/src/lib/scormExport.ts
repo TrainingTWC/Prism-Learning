@@ -918,7 +918,7 @@ html[data-theme="dark"] .prism-callout--tip{color:#d8b4fe}
 .prism-btn--outline{background:transparent;color:var(--prism-primary);border:2px solid var(--prism-primary)}
 .prism-btn--ghost{background:transparent;color:var(--prism-primary);border:none;text-decoration:underline}
 .prism-phone{display:none}
-.prism-custom-html{margin:1.5rem 0}
+.prism-custom-html{margin:1.5rem 0;max-width:100%;overflow-x:auto}
 /* ── Hotspots ── */
 .prism-hotspots{position:relative;border-radius:12px;overflow:hidden;margin:1.5rem 0}
 .prism-hotspots img{width:100%;display:block}
