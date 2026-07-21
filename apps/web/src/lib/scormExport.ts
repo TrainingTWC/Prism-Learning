@@ -117,6 +117,28 @@ function sanitizeForFeedbackAttr(s: string): string {
   return escapeHtml(sanitizeInlineHtml(s));
 }
 
+/**
+ * A parser-blocking <script src> (no async/defer) pauses rendering of
+ * everything after it in the page until that request resolves. A stray
+ * external script pointed at a slow or dead host (e.g. a browser-injected
+ * tag accidentally copied into a Custom HTML block) can stall an entire
+ * SCORM lesson for minutes. Add defer to any external script tag missing
+ * both attributes so the rest of the block/page renders immediately
+ * regardless of that script's network behavior. Custom HTML otherwise stays
+ * fully unsanitized/unmodified — this is a narrow, additive attribute
+ * insertion via regex rather than a full reparse, so nothing else in the
+ * author's markup is touched.
+ */
+function deferExternalScripts(html: string): string {
+  return html.replace(
+    /<script\b([^>]*?)\bsrc=(["'])(.*?)\2([^>]*)>/gi,
+    (match, before: string, quote: string, src: string, after: string) => {
+      if (/\b(?:async|defer)\b/i.test(before + after)) return match;
+      return `<script${before} src=${quote}${src}${quote}${after} defer>`;
+    },
+  );
+}
+
 function defaultDividerPadding(style?: string) {
   return style === 'space' ? 32 : 48;
 }
@@ -404,10 +426,12 @@ function renderBlock(block: ExportBlock, assetMap: Record<string, string>): stri
     }
 
     case 'customHtml': {
-      // In SCORM export, author controls their own output — use raw HTML (no sanitization)
+      // In SCORM export, author controls their own output — use raw HTML (no
+      // sanitization), aside from deferring external <script src> tags (see
+      // deferExternalScripts) so one bad script can't hang the whole page.
       let p: { html?: string } = {};
       try { p = JSON.parse(c) as typeof p; } catch { /* */ }
-      return `<div class="prism-custom-html">${p.html ?? ''}</div>`;
+      return `<div class="prism-custom-html">${deferExternalScripts(p.html ?? '')}</div>`;
     }
 
     case 'hotspots': {
