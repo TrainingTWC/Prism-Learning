@@ -353,16 +353,20 @@ function renderBlock(block: ExportBlock, assetMap: Record<string, string>): stri
     }
 
     case 'tabs': {
-      let p: { tabs?: Array<{ id: string; title: string; content: string }> } = {};
+      let p: { tabs?: Array<{ id: string; title: string; content: string; imageStorageId?: string; audioStorageId?: string }> } = {};
       try { p = JSON.parse(c) as typeof p; } catch { /* */ }
       const tabs = p.tabs ?? [];
       if (!tabs.length) return '';
       const tabBtns = tabs.map((t, i) =>
-        `<button type="button" class="prism-tab-btn${i === 0 ? ' active' : ''}" data-idx="${i}" style="all:unset;flex-shrink:0;padding:.85rem 1.1rem;font:inherit;font-size:.875rem;font-weight:600;border:0;border-bottom:2px solid ${i === 0 ? 'var(--prism-primary)' : 'transparent'};background:none;cursor:pointer;color:${i === 0 ? 'var(--prism-primary)' : 'var(--prism-text-muted)'};white-space:nowrap;transition:color .15s,border-color .15s">${t.title || `Tab ${i + 1}`}</button>`,
+        `<button type="button" class="prism-tab-btn${i === 0 ? ' active' : ''}" data-idx="${i}">${t.title || `Tab ${i + 1}`}</button>`,
       ).join('');
-      const tabPanels = tabs.map((t, i) =>
-        `<div class="prism-tab-panel prism-rich-content" data-idx="${i}" style="${i > 0 ? 'display:none' : ''}">${t.content}</div>`,
-      ).join('');
+      const tabPanels = tabs.map((t, i) => {
+        const imgSrc = t.imageStorageId ? assetMap[t.imageStorageId] : undefined;
+        const audioSrc = t.audioStorageId ? assetMap[t.audioStorageId] : undefined;
+        const imageHtml = imgSrc ? `<img src="${escapeHtml(imgSrc)}" alt="" class="prism-tab-img" />` : '';
+        const audioHtml = audioSrc ? `<audio controls src="${escapeHtml(audioSrc)}"></audio>` : '';
+        return `<div class="prism-tab-panel prism-rich-content" data-idx="${i}" style="${i > 0 ? 'display:none' : ''}">${imageHtml}${t.content}${audioHtml}</div>`;
+      }).join('');
       return `<div class="prism-tabs">
   <div class="prism-tabs-bar">${tabBtns}</div>
   <div class="prism-tabs-panels">${tabPanels}</div>
@@ -883,6 +887,8 @@ html[data-theme="dark"] .prism-callout--tip{color:#d8b4fe}
 .prism-tab-btn{flex-shrink:0;padding:.85rem 1.1rem;font:inherit;font-size:.875rem;font-weight:600;border:0;background:none;cursor:pointer;color:var(--prism-text-muted);border-bottom:2px solid transparent;margin-bottom:-2px;transition:color .15s,border-color .15s;white-space:nowrap}
 .prism-tab-btn:hover{color:var(--prism-text)}
 .prism-tab-btn.active{color:var(--prism-primary);border-bottom-color:var(--prism-primary)}
+.prism-tab-img{max-height:16rem;max-width:100%;border-radius:12px;object-fit:contain;display:block;margin:0 auto 1rem}
+.prism-tab-panel audio{width:100%;margin-top:1rem;display:block}
 .prism-tabs-panels{padding:1.25rem}
 .prism-tab-panel{font-size:.92rem;line-height:1.7;color:var(--prism-text-2)}
 .prism-tab-panel p{margin:0}

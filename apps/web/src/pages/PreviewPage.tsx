@@ -52,6 +52,12 @@ function extractStorageIds(blocks: Array<{ type: string; content?: string }>): s
           if (typeof card.audioStorageId === 'string') ids.push(card.audioStorageId);
         }
       }
+      if (Array.isArray(p.tabs)) {
+        for (const tab of p.tabs as Array<{ imageStorageId?: string; audioStorageId?: string }>) {
+          if (typeof tab.imageStorageId === 'string') ids.push(tab.imageStorageId);
+          if (typeof tab.audioStorageId === 'string') ids.push(tab.audioStorageId);
+        }
+      }
     } catch { /* not JSON */ }
   }
   return [...new Set(ids)];

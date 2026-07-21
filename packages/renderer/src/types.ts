@@ -125,7 +125,7 @@ export interface ProcessBlock {
 export interface TabsBlock {
   id: string;
   type: 'tabs';
-  content: string; // JSON: { tabs: { id: string; title: string; content: string }[] }
+  content: string; // JSON: { tabs: { id: string; title: string; content: string; imageStorageId?: string; audioStorageId?: string }[] }
 }
 
 export interface ButtonBlock {

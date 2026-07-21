@@ -78,7 +78,7 @@ export function Module({ blocks, theme, resolveAsset }: ModuleProps) {
             rendered = <ProcessBlockRenderer block={block} />;
             break;
           case 'tabs':
-            rendered = <TabsBlockRenderer block={block} />;
+            rendered = <TabsBlockRenderer block={block} resolveAsset={resolveAsset} />;
             break;
           case 'button':
             rendered = <ButtonBlockRenderer block={block} />;
