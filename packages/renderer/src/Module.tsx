@@ -72,7 +72,7 @@ export function Module({ blocks, theme, resolveAsset }: ModuleProps) {
             rendered = <DividerBlockRenderer block={block} />;
             break;
           case 'flashcard':
-            rendered = <FlashcardBlockRenderer block={block} />;
+            rendered = <FlashcardBlockRenderer block={block} resolveAsset={resolveAsset} />;
             break;
           case 'process':
             rendered = <ProcessBlockRenderer block={block} />;

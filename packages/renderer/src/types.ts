@@ -113,7 +113,7 @@ export interface DividerBlock {
 export interface FlashcardBlock {
   id: string;
   type: 'flashcard';
-  content: string; // JSON: { cards: { id: string; front: string; back: string }[] }
+  content: string; // JSON: { cards: { id: string; front: string; back: string; imageStorageId?: string; audioStorageId?: string }[] }
 }
 
 export interface ProcessBlock {

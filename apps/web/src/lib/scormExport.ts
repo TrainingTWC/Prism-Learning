@@ -306,19 +306,27 @@ function renderBlock(block: ExportBlock, assetMap: Record<string, string>): stri
     }
 
     case 'flashcard': {
-      let p: { cards?: Array<{ id: string; front: string; back: string }> } = {};
+      let p: { cards?: Array<{ id: string; front: string; back: string; imageStorageId?: string; audioStorageId?: string }> } = {};
       try { p = JSON.parse(c) as typeof p; } catch { /* */ }
       const cards = p.cards ?? [];
       if (!cards.length) return '';
-      const cardsHtml = cards.map((card, i) =>
-        `<div class="prism-fc-card" data-idx="${i}" style="${i > 0 ? 'display:none' : ''}">
-  <div class="prism-fc-inner" data-flipped="false">
-    <div class="prism-fc-front">${sanitizeMultilineHtml(card.front)}</div>
-    <div class="prism-fc-back" style="display:none">${sanitizeMultilineHtml(card.back)}</div>
+      const cardsHtml = cards.map((card, i) => {
+        const imgSrc = card.imageStorageId ? assetMap[card.imageStorageId] : undefined;
+        const audioSrc = card.audioStorageId ? assetMap[card.audioStorageId] : undefined;
+        const imageHtml = imgSrc ? `<img src="${escapeHtml(imgSrc)}" alt="" />` : '';
+        const audioHtml = audioSrc
+          ? `<audio controls src="${escapeHtml(audioSrc)}" onclick="event.stopPropagation()"></audio>`
+          : '';
+        return `<div class="prism-fc-card" data-idx="${i}" style="${i > 0 ? 'display:none' : ''}">
+  <div class="prism-fc-scene">
+    <div class="prism-fc-inner" data-flipped="false">
+      <div class="prism-fc-face prism-fc-front">${imageHtml}${sanitizeMultilineHtml(card.front)}${audioHtml}</div>
+      <div class="prism-fc-face prism-fc-back">${imageHtml}${sanitizeMultilineHtml(card.back)}${audioHtml}</div>
+    </div>
   </div>
   <button type="button" class="prism-fc-flip">Tap to reveal</button>
-</div>`,
-      ).join('');
+</div>`;
+      }).join('');
       return `<div class="prism-flashcards" data-total="${cards.length}" data-current="0">
   ${cardsHtml}
   <div class="prism-fc-nav">
@@ -848,9 +856,14 @@ html[data-theme="dark"] .prism-callout--tip{color:#d8b4fe}
 .prism-divider--label{display:flex;align-items:center;gap:.75rem;padding:var(--prism-divider-padding) 0;color:var(--prism-text-muted);font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em}
 .prism-divider--label::before,.prism-divider--label::after{content:'';flex:1;border-top:1.5px solid var(--prism-border)}
 .prism-flashcards{background:var(--prism-surface-2);border:1px solid var(--prism-border);border-radius:20px;padding:1.25rem;margin:1.75rem 0}
-.prism-fc-inner{min-height:10rem;background:var(--prism-surface);border-radius:14px;border:1.5px solid var(--prism-border);padding:1.5rem;display:flex;align-items:center;justify-content:center;text-align:center;margin-bottom:.875rem;box-shadow:var(--prism-shadow-soft);color:var(--prism-text)}
+.prism-fc-scene{perspective:1600px;margin-bottom:.875rem;cursor:pointer}
+.prism-fc-inner{display:grid;width:100%;transition:transform .6s cubic-bezier(.4,.15,.2,1);transform-style:preserve-3d}
+.prism-fc-inner[data-flipped="true"]{transform:rotateY(180deg)}
+.prism-fc-face{grid-row:1;grid-column:1;min-height:12rem;background:var(--prism-surface);border-radius:14px;border:1.5px solid var(--prism-border);padding:1.5rem;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;box-shadow:var(--prism-shadow-soft);color:var(--prism-text);backface-visibility:hidden;-webkit-backface-visibility:hidden}
+.prism-fc-face img{max-height:8rem;max-width:100%;border-radius:10px;object-fit:contain;margin-bottom:.75rem}
+.prism-fc-face audio{width:100%;max-width:16rem;margin-top:.75rem}
+.prism-fc-back{transform:rotateY(180deg)}
 .prism-fc-front p,.prism-fc-back p{font-size:.98rem;line-height:1.65;color:var(--prism-text);margin:0}
-.prism-fc-back{display:none}
 .prism-fc-flip{width:100%;min-height:44px;background:linear-gradient(135deg,var(--prism-primary),var(--prism-accent));color:#fff;border:0;border-radius:10px;font:inherit;font-size:.9rem;font-weight:700;cursor:pointer;margin-bottom:.75rem;transition:filter .15s;box-shadow:0 10px 22px -12px var(--prism-primary)}
 .prism-fc-flip:hover{filter:brightness(1.05)}
 .prism-fc-nav{display:flex;align-items:center;justify-content:space-between;gap:.5rem}
@@ -1112,7 +1125,15 @@ document.querySelectorAll('.prism-flashcards').forEach(function(fc){
   var count=fc.querySelector('.prism-fc-count');
   var prev=fc.querySelector('.prism-fc-prev');
   var next=fc.querySelector('.prism-fc-next');
+  function setFlipped(card,flipped){
+    var inner=card.querySelector('.prism-fc-inner');
+    var btn=card.querySelector('.prism-fc-flip');
+    if(!inner)return;
+    inner.dataset.flipped=flipped?'true':'false';
+    if(btn)btn.textContent=flipped?'Tap to see question':'Tap to reveal';
+  }
   function goTo(idx){
+    setFlipped(cards[current],false);
     cards[current].style.display='none';
     current=idx;
     cards[current].style.display='';
@@ -1120,25 +1141,12 @@ document.querySelectorAll('.prism-flashcards').forEach(function(fc){
     if(prev)prev.disabled=(current===0);
     if(next)next.disabled=(current===total-1);
   }
-  fc.querySelectorAll('.prism-fc-flip').forEach(function(btn){
-    btn.addEventListener('click',function(){
-      var inner=btn.previousElementSibling;
-      if(!inner)return;
-      var flipped=inner.dataset.flipped==='true';
-      var front=inner.querySelector('.prism-fc-front');
-      var back=inner.querySelector('.prism-fc-back');
-      if(!flipped){
-        if(front)front.style.display='none';
-        if(back)back.style.display='flex';
-        btn.textContent='Tap to flip back';
-        inner.dataset.flipped='true';
-      } else {
-        if(front)front.style.display='flex';
-        if(back)back.style.display='none';
-        btn.textContent='Tap to reveal';
-        inner.dataset.flipped='false';
-      }
-    });
+  cards.forEach(function(card){
+    var inner=card.querySelector('.prism-fc-inner');
+    var btn=card.querySelector('.prism-fc-flip');
+    function toggle(){ setFlipped(card, inner.dataset.flipped!=='true'); }
+    if(inner)inner.addEventListener('click',toggle);
+    if(btn)btn.addEventListener('click',toggle);
   });
   if(prev)prev.addEventListener('click',function(){if(current>0)goTo(current-1);});
   if(next)next.addEventListener('click',function(){if(current<total-1)goTo(current+1);});
@@ -1821,6 +1829,7 @@ export async function buildScormPackage(
           for (const card of p.cards as Array<Record<string, unknown>>) {
             if (typeof card.storageId === 'string') storageIds.add(card.storageId);
             if (typeof card.imageStorageId === 'string') storageIds.add(card.imageStorageId);
+            if (typeof card.audioStorageId === 'string') storageIds.add(card.audioStorageId);
           }
         }
       } catch { /* not JSON */ }
