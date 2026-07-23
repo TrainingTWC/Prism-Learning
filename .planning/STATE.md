@@ -74,6 +74,7 @@
 | 260710-eyl | Rename app "Prism Learning" → "Prism Authoring" (UI, emails, package.json, docs) | 2026-07-10 | TBD | [260710-eyl-rename-prism-authoring](./quick/260710-eyl-rename-prism-authoring/) |
 | 260720-fe0 | Fix hotspot popover overflow (pin to bottom) + MCQ selection marker (neutral pre-submit fill, gate correctness reveal behind submit) in learner-preview renderers | 2026-07-20 | 3bc5954 | [260720-fe0-fix-hotspot-popover-overflow-and-mcq-sel](./quick/260720-fe0-fix-hotspot-popover-overflow-and-mcq-sel/) |
 | fast | Same hotspot popover + MCQ marker fixes applied to the ACTUAL render path (scormExport.ts buildPreviewHtml/buildLessonPage — preview iframe + SCORM export); 260720-fe0 had edited the unused packages/renderer by mistake | 2026-07-20 | 269aa80 | — |
+| 260723-b2g | Fix CSS leakage from custom-html blocks: Shadow DOM isolation in both React renderer (CustomHtmlBlockRenderer.tsx) and SCORM/preview export (scormExport.ts) — pasted `<style>` in a custom-html block no longer overrides lesson title/theme fonts elsewhere on the page. Human verification of the fix still pending (blocking checkpoint). | 2026-07-23 | fb0de00, 4cc5f31 | [260723-b2g-fix-css-leakage-from-custom-html-blocks-](./quick/260723-b2g-fix-css-leakage-from-custom-html-blocks-/) |
 
 ---
 
@@ -86,7 +87,7 @@
 ## Session Continuity
 
 **Last session ended:** 2026-05-27 — roadmap created and committed.
-**Last activity:** 2026-07-20 - Completed quick task 260720-fe0: fixed hotspot popover overflow and MCQ selection marker in learner-preview renderers.
+**Last activity:** 2026-07-23 - Completed quick task 260723-b2g: shadow-DOM isolation for custom-html blocks to stop pasted CSS leaking into lesson title/theme fonts (pending human verification of the fix).
 **Resume with:** `/gsd-plan-phase 1` (or `/gsd-ui-phase 1` for the sign-in UI design first).
 
 **Files just created/updated:**
