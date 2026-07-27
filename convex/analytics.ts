@@ -15,6 +15,21 @@ import { getAuthUserId } from '@convex-dev/auth/server';
 import { internal, api } from './_generated/api';
 import type { Doc, Id } from './_generated/dataModel';
 
+// ── Shared validators ─────────────────────────────────────────────────────
+// Declared before first use: these are referenced by computeGaps' args, which
+// are evaluated at module load, so defining them lower down would hit the TDZ.
+
+const thresholdsValidator = v.object({
+  critical: v.number(),
+  high: v.number(),
+  medium: v.number(),
+  low: v.number(),
+});
+
+const dimensionsValidator = v.array(
+  v.union(v.literal('region'), v.literal('areaManager'), v.literal('store')),
+);
+
 // ── PI response shapes ────────────────────────────────────────────────────
 // Minimal interfaces for data returned by PI's public Convex HTTP queries.
 
@@ -278,12 +293,29 @@ export const computeGaps = action({
     workspaceId: v.id('workspaces'),
     /** Run under a saved analysis profile. Omitted = legacy link defaults. */
     profileId: v.optional(v.id('analysisProfiles')),
+    /**
+     * Ad-hoc config for running an unsaved panel state. Takes precedence over
+     * `profileId` so the user can tweak a loaded profile and run without
+     * having to save first.
+     */
+    overrides: v.optional(
+      v.object({
+        programs: v.array(v.string()),
+        fromDate: v.optional(v.number()),
+        toDate: v.optional(v.number()),
+        lookbackDays: v.number(),
+        benchmarkScore: v.number(),
+        thresholds: thresholdsValidator,
+        minSubmissions: v.number(),
+        dimensions: dimensionsValidator,
+      }),
+    ),
   },
   // Explicit annotations: these runQuery calls target functions declared in
   // this same module, so TS cannot infer the types without a cycle (TS7022).
   handler: async (
     ctx,
-    { workspaceId, profileId },
+    { workspaceId, profileId, overrides },
   ): Promise<{
     gapCount: number;
     submissionCount: number;
@@ -306,7 +338,8 @@ export const computeGaps = action({
       : null;
     if (profileId && !profile) throw new ConvexError('Analysis profile not found');
 
-    const cfg = {
+    // Precedence: inline overrides > saved profile > link defaults.
+    const cfg = overrides ?? {
       programs: profile?.programs ?? DEFAULT_PROFILE.programs,
       fromDate: profile?.fromDate,
       toDate: profile?.toDate,
@@ -316,6 +349,8 @@ export const computeGaps = action({
       minSubmissions: profile?.minSubmissions ?? DEFAULT_PROFILE.minSubmissions,
       dimensions: profile?.dimensions ?? DEFAULT_PROFILE.dimensions,
     };
+    if (cfg.dimensions.length === 0)
+      throw new ConvexError('Select at least one dimension to analyse');
     const programFilter = new Set(cfg.programs);
 
     const piUrl = (process.env.PI_CONVEX_URL ?? '').replace(/\/+$/, '');
@@ -506,17 +541,6 @@ export const computeGaps = action({
 });
 
 // ── Analysis profiles ────────────────────────────────────────────────────
-
-const thresholdsValidator = v.object({
-  critical: v.number(),
-  high: v.number(),
-  medium: v.number(),
-  low: v.number(),
-});
-
-const dimensionsValidator = v.array(
-  v.union(v.literal('region'), v.literal('areaManager'), v.literal('store')),
-);
 
 /** Defaults reproduce the pre-profile hardcoded behaviour exactly. */
 export const DEFAULT_PROFILE = {

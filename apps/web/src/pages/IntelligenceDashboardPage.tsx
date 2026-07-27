@@ -34,6 +34,7 @@ import {
 import { useState, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { PrismWorkspaceShell } from '../components/PrismWorkspaceShell';
+import { AnalysisControlPanel, type AnalysisConfig } from '../components/AnalysisControlPanel';
 
 const DEFAULT_COMPANY_CODE = 'HBPL';
 
@@ -1079,17 +1080,26 @@ function IntelligenceContent({
       ? (gaps.reduce((s, g) => s + g.avgScore - g.benchmark, 0) / gaps.length).toFixed(1)
       : null;
 
-  async function handleCompute() {
+  async function handleCompute(
+    profileId?: Id<'analysisProfiles'>,
+    overrides?: AnalysisConfig,
+  ) {
     setComputing(true);
     setComputeErr('');
     try {
-      await computeGaps({ workspaceId });
+      await computeGaps({ workspaceId, profileId, overrides });
     } catch (e: any) {
       setComputeErr(e.data ?? e.message ?? 'Compute failed');
     } finally {
       setComputing(false);
     }
   }
+
+  // Program names discovered from the last analysis — drives the panel's
+  // program multi-select.
+  const availablePrograms = Array.from(
+    new Set((gaps ?? []).map((g) => g.programName).filter(Boolean)),
+  ).sort();
 
   if (link === undefined) {
     return (
@@ -1139,7 +1149,7 @@ function IntelligenceContent({
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={handleCompute}
+              onClick={() => void handleCompute()}
               disabled={computing}
               className="flex items-center gap-1.5 rounded-lg border border-[var(--border-subtle)] px-3 py-1.5 text-xs font-semibold text-[var(--text-secondary)] transition hover:border-[var(--ember-400)]/50 hover:text-[var(--text-primary)] disabled:opacity-50"
             >
@@ -1233,7 +1243,7 @@ function IntelligenceContent({
           </div>
           <button
             type="button"
-            onClick={handleCompute}
+            onClick={() => void handleCompute()}
             disabled={computing}
             className="prism-action-primary flex items-center gap-2 rounded-xl px-6 py-3 font-bold disabled:opacity-50"
           >
@@ -1249,6 +1259,13 @@ function IntelligenceContent({
       ) : (
         <>
           {/* KPI strip */}
+          <AnalysisControlPanel
+            workspaceId={workspaceId}
+            availablePrograms={availablePrograms}
+            running={computing}
+            onRun={(profileId, config) => void handleCompute(profileId, config)}
+          />
+
           <div className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
             <KpiCard
               label="Avg Score"
