@@ -178,6 +178,47 @@ export default defineSchema({
     updatedAt: v.number(),
   }).index('by_workspace', ['workspaceId']),
 
+  /**
+   * Saved, reusable analysis configurations. A profile fully describes HOW a
+   * gap analysis is run (which programs, which window, what counts as a gap)
+   * so a setup can be named once and re-run later.
+   */
+  analysisProfiles: defineTable({
+    workspaceId: v.id('workspaces'),
+    name: v.string(),
+    /** PI program names to include. Empty array = all programs. */
+    programs: v.array(v.string()),
+    /**
+     * Explicit window in epoch ms. When `fromDate` is absent the analysis
+     * falls back to `lookbackDays` (rolling window), preserving the original
+     * behaviour for profiles that don't pin dates.
+     */
+    fromDate: v.optional(v.number()),
+    toDate: v.optional(v.number()),
+    lookbackDays: v.number(),
+    /** Score below which a category counts as a gap */
+    benchmarkScore: v.number(),
+    /** Gap-size cutoffs (percentage points). Was hardcoded 25/15/8/2. */
+    thresholds: v.object({
+      critical: v.number(),
+      high: v.number(),
+      medium: v.number(),
+      /** Gaps smaller than this are discarded entirely */
+      low: v.number(),
+    }),
+    /** Drop any aggregate built from fewer than this many submissions */
+    minSubmissions: v.number(),
+    /** Which dimensions to aggregate over */
+    dimensions: v.array(
+      v.union(v.literal('region'), v.literal('areaManager'), v.literal('store')),
+    ),
+    /** The profile applied when the dashboard loads */
+    isDefault: v.optional(v.boolean()),
+    lastRunAt: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index('by_workspace', ['workspaceId']),
+
   /** Materialized gap analysis results — recomputed on demand */
   trainingGaps: defineTable({
     workspaceId: v.id('workspaces'),
@@ -224,6 +265,16 @@ export default defineSchema({
       v.literal('dismissed'),
     ),
     moduleId: v.optional(v.id('modules')),
+    /**
+     * Whether the AI wants a brand-new course or an extension of something
+     * already authored in this workspace. Optional for back-compat with
+     * recommendations generated before module-awareness existed.
+     */
+    kind: v.optional(v.union(v.literal('new'), v.literal('extend'))),
+    /** When kind === 'extend', the existing module to build on */
+    extendsModuleId: v.optional(v.id('modules')),
+    /** AI's note on what the workspace already covers for this gap */
+    coverageNote: v.optional(v.string()),
     /** Audience scope returned by the AI: national, regional, area-manager, or store level */
     audienceLevel: v.optional(
       v.union(v.literal('national'), v.literal('regional'), v.literal('areaManager'), v.literal('store')),
