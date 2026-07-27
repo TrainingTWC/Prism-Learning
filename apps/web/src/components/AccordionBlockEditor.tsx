@@ -154,14 +154,23 @@ export function AccordionBlockEditor({
                   )}
                 </button>
 
-                {/* Title input */}
-                <input
-                  type="text"
-                  value={section.title}
-                  onChange={(e) => setTitle(section.id, e.target.value)}
-                  placeholder={`Section ${idx + 1} title…`}
-                  className="flex-1 bg-transparent text-sm font-medium text-slate-700 placeholder-slate-400 outline-none"
-                />
+                {/* Title preview — styled exactly as the learner sees it.
+                    Editing happens in the expanded panel so the formatting
+                    toolbar has room. */}
+                <button
+                  type="button"
+                  onClick={() => setExpandedId(isOpen ? null : section.id)}
+                  className="flex-1 truncate text-left text-sm font-medium text-slate-700 [&_p]:m-0 [&_p]:inline [&_strong]:font-bold [&_em]:italic [&_u]:underline"
+                >
+                  {section.title ? (
+                    <span
+                      // eslint-disable-next-line react/no-danger -- author-authored inline HTML, sanitized at render
+                      dangerouslySetInnerHTML={{ __html: section.title }}
+                    />
+                  ) : (
+                    <span className="text-slate-400">{`Section ${idx + 1} title…`}</span>
+                  )}
+                </button>
 
                 <button
                   type="button"
@@ -178,6 +187,14 @@ export function AccordionBlockEditor({
               {isOpen && (
                 <div className="border-t border-slate-100 bg-slate-50/60 px-4 py-3">
                   <label className="block text-[11px] font-semibold uppercase tracking-wide text-slate-400 mb-1.5">
+                    Title
+                  </label>
+                  <InlineRichText
+                    value={section.title}
+                    onChange={(html) => setTitle(section.id, html)}
+                    placeholder={`Section ${idx + 1} title…`}
+                  />
+                  <label className="mt-3 block text-[11px] font-semibold uppercase tracking-wide text-slate-400 mb-1.5">
                     Content
                   </label>
                   <InlineRichText

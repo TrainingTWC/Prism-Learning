@@ -45,7 +45,11 @@ export function AccordionBlockRenderer({ block, resolveAsset }: Props) {
               onClick={() => toggle(s.id)}
               className="prism-pressable flex min-h-12 w-full items-center justify-between px-5 py-4 text-left text-sm font-semibold leading-6 text-slate-800 hover:bg-slate-50"
             >
-              {s.title}
+              <span
+                className="min-w-0 flex-1 [&_p]:m-0 [&_p]:inline"
+                // eslint-disable-next-line react/no-danger -- sanitized via sanitizeInline
+                dangerouslySetInnerHTML={{ __html: sanitizeInline(s.title) }}
+              />
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 className={`size-4 shrink-0 text-slate-400 transition-transform ${open.has(s.id) ? 'rotate-180' : ''}`}

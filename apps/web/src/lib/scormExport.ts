@@ -288,7 +288,7 @@ function renderBlock(block: ExportBlock, assetMap: Record<string, string>): stri
         const imageHtml = imgSrc ? `<img src="${escapeHtml(imgSrc)}" alt="" class="prism-acc-img" />` : '';
         const audioHtml = audioSrc ? `<audio controls src="${escapeHtml(audioSrc)}"></audio>` : '';
         return `<div class="prism-acc-item">
-  <button type="button" class="prism-acc-btn" data-idx="${i}">${escapeHtml(s.title)}<span class="prism-acc-arrow">▼</span></button>
+  <button type="button" class="prism-acc-btn" data-idx="${i}"><span class="prism-acc-title">${sanitizeInlineHtml(s.title)}</span><span class="prism-acc-arrow">▼</span></button>
   <div class="prism-acc-body" style="display:none">${imageHtml}${sanitizeMultilineHtml(s.content)}${audioHtml}</div>
 </div>`;
       }).join('');
@@ -868,6 +868,8 @@ html[data-theme="dark"] .prism-tf-btns button.selected-bad{color:#fca5a5}
 .prism-acc-item:last-child{border-bottom:0}
 .prism-acc-btn{display:flex;justify-content:space-between;align-items:center;width:100%;min-height:3rem;padding:.95rem 1.25rem;font:inherit;font-size:.95rem;line-height:1.5;font-weight:700;color:var(--prism-text);border:0;background:none;cursor:pointer;text-align:left;transition:background-color var(--prism-motion-base)}
 .prism-acc-btn:hover{background:var(--prism-surface-2)}
+.prism-acc-title{flex:1;min-width:0}
+.prism-acc-title p{margin:0;display:inline}
 .prism-acc-arrow{font-size:.65rem;transition:transform var(--prism-motion-base) var(--prism-ease-standard);margin-left:.5rem;color:var(--prism-text-muted)}
 .prism-acc-body{padding:.5rem 1.25rem 1rem;font-size:.92rem;line-height:1.7;color:var(--prism-text-2);border-top:1px solid var(--prism-border-subtle);animation:prism-feedback-enter var(--prism-motion-base) var(--prism-ease-emphasized) both}
 .prism-acc-img{max-height:16rem;max-width:100%;border-radius:12px;object-fit:contain;display:block;margin:.5rem auto 1rem}
