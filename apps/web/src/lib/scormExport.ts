@@ -434,24 +434,18 @@ function renderBlock(block: ExportBlock, assetMap: Record<string, string>): stri
       // sanitization), aside from deferring external <script src> tags (see
       // deferExternalScripts) so one bad script can't hang the whole page.
       //
-      // Author markup is mounted inside an open Shadow DOM root instead of
-      // the light DOM (parity with the React renderer): a pasted <style> /
-      // <link> must not become a global stylesheet that leaks into the rest
-      // of the lesson, and the exported page's own CSS must not bleed into
-      // the author's widget. This exported page has no React, so isolation
-      // is done with a small inline bootstrap <script>. The author markup is
-      // first placed inside an inert <template> (never parsed/rendered in
-      // the light DOM), then the bootstrap script attaches a shadow root,
-      // copies the template content into it, and re-creates any <script>
-      // elements found inside the shadow root — assigning to .innerHTML does
-      // NOT execute <script> tags, so each inert script node is replaced
-      // with a freshly created one (attributes + text copied) to preserve
-      // today's script-execution behavior.
+      // Mounted in the LIGHT DOM on purpose. A previous revision isolated this
+      // in an open Shadow DOM to stop a pasted <style> leaking into the rest of
+      // the lesson, but author widgets routinely drive themselves with
+      // `document.getElementById` / `document.querySelector` and inline `on*=`
+      // handlers. Those cannot see nodes inside a shadow root (and inline
+      // handlers resolve against global scope), so shadow-mounting silently
+      // broke every scripted widget — only its static markup rendered.
+      // Script compatibility was chosen over style isolation; the known
+      // trade-off is that a pasted <style> is a global stylesheet again.
       let p: { html?: string } = {};
       try { p = JSON.parse(c) as typeof p; } catch { /* */ }
-      const uid = `prism_custom_html_${Math.random().toString(36).slice(2, 9)}`;
-      const authorHtml = deferExternalScripts(p.html ?? '');
-      return `<div class="prism-custom-html" data-prism-custom-html="${uid}"></div><template data-prism-custom-html-src="${uid}">${authorHtml}</template><script>(function(){var host=document.querySelector('[data-prism-custom-html="${uid}"]');var tpl=document.querySelector('[data-prism-custom-html-src="${uid}"]');if(!host||!tpl)return;var root=host.shadowRoot||host.attachShadow({mode:'open'});root.innerHTML=tpl.innerHTML;if(tpl.parentNode)tpl.parentNode.removeChild(tpl);var scripts=[].slice.call(root.querySelectorAll('script'));scripts.forEach(function(old){var s=document.createElement('script');for(var i=0;i<old.attributes.length;i++){var a=old.attributes[i];s.setAttribute(a.name,a.value);}s.textContent=old.textContent;if(old.parentNode)old.parentNode.replaceChild(s,old);});})();</script>`;
+      return `<div class="prism-custom-html">${deferExternalScripts(p.html ?? '')}</div>`;
     }
 
     case 'hotspots': {
