@@ -2,18 +2,55 @@ import { useState } from 'react';
 import { useQuery, useMutation } from 'convex/react';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { api } from '~convex/_generated/api';
-import { Plus, Loader2, ChevronRight, Users, Brain, Layers, Palette } from 'lucide-react';
+import { Plus, Loader2, ChevronRight, Users, Brain, Layers, Palette, Pencil, Check, X } from 'lucide-react';
 import { PrismWorkspaceShell } from '../components/PrismWorkspaceShell';
+import type { Id } from '~convex/_generated/dataModel';
 
 export function DashboardPage() {
   const workspaces = useQuery(api.workspaces.listMine);
   const createWorkspace = useMutation(api.workspaces.create);
+  const renameWorkspace = useMutation(api.workspaces.rename);
   const navigate = useNavigate();
 
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Inline rename (owner only — the backend enforces it too)
+  const [renamingId, setRenamingId] = useState<Id<'workspaces'> | null>(null);
+  const [renameValue, setRenameValue] = useState('');
+  const [renameSaving, setRenameSaving] = useState(false);
+  const [renameError, setRenameError] = useState<string | null>(null);
+
+  function startRename(id: Id<'workspaces'>, currentName: string) {
+    setRenamingId(id);
+    setRenameValue(currentName);
+    setRenameError(null);
+  }
+
+  function cancelRename() {
+    setRenamingId(null);
+    setRenameValue('');
+    setRenameError(null);
+  }
+
+  async function handleRename(e: React.FormEvent, id: Id<'workspaces'>) {
+    e.preventDefault();
+    const name = renameValue.trim();
+    if (!name) return;
+
+    setRenameSaving(true);
+    setRenameError(null);
+    try {
+      await renameWorkspace({ workspaceId: id, name });
+      cancelRename();
+    } catch (err) {
+      setRenameError(err instanceof Error ? err.message : 'Failed to rename workspace');
+    } finally {
+      setRenameSaving(false);
+    }
+  }
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -180,34 +217,105 @@ export function DashboardPage() {
         {/* Workspace list */}
         {workspaces && workspaces.length > 0 && (
           <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {workspaces.map((ws) => (
-              <Link
-                key={ws._id}
-                to="/w/$workspaceId"
-                params={{ workspaceId: ws._id }}
-                className="widget group flex items-center justify-between p-5"
-              >
-                <div>
-                  <p className="font-bold text-[var(--text-primary)]">{ws.name}</p>
-                  <div className="mt-1 flex items-center gap-2">
-                    <span
-                      className={`badge-pill ${
-                        ws.role === 'owner'
-                          ? 'bg-[rgba(140,67,208,0.1)] text-[var(--ember-400)]'
-                          : 'bg-white/[0.04] text-[var(--text-tertiary)]'
-                      }`}
-                    >
-                      {ws.role}
-                    </span>
-                    <span className="flex items-center gap-1 text-xs text-[var(--text-muted)]">
-                      <Users className="size-3" />
-                      Members
-                    </span>
-                  </div>
+            {workspaces.map((ws) => {
+              const roleBadge = (
+                <div className="mt-1 flex items-center gap-2">
+                  <span
+                    className={`badge-pill ${
+                      ws.role === 'owner'
+                        ? 'bg-[rgba(140,67,208,0.1)] text-[var(--ember-400)]'
+                        : 'bg-white/[0.04] text-[var(--text-tertiary)]'
+                    }`}
+                  >
+                    {ws.role}
+                  </span>
+                  <span className="flex items-center gap-1 text-xs text-[var(--text-muted)]">
+                    <Users className="size-3" />
+                    Members
+                  </span>
                 </div>
-                <ChevronRight className="size-5 text-[var(--text-muted)] transition-colors group-hover:text-[var(--ember-400)]" />
-              </Link>
-            ))}
+              );
+
+              // Rename mode — a plain card (not a Link) so typing and the
+              // action buttons don't navigate into the workspace.
+              if (renamingId === ws._id) {
+                return (
+                  <div key={ws._id} className="widget p-5">
+                    <form onSubmit={(e) => void handleRename(e, ws._id)}>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          autoFocus
+                          value={renameValue}
+                          onChange={(e) => setRenameValue(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Escape') cancelRename();
+                          }}
+                          aria-label="Workspace name"
+                          className="min-w-0 flex-1 rounded-lg border border-[var(--border-primary)] bg-transparent px-2.5 py-1.5 text-sm font-bold text-[var(--text-primary)] outline-none"
+                        />
+                        <button
+                          type="submit"
+                          disabled={renameSaving || !renameValue.trim()}
+                          title="Save name"
+                          className="prism-action-primary flex shrink-0 items-center rounded-lg p-1.5 disabled:opacity-50"
+                        >
+                          {renameSaving ? (
+                            <Loader2 className="size-4 animate-spin" />
+                          ) : (
+                            <Check className="size-4" />
+                          )}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={cancelRename}
+                          title="Cancel"
+                          className="shrink-0 rounded-lg border border-[var(--border-primary)] p-1.5 text-[var(--text-tertiary)] hover:bg-[var(--card-bg-hover)]"
+                        >
+                          <X className="size-4" />
+                        </button>
+                      </div>
+                    </form>
+                    {roleBadge}
+                    {renameError && (
+                      <p className="mt-2 text-xs text-[var(--semantic-danger)]">{renameError}</p>
+                    )}
+                  </div>
+                );
+              }
+
+              return (
+                <Link
+                  key={ws._id}
+                  to="/w/$workspaceId"
+                  params={{ workspaceId: ws._id }}
+                  className="widget group flex items-center justify-between p-5"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate font-bold text-[var(--text-primary)]">{ws.name}</p>
+                    {roleBadge}
+                  </div>
+                  <div className="flex shrink-0 items-center gap-1">
+                    {ws.role === 'owner' && (
+                      <button
+                        type="button"
+                        title="Rename workspace"
+                        aria-label={`Rename ${ws.name}`}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          startRename(ws._id, ws.name);
+                        }}
+                        className="rounded-lg p-1.5 text-[var(--text-muted)] opacity-0 transition-opacity hover:bg-[var(--card-bg-hover)] hover:text-[var(--ember-400)] focus:opacity-100 group-hover:opacity-100"
+                      >
+                        <Pencil className="size-4" />
+                      </button>
+                    )}
+                    <ChevronRight className="size-5 text-[var(--text-muted)] transition-colors group-hover:text-[var(--ember-400)]" />
+                  </div>
+                </Link>
+              );
+            })}
           </div>
         )}
     </PrismWorkspaceShell>

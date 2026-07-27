@@ -76,7 +76,10 @@ export const rename = mutation({
     if (!ws) throw new Error('Not found');
     if (ws.ownerId !== userId) throw new Error('Only the workspace owner can rename it');
 
-    await ctx.db.patch(workspaceId, { name: name.trim() });
+    const trimmed = name.trim();
+    if (!trimmed) throw new Error('Workspace name cannot be empty');
+
+    await ctx.db.patch(workspaceId, { name: trimmed });
   },
 });
 
