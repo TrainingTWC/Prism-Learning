@@ -1,11 +1,13 @@
 import { useState } from 'react';
-import type { AccordionBlock } from './types';
+import type { AccordionBlock, ResolveAsset } from './types';
 import { sanitizeInline } from './sanitizeInline';
 
 interface Section {
   id: string;
   title: string;
   content: string;
+  imageStorageId?: string;
+  audioStorageId?: string;
 }
 
 interface AccordionPayload {
@@ -14,9 +16,10 @@ interface AccordionPayload {
 
 interface Props {
   block: AccordionBlock;
+  resolveAsset: ResolveAsset;
 }
 
-export function AccordionBlockRenderer({ block }: Props) {
+export function AccordionBlockRenderer({ block, resolveAsset }: Props) {
   let payload: AccordionPayload = {};
   try { payload = JSON.parse(block.content) as AccordionPayload; } catch { /* empty */ }
 
@@ -32,36 +35,53 @@ export function AccordionBlockRenderer({ block }: Props) {
 
   return (
     <div className="prism-accordion my-6 divide-y divide-slate-200 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-      {sections.map((s) => (
-        <div key={s.id} className="bg-white">
-          <button
-            type="button"
-            onClick={() => toggle(s.id)}
-            className="prism-pressable flex min-h-12 w-full items-center justify-between px-5 py-4 text-left text-sm font-semibold leading-6 text-slate-800 hover:bg-slate-50"
-          >
-            {s.title}
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className={`size-4 shrink-0 text-slate-400 transition-transform ${open.has(s.id) ? 'rotate-180' : ''}`}
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
+      {sections.map((s) => {
+        const imageSrc = s.imageStorageId ? resolveAsset(s.imageStorageId) : undefined;
+        const audioSrc = s.audioStorageId ? resolveAsset(s.audioStorageId) : undefined;
+        return (
+          <div key={s.id} className="bg-white">
+            <button
+              type="button"
+              onClick={() => toggle(s.id)}
+              className="prism-pressable flex min-h-12 w-full items-center justify-between px-5 py-4 text-left text-sm font-semibold leading-6 text-slate-800 hover:bg-slate-50"
             >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-            </svg>
-          </button>
-          <div className="prism-accordion-panel" data-open={open.has(s.id)}>
-            <div>
-              <div
-                className="border-t border-slate-100 px-5 py-4 text-sm leading-relaxed text-slate-600"
-                // eslint-disable-next-line react/no-danger -- sanitized via sanitizeInline
-                dangerouslySetInnerHTML={{ __html: sanitizeInline(s.content) }}
-              />
+              {s.title}
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className={`size-4 shrink-0 text-slate-400 transition-transform ${open.has(s.id) ? 'rotate-180' : ''}`}
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            <div className="prism-accordion-panel" data-open={open.has(s.id)}>
+              <div>
+                <div className="border-t border-slate-100 px-5 py-4">
+                  {imageSrc && (
+                    <img
+                      src={imageSrc}
+                      alt=""
+                      className="mb-4 max-h-64 w-full rounded-xl object-contain"
+                    />
+                  )}
+                  <div
+                    className="text-sm leading-relaxed text-slate-600"
+                    // eslint-disable-next-line react/no-danger -- sanitized via sanitizeInline
+                    dangerouslySetInnerHTML={{ __html: sanitizeInline(s.content) }}
+                  />
+                  {audioSrc && (
+                    // eslint-disable-next-line jsx-a11y/media-has-caption -- transcript-free short clips
+                    <audio src={audioSrc} controls className="mt-4 w-full" />
+                  )}
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

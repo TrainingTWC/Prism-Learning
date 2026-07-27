@@ -60,7 +60,7 @@ export function Module({ blocks, theme, resolveAsset }: ModuleProps) {
             rendered = <TrueFalseBlockRenderer block={block} />;
             break;
           case 'accordion':
-            rendered = <AccordionBlockRenderer block={block} />;
+            rendered = <AccordionBlockRenderer block={block} resolveAsset={resolveAsset} />;
             break;
           case 'quote':
             rendered = <QuoteBlockRenderer block={block} />;

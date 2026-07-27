@@ -280,14 +280,18 @@ function renderBlock(block: ExportBlock, assetMap: Record<string, string>): stri
     }
 
     case 'accordion': {
-      let p: { sections?: Array<{ id: string; title: string; content: string }> } = {};
+      let p: { sections?: Array<{ id: string; title: string; content: string; imageStorageId?: string; audioStorageId?: string }> } = {};
       try { p = JSON.parse(c) as typeof p; } catch { /* */ }
-      const sections = (p.sections ?? []).map((s, i) =>
-        `<div class="prism-acc-item">
+      const sections = (p.sections ?? []).map((s, i) => {
+        const imgSrc = s.imageStorageId ? assetMap[s.imageStorageId] : undefined;
+        const audioSrc = s.audioStorageId ? assetMap[s.audioStorageId] : undefined;
+        const imageHtml = imgSrc ? `<img src="${escapeHtml(imgSrc)}" alt="" class="prism-acc-img" />` : '';
+        const audioHtml = audioSrc ? `<audio controls src="${escapeHtml(audioSrc)}"></audio>` : '';
+        return `<div class="prism-acc-item">
   <button type="button" class="prism-acc-btn" data-idx="${i}">${escapeHtml(s.title)}<span class="prism-acc-arrow">▼</span></button>
-  <div class="prism-acc-body" style="display:none">${sanitizeMultilineHtml(s.content)}</div>
-</div>`,
-      ).join('');
+  <div class="prism-acc-body" style="display:none">${imageHtml}${sanitizeMultilineHtml(s.content)}${audioHtml}</div>
+</div>`;
+      }).join('');
       return `<div class="prism-acc">${sections}</div>`;
     }
 
@@ -866,6 +870,8 @@ html[data-theme="dark"] .prism-tf-btns button.selected-bad{color:#fca5a5}
 .prism-acc-btn:hover{background:var(--prism-surface-2)}
 .prism-acc-arrow{font-size:.65rem;transition:transform var(--prism-motion-base) var(--prism-ease-standard);margin-left:.5rem;color:var(--prism-text-muted)}
 .prism-acc-body{padding:.5rem 1.25rem 1rem;font-size:.92rem;line-height:1.7;color:var(--prism-text-2);border-top:1px solid var(--prism-border-subtle);animation:prism-feedback-enter var(--prism-motion-base) var(--prism-ease-emphasized) both}
+.prism-acc-img{max-height:16rem;max-width:100%;border-radius:12px;object-fit:contain;display:block;margin:.5rem auto 1rem}
+.prism-acc-body audio{width:100%;margin-top:1rem;display:block}
 
 /* ── Reduced motion ── */
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}.prism-block{animation:none}.prism-progress::after{display:none}}
@@ -1849,6 +1855,13 @@ export async function buildScormPackage(
           for (const tab of p.tabs as Array<Record<string, unknown>>) {
             if (typeof tab.imageStorageId === 'string') storageIds.add(tab.imageStorageId);
             if (typeof tab.audioStorageId === 'string') storageIds.add(tab.audioStorageId);
+          }
+        }
+        // Accordion block — per-section media
+        if (Array.isArray(p.sections)) {
+          for (const section of p.sections as Array<Record<string, unknown>>) {
+            if (typeof section.imageStorageId === 'string') storageIds.add(section.imageStorageId);
+            if (typeof section.audioStorageId === 'string') storageIds.add(section.audioStorageId);
           }
         }
         // Flashcard / carousel-style blocks with cards array
