@@ -540,6 +540,83 @@ export const computeGaps = action({
   },
 });
 
+// ── Checklist import ─────────────────────────────────────────────────────
+
+/** A PI checklist question, as returned inside programs:list */
+export type PIQuestion = {
+  id: string;
+  text: string;
+  questionType: string;
+  order?: number;
+  weight?: number;
+  options?: Array<{ label: string; value: string; score?: number }>;
+};
+
+/**
+ * Full program definitions (sections + questions) for the workspace's linked
+ * PI company. Powers "import checklist" in the module builder — unlike the
+ * analytics path, this needs the question text and options, not just scores.
+ */
+export const listPIPrograms = action({
+  args: { workspaceId: v.id('workspaces') },
+  handler: async (
+    ctx,
+    { workspaceId },
+  ): Promise<
+    Array<{
+      id: string;
+      name: string;
+      sections: Array<{ id: string; title: string; questions: PIQuestion[] }>;
+    }>
+  > => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new ConvexError('Not authenticated');
+
+    const link: Doc<'analyticsLinks'> | null = await ctx.runQuery(
+      internal.analytics.getLinkInternal,
+      { workspaceId },
+    );
+    if (!link) throw new ConvexError('No PI company linked — connect Prism Intelligence first');
+
+    const piUrl = (process.env.PI_CONVEX_URL ?? '').replace(/\/+$/, '');
+    const piToken = process.env.PI_API_TOKEN;
+    if (!piUrl || !piToken)
+      throw new ConvexError('PI_CONVEX_URL and PI_API_TOKEN must be set in the Convex dashboard');
+
+    const raw = await callPIQuery(piUrl, piToken, 'programs:list', {
+      companyId: link.piCompanyId,
+    });
+
+    const programs = Array.isArray(raw) ? (raw as Array<Record<string, unknown>>) : [];
+    return programs.map((p) => ({
+      id: String(p._id ?? ''),
+      name: String(p.name ?? 'Untitled program'),
+      sections: (Array.isArray(p.sections) ? (p.sections as Array<Record<string, unknown>>) : [])
+        .map((s) => ({
+          id: String(s.id ?? ''),
+          title: String(s.title ?? 'Untitled section'),
+          questions: (Array.isArray(s.questions)
+            ? (s.questions as Array<Record<string, unknown>>)
+            : []
+          ).map((q) => ({
+            id: String(q.id ?? ''),
+            text: String(q.text ?? ''),
+            questionType: String(q.questionType ?? 'TEXT'),
+            order: typeof q.order === 'number' ? q.order : undefined,
+            weight: typeof q.weight === 'number' ? q.weight : undefined,
+            options: Array.isArray(q.options)
+              ? (q.options as Array<Record<string, unknown>>).map((o) => ({
+                  label: String(o.label ?? ''),
+                  value: String(o.value ?? ''),
+                  score: typeof o.score === 'number' ? o.score : undefined,
+                }))
+              : undefined,
+          })),
+        })),
+    }));
+  },
+});
+
 // ── Analysis profiles ────────────────────────────────────────────────────
 
 /** Defaults reproduce the pre-profile hardcoded behaviour exactly. */
