@@ -17,6 +17,11 @@ export type MCQPayload = {
   multiSelect: boolean;
   /** Show per-option feedback in preview/export */
   showFeedback: boolean;
+  /**
+   * Overrides the module-level "Assessment mode" export setting for this
+   * question specifically. undefined = inherit the module default.
+   */
+  assessment?: boolean;
 };
 
 function emptyOption(id: string): MCQOption {
@@ -156,8 +161,28 @@ export function MCQBlockEditor({
             </span>
             <span className="text-sm font-medium text-slate-700">Show feedback</span>
           </label>
+          {/* Per-question assessment override */}
+          <select
+            value={payload.assessment === undefined ? 'inherit' : payload.assessment ? 'on' : 'off'}
+            onChange={(e) => {
+              const v = e.target.value;
+              commit({ ...payload, assessment: v === 'inherit' ? undefined : v === 'on' });
+            }}
+            title="Whether this question hides answers/feedback and just records a right/wrong result — overrides the module's export-time setting"
+            className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-medium text-slate-600"
+          >
+            <option value="inherit">Assessment: module default</option>
+            <option value="on">Assessment: always on</option>
+            <option value="off">Assessment: always off</option>
+          </select>
         </div>
       </div>
+      {payload.assessment === true && (
+        <p className="border-b border-amber-100 bg-amber-50/60 px-4 py-1.5 text-[11px] text-amber-700">
+          This question always hides the correct answer and feedback, regardless of the module's
+          export setting.
+        </p>
+      )}
 
       <div className="p-4 space-y-4">
         {/* Question */}

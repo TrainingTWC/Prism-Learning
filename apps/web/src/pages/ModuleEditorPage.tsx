@@ -845,6 +845,26 @@ export function ModuleEditorPage() {
             <div className="mt-1 flex justify-between text-[11px] text-[var(--text-muted)]"><span>0%</span><span>50%</span><span>100%</span></div>
           </div>
 
+          {/* Assessment mode */}
+          <div className="mb-6">
+            <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-[var(--border-primary)] px-4 py-3 transition-colors hover:border-indigo-500 has-[:checked]:border-indigo-500 has-[:checked]:bg-indigo-500/10">
+              <input
+                type="checkbox"
+                checked={exportOptions.assessmentMode ?? false}
+                onChange={(e) => setExportOptions((o) => ({ ...o, assessmentMode: e.target.checked }))}
+                className="mt-0.5 accent-indigo-500"
+              />
+              <span>
+                <span className="block text-sm font-semibold text-[var(--text-primary)]">Assessment mode</span>
+                <span className="block text-xs text-[var(--text-muted)]">
+                  Quiz questions record an answer without revealing right/wrong or feedback. Pair
+                  with "achieves the pass score" above so the course reports passed or incomplete.
+                  Individual questions can override this in their own block editor.
+                </span>
+              </span>
+            </label>
+          </div>
+
           <div className="flex gap-3 justify-end">
             <button type="button" onClick={() => setExportDialogOpen(false)} className="rounded-lg border border-[var(--border-primary)] px-4 py-2 text-sm font-semibold text-[var(--text-secondary)] hover:bg-[var(--card-bg-hover)]">Cancel</button>
             <button type="button" onClick={() => void handleExportScorm(exportOptions)} className="flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700">
