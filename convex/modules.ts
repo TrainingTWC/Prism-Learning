@@ -110,6 +110,25 @@ export const rename = mutation({
   },
 });
 
+/** Move a module to another workspace the caller is also a member of. */
+export const move = mutation({
+  args: { moduleId: v.id('modules'), destinationWorkspaceId: v.id('workspaces') },
+  handler: async (ctx, { moduleId, destinationWorkspaceId }) => {
+    const mod = await ctx.db.get(moduleId);
+    if (!mod || mod.deletedAt) throw new Error('Not found');
+    const userId = await requireMember(ctx, mod.workspaceId);
+    if (destinationWorkspaceId === mod.workspaceId) {
+      throw new Error('Module is already in that workspace');
+    }
+    await requireMember(ctx, destinationWorkspaceId);
+    await ctx.db.patch(moduleId, {
+      workspaceId: destinationWorkspaceId,
+      updatedAt: Date.now(),
+      lastEditedBy: userId,
+    });
+  },
+});
+
 /** Set (or clear) the per-module AI image style reference. */
 export const setStyleReference = mutation({
   args: { moduleId: v.id('modules'), storageId: v.union(v.string(), v.null()) },
