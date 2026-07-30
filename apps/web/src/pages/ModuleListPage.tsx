@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useQuery, useMutation } from 'convex/react';
 import { Link, useParams, useNavigate } from '@tanstack/react-router';
 import { api } from '~convex/_generated/api';
@@ -277,9 +278,9 @@ export function ModuleListPage() {
         ))}
       </div>
 
-      {movingModuleId !== null && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="flex max-h-[85vh] w-full max-w-sm flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
+      {movingModuleId !== null && createPortal(
+        <div className="prism-modal-overlay fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-black/55 p-4 backdrop-blur-md">
+          <div className="my-auto flex max-h-[85vh] w-full max-w-sm flex-col overflow-hidden rounded-2xl border border-[var(--border-subtle)] bg-[var(--card-bg)] shadow-2xl">
             <div className="flex items-center justify-between border-b border-[var(--border-subtle)] px-4 py-3">
               <p className="text-sm font-bold text-[var(--text-primary)]">Move module to workspace</p>
               <button
@@ -332,7 +333,8 @@ export function ModuleListPage() {
               )}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </PrismWorkspaceShell>
   );
