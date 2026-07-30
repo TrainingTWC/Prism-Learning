@@ -12,6 +12,8 @@ import {
   Copy,
   Trash2,
   Sparkles,
+  FolderInput,
+  X,
 } from 'lucide-react';
 import { PrismWorkspaceShell } from '../components/PrismWorkspaceShell';
 
@@ -22,17 +24,22 @@ export function ModuleListPage() {
 
   const workspace = useQuery(api.workspaces.getById, { workspaceId: wsId });
   const modules = useQuery(api.modules.list, { workspaceId: wsId });
+  const myWorkspaces = useQuery(api.workspaces.listMine);
 
   const createModule = useMutation(api.modules.create);
   const renameModule = useMutation(api.modules.rename);
   const duplicateModule = useMutation(api.modules.duplicate);
   const deleteModule = useMutation(api.modules.softDelete);
+  const moveModule = useMutation(api.modules.move);
 
   const [creating, setCreating] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
+  const [movingModuleId, setMovingModuleId] = useState<Id<'modules'> | null>(null);
+  const [moveError, setMoveError] = useState<string | null>(null);
+  const [moving, setMoving] = useState(false);
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -59,6 +66,21 @@ export function ModuleListPage() {
   async function handleDelete(moduleId: Id<'modules'>) {
     setOpenMenuId(null);
     await deleteModule({ moduleId });
+  }
+
+  async function handleMove(destinationWorkspaceId: Id<'workspaces'>) {
+    if (!movingModuleId) return;
+    setMoving(true);
+    setMoveError(null);
+    try {
+      await moveModule({ moduleId: movingModuleId, destinationWorkspaceId });
+      setMovingModuleId(null);
+    } catch (e: unknown) {
+      const err = e as { data?: string; message?: string };
+      setMoveError(err.data ?? err.message ?? 'Could not move module');
+    } finally {
+      setMoving(false);
+    }
   }
 
   if (workspace === undefined || modules === undefined) {
@@ -229,6 +251,17 @@ export function ModuleListPage() {
                   >
                     <Copy className="size-3.5" /> Duplicate
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMovingModuleId(mod._id as Id<'modules'>);
+                      setOpenMenuId(null);
+                      setMoveError(null);
+                    }}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-sm text-[var(--text-secondary)] hover:bg-[var(--card-bg-hover)] hover:text-[var(--text-primary)]"
+                  >
+                    <FolderInput className="size-3.5" /> Move to workspace
+                  </button>
                   <hr className="my-1 border-[var(--border-subtle)]" />
                   <button
                     type="button"
@@ -243,6 +276,64 @@ export function ModuleListPage() {
           </div>
         ))}
       </div>
+
+      {movingModuleId !== null && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="flex max-h-[85vh] w-full max-w-sm flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-[var(--border-subtle)] px-4 py-3">
+              <p className="text-sm font-bold text-[var(--text-primary)]">Move module to workspace</p>
+              <button
+                type="button"
+                onClick={() => {
+                  setMovingModuleId(null);
+                  setMoveError(null);
+                }}
+                className="rounded-lg p-1 text-[var(--text-muted)] hover:bg-[var(--card-bg-hover)] hover:text-[var(--text-primary)]"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+            <div className="overflow-y-auto p-3">
+              {moveError && (
+                <p className="mb-2 rounded-lg bg-[rgba(239,68,68,0.08)] px-3 py-2 text-xs font-semibold text-[var(--semantic-danger)]">
+                  {moveError}
+                </p>
+              )}
+              {myWorkspaces === undefined ? (
+                <div className="flex items-center justify-center py-6">
+                  <Loader2 className="size-5 animate-spin text-indigo-500" />
+                </div>
+              ) : (
+                (() => {
+                  const destinations = myWorkspaces.filter((ws) => ws._id !== wsId);
+                  if (destinations.length === 0) {
+                    return (
+                      <p className="px-2 py-4 text-center text-sm text-[var(--text-tertiary)]">
+                        You&apos;re not a member of any other workspace yet.
+                      </p>
+                    );
+                  }
+                  return (
+                    <div className="space-y-1">
+                      {destinations.map((ws) => (
+                        <button
+                          key={ws._id}
+                          type="button"
+                          disabled={moving}
+                          onClick={() => void handleMove(ws._id)}
+                          className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-semibold text-[var(--text-secondary)] hover:bg-[var(--card-bg-hover)] hover:text-[var(--text-primary)] disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {ws.name}
+                        </button>
+                      ))}
+                    </div>
+                  );
+                })()
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </PrismWorkspaceShell>
   );
 }
