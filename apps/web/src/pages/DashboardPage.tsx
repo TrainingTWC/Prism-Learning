@@ -1,8 +1,22 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useQuery, useMutation } from 'convex/react';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { api } from '~convex/_generated/api';
-import { Plus, Loader2, ChevronRight, Users, Brain, Layers, Palette, Pencil, Check, X } from 'lucide-react';
+import {
+  Plus,
+  Loader2,
+  ChevronRight,
+  Users,
+  Brain,
+  Layers,
+  Palette,
+  Pencil,
+  Check,
+  X,
+  Trash2,
+  AlertTriangle,
+} from 'lucide-react';
 import { PrismWorkspaceShell } from '../components/PrismWorkspaceShell';
 import type { Id } from '~convex/_generated/dataModel';
 
@@ -10,6 +24,7 @@ export function DashboardPage() {
   const workspaces = useQuery(api.workspaces.listMine);
   const createWorkspace = useMutation(api.workspaces.create);
   const renameWorkspace = useMutation(api.workspaces.rename);
+  const deleteWorkspace = useMutation(api.workspaces.remove);
   const navigate = useNavigate();
 
   const [creating, setCreating] = useState(false);
@@ -49,6 +64,41 @@ export function DashboardPage() {
       setRenameError(err instanceof Error ? err.message : 'Failed to rename workspace');
     } finally {
       setRenameSaving(false);
+    }
+  }
+
+  // Delete (owner only — the backend enforces it too, and independently
+  // re-verifies the typed confirmation name so the check can't be skipped
+  // by calling the mutation directly).
+  const [deletingWs, setDeletingWs] = useState<{ id: Id<'workspaces'>; name: string } | null>(null);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [deleteSaving, setDeleteSaving] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  function startDelete(id: Id<'workspaces'>, name: string) {
+    setDeletingWs({ id, name });
+    setDeleteConfirmText('');
+    setDeleteError(null);
+  }
+
+  function cancelDelete() {
+    setDeletingWs(null);
+    setDeleteConfirmText('');
+    setDeleteError(null);
+  }
+
+  async function handleDelete(e: React.FormEvent) {
+    e.preventDefault();
+    if (!deletingWs || deleteConfirmText !== deletingWs.name) return;
+
+    setDeleteSaving(true);
+    setDeleteError(null);
+    try {
+      await deleteWorkspace({ workspaceId: deletingWs.id, confirmName: deleteConfirmText });
+      cancelDelete();
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : 'Failed to delete workspace');
+      setDeleteSaving(false);
     }
   }
 
@@ -311,12 +361,83 @@ export function DashboardPage() {
                         <Pencil className="size-4" />
                       </button>
                     )}
+                    {ws.role === 'owner' && (
+                      <button
+                        type="button"
+                        title="Delete workspace"
+                        aria-label={`Delete ${ws.name}`}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          startDelete(ws._id, ws.name);
+                        }}
+                        className="rounded-lg p-1.5 text-[var(--text-muted)] opacity-0 transition-opacity hover:bg-[rgba(239,68,68,0.1)] hover:text-[var(--semantic-danger)] focus:opacity-100 group-hover:opacity-100"
+                      >
+                        <Trash2 className="size-4" />
+                      </button>
+                    )}
                     <ChevronRight className="size-5 text-[var(--text-muted)] transition-colors group-hover:text-[var(--ember-400)]" />
                   </div>
                 </Link>
               );
             })}
           </div>
+        )}
+
+        {/* Delete workspace confirmation — portaled to document.body so it
+            renders as a true full-viewport overlay regardless of any
+            ancestor's stacking context (see e700013 / 5326474). */}
+        {deletingWs && createPortal(
+          <div className="prism-modal-overlay fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-black/55 p-4 backdrop-blur-md">
+            <div className="my-auto w-full max-w-sm rounded-2xl border border-[var(--border-subtle)] bg-[var(--card-bg)] p-5 shadow-2xl">
+              <div className="mb-3 flex items-center gap-2.5">
+                <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[rgba(239,68,68,0.1)] text-[var(--semantic-danger)]">
+                  <AlertTriangle className="size-4.5" />
+                </div>
+                <h2 className="text-sm font-bold text-[var(--text-primary)]">Delete workspace</h2>
+              </div>
+              <p className="text-sm leading-relaxed text-[var(--text-tertiary)]">
+                This removes <strong className="text-[var(--text-secondary)]">{deletingWs.name}</strong> and
+                every member's access to it. Its modules stay stored but become unreachable from the app —
+                this isn't a quick undo.
+              </p>
+              <form onSubmit={(e) => void handleDelete(e)} className="mt-4">
+                <label className="mb-1.5 block text-xs font-semibold text-[var(--text-tertiary)]">
+                  Type <span className="font-mono text-[var(--text-secondary)]">{deletingWs.name}</span> to
+                  confirm
+                </label>
+                <input
+                  type="text"
+                  autoFocus
+                  value={deleteConfirmText}
+                  onChange={(e) => setDeleteConfirmText(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Escape' && cancelDelete()}
+                  className="w-full rounded-lg border border-[var(--border-primary)] bg-transparent px-3 py-2 text-sm text-[var(--text-primary)] outline-none"
+                />
+                {deleteError && (
+                  <p className="mt-2 text-xs text-[var(--semantic-danger)]">{deleteError}</p>
+                )}
+                <div className="mt-4 flex justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={cancelDelete}
+                    className="rounded-lg border border-[var(--border-primary)] px-3.5 py-2 text-sm font-semibold text-[var(--text-secondary)] hover:bg-[var(--card-bg-hover)]"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={deleteSaving || deleteConfirmText !== deletingWs.name}
+                    className="flex items-center gap-2 rounded-lg bg-[var(--semantic-danger)] px-3.5 py-2 text-sm font-bold text-white disabled:opacity-40"
+                  >
+                    {deleteSaving && <Loader2 className="size-4 animate-spin" />}
+                    Delete workspace
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>,
+          document.body,
         )}
     </PrismWorkspaceShell>
   );

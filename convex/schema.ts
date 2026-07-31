@@ -20,6 +20,10 @@ export default defineSchema({
     name: v.string(),
     ownerId: v.id('users'),
     createdAt: v.number(),
+    /** Soft-delete: present means deleted. Underlying modules/data are left
+     * intact (same convention as modules.deletedAt) — recoverable by an
+     * admin, not silently gone. */
+    deletedAt: v.optional(v.number()),
     /** Phase 6 theming — optional so existing rows stay valid */
     theme: v.optional(v.object({
       primary: v.string(),

@@ -17,7 +17,7 @@ export const listMine = query({
     const workspaces = await Promise.all(memberships.map((m) => ctx.db.get(m.workspaceId)));
 
     const results = workspaces.map((ws, i) =>
-      ws ? { ...ws, role: memberships[i]!.role } : null,
+      ws && !ws.deletedAt ? { ...ws, role: memberships[i]!.role } : null,
     );
     return results.filter((ws): ws is NonNullable<typeof ws> => ws !== null);
   },
@@ -38,7 +38,7 @@ export const getById = query({
     if (!membership) return null;
 
     const ws = await ctx.db.get(workspaceId);
-    return ws ? { ...ws, role: membership.role } : null;
+    return ws && !ws.deletedAt ? { ...ws, role: membership.role } : null;
   },
 });
 
@@ -80,6 +80,30 @@ export const rename = mutation({
     if (!trimmed) throw new Error('Workspace name cannot be empty');
 
     await ctx.db.patch(workspaceId, { name: trimmed });
+  },
+});
+
+/**
+ * Soft-delete a workspace (owner only). Mirrors modules.softDelete: sets
+ * deletedAt and stops here — memberships, modules, lessons, blocks, and the
+ * analytics tables are left in place rather than cascade-deleted. Given the
+ * blast radius (this can hide months of authored content in one call), the
+ * caller must echo the workspace's exact current name back as confirmName;
+ * this is enforced server-side, not just as a client-side UI gate, so the
+ * check can't be bypassed by calling the mutation directly.
+ */
+export const remove = mutation({
+  args: { workspaceId: v.id('workspaces'), confirmName: v.string() },
+  handler: async (ctx, { workspaceId, confirmName }) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error('Unauthenticated');
+
+    const ws = await ctx.db.get(workspaceId);
+    if (!ws || ws.deletedAt) throw new Error('Not found');
+    if (ws.ownerId !== userId) throw new Error('Only the workspace owner can delete it');
+    if (confirmName !== ws.name) throw new Error('Workspace name did not match');
+
+    await ctx.db.patch(workspaceId, { deletedAt: Date.now() });
   },
 });
 
