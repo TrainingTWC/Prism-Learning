@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useQuery, useMutation } from 'convex/react';
 import { Link, useParams, useNavigate } from '@tanstack/react-router';
@@ -35,7 +35,26 @@ export function ModuleListPage() {
 
   const [creating, setCreating] = useState(false);
   const [newTitle, setNewTitle] = useState('');
-  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  // Anchored to the clicked button's rect (not CSS-relative positioning)
+  // and portaled to document.body — the row is a .widget, and .widget:hover
+  // applies a transform, which makes the row a new stacking context. A
+  // plain `absolute` dropdown nested inside gets trapped in that context
+  // and can render behind later sibling rows despite z-50. Same class of
+  // bug as the move-to-workspace dialog fixed in 5326474; same fix.
+  const [openMenu, setOpenMenu] = useState<{ id: string; rect: DOMRect } | null>(null);
+
+  // A stale rect looks worse than a closed menu — drop it if the page
+  // scrolls or resizes while it's open instead of drifting off the button.
+  useEffect(() => {
+    if (!openMenu) return;
+    const close = () => setOpenMenu(null);
+    window.addEventListener('scroll', close, true);
+    window.addEventListener('resize', close);
+    return () => {
+      window.removeEventListener('scroll', close, true);
+      window.removeEventListener('resize', close);
+    };
+  }, [openMenu]);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
   const [movingModuleId, setMovingModuleId] = useState<Id<'modules'> | null>(null);
@@ -59,13 +78,13 @@ export function ModuleListPage() {
   }
 
   async function handleDuplicate(moduleId: Id<'modules'>) {
-    setOpenMenuId(null);
+    setOpenMenu(null);
     const newId = await duplicateModule({ moduleId });
     void navigate({ to: '/w/$workspaceId/m/$moduleId', params: { workspaceId, moduleId: newId } });
   }
 
   async function handleDelete(moduleId: Id<'modules'>) {
-    setOpenMenuId(null);
+    setOpenMenu(null);
     await deleteModule({ moduleId });
   }
 
@@ -177,7 +196,7 @@ export function ModuleListPage() {
           <div
             key={mod._id}
             className="widget group relative flex items-center gap-4 px-5 py-4"
-            onClick={() => openMenuId && setOpenMenuId(null)}
+            onClick={() => openMenu && setOpenMenu(null)}
           >
             <div className="prism-icon-tile size-10 shrink-0 rounded-lg"><Layers className="size-4" /></div>
 
@@ -223,55 +242,72 @@ export function ModuleListPage() {
               </p>
             </div>
 
-            {/* Context menu */}
+            {/* Context menu — portaled to document.body (see openMenu comment above) */}
             <div className="relative" onClick={(e) => e.stopPropagation()}>
               <button
                 type="button"
-                onClick={() => setOpenMenuId(openMenuId === mod._id ? null : mod._id)}
+                onClick={(e) => {
+                  if (openMenu?.id === mod._id) {
+                    setOpenMenu(null);
+                    return;
+                  }
+                  setOpenMenu({ id: mod._id, rect: e.currentTarget.getBoundingClientRect() });
+                }}
                 className="rounded-lg p-1.5 text-[var(--text-muted)] opacity-0 transition-opacity hover:bg-[var(--card-bg-hover)] hover:text-[var(--text-primary)] group-hover:opacity-100"
               >
                 <MoreHorizontal className="size-4" />
               </button>
-              {openMenuId === mod._id && (
-                <div className="glass absolute right-0 top-8 z-50 w-44 py-1">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setRenamingId(mod._id);
-                      setRenameValue(mod.title);
-                      setOpenMenuId(null);
+              {openMenu?.id === mod._id && createPortal(
+                <>
+                  <div className="fixed inset-0 z-50" onClick={() => setOpenMenu(null)} />
+                  <div
+                    className="glass fixed z-50 w-44 py-1"
+                    style={{
+                      top: openMenu.rect.bottom + 6,
+                      right: window.innerWidth - openMenu.rect.right,
                     }}
-                    className="flex w-full items-center gap-2 px-3 py-2 text-sm text-[var(--text-secondary)] hover:bg-[var(--card-bg-hover)] hover:text-[var(--text-primary)]"
+                    onClick={(e) => e.stopPropagation()}
                   >
-                    <Pencil className="size-3.5" /> Rename
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => void handleDuplicate(mod._id as Id<'modules'>)}
-                    className="flex w-full items-center gap-2 px-3 py-2 text-sm text-[var(--text-secondary)] hover:bg-[var(--card-bg-hover)] hover:text-[var(--text-primary)]"
-                  >
-                    <Copy className="size-3.5" /> Duplicate
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMovingModuleId(mod._id as Id<'modules'>);
-                      setOpenMenuId(null);
-                      setMoveError(null);
-                    }}
-                    className="flex w-full items-center gap-2 px-3 py-2 text-sm text-[var(--text-secondary)] hover:bg-[var(--card-bg-hover)] hover:text-[var(--text-primary)]"
-                  >
-                    <FolderInput className="size-3.5" /> Move to workspace
-                  </button>
-                  <hr className="my-1 border-[var(--border-subtle)]" />
-                  <button
-                    type="button"
-                    onClick={() => void handleDelete(mod._id as Id<'modules'>)}
-                    className="flex w-full items-center gap-2 px-3 py-2 text-sm text-[var(--semantic-danger)] hover:bg-[rgba(239,68,68,0.08)]"
-                  >
-                    <Trash2 className="size-3.5" /> Delete
-                  </button>
-                </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setRenamingId(mod._id);
+                        setRenameValue(mod.title);
+                        setOpenMenu(null);
+                      }}
+                      className="flex w-full items-center gap-2 px-3 py-2 text-sm text-[var(--text-secondary)] hover:bg-[var(--card-bg-hover)] hover:text-[var(--text-primary)]"
+                    >
+                      <Pencil className="size-3.5" /> Rename
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void handleDuplicate(mod._id as Id<'modules'>)}
+                      className="flex w-full items-center gap-2 px-3 py-2 text-sm text-[var(--text-secondary)] hover:bg-[var(--card-bg-hover)] hover:text-[var(--text-primary)]"
+                    >
+                      <Copy className="size-3.5" /> Duplicate
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMovingModuleId(mod._id as Id<'modules'>);
+                        setOpenMenu(null);
+                        setMoveError(null);
+                      }}
+                      className="flex w-full items-center gap-2 px-3 py-2 text-sm text-[var(--text-secondary)] hover:bg-[var(--card-bg-hover)] hover:text-[var(--text-primary)]"
+                    >
+                      <FolderInput className="size-3.5" /> Move to workspace
+                    </button>
+                    <hr className="my-1 border-[var(--border-subtle)]" />
+                    <button
+                      type="button"
+                      onClick={() => void handleDelete(mod._id as Id<'modules'>)}
+                      className="flex w-full items-center gap-2 px-3 py-2 text-sm text-[var(--semantic-danger)] hover:bg-[rgba(239,68,68,0.08)]"
+                    >
+                      <Trash2 className="size-3.5" /> Delete
+                    </button>
+                  </div>
+                </>,
+                document.body,
               )}
             </div>
           </div>
