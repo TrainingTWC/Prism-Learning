@@ -16,15 +16,27 @@ import {
   X,
   Trash2,
   AlertTriangle,
+  RotateCcw,
+  Clock,
 } from 'lucide-react';
 import { PrismWorkspaceShell } from '../components/PrismWorkspaceShell';
 import type { Id } from '~convex/_generated/dataModel';
 
+/** Mirrors the plain-English framing of the 7-day window; the actual cutoff is computed server-side. */
+function daysLeftLabel(purgesAt: number): string {
+  const days = Math.ceil((purgesAt - Date.now()) / (24 * 60 * 60 * 1000));
+  if (days <= 0) return 'purging soon';
+  if (days === 1) return '1 day left';
+  return `${days} days left`;
+}
+
 export function DashboardPage() {
   const workspaces = useQuery(api.workspaces.listMine);
+  const deletedWorkspaces = useQuery(api.workspaces.listDeleted);
   const createWorkspace = useMutation(api.workspaces.create);
   const renameWorkspace = useMutation(api.workspaces.rename);
   const deleteWorkspace = useMutation(api.workspaces.remove);
+  const restoreWorkspace = useMutation(api.workspaces.restore);
   const navigate = useNavigate();
 
   const [creating, setCreating] = useState(false);
@@ -99,6 +111,22 @@ export function DashboardPage() {
     } catch (err) {
       setDeleteError(err instanceof Error ? err.message : 'Failed to delete workspace');
       setDeleteSaving(false);
+    }
+  }
+
+  // Restore from "Recently deleted"
+  const [restoringId, setRestoringId] = useState<Id<'workspaces'> | null>(null);
+  const [restoreError, setRestoreError] = useState<string | null>(null);
+
+  async function handleRestore(id: Id<'workspaces'>) {
+    setRestoringId(id);
+    setRestoreError(null);
+    try {
+      await restoreWorkspace({ workspaceId: id });
+    } catch (err) {
+      setRestoreError(err instanceof Error ? err.message : 'Failed to restore workspace');
+    } finally {
+      setRestoringId(null);
     }
   }
 
@@ -382,6 +410,49 @@ export function DashboardPage() {
               );
             })}
           </div>
+        )}
+
+        {/* Recently deleted — owner-only recovery window (see workspaces.WORKSPACE_RETENTION_MS) */}
+        {deletedWorkspaces && deletedWorkspaces.length > 0 && (
+          <section className="mt-10">
+            <div className="mb-3 flex items-center gap-2">
+              <Clock className="size-4 text-[var(--text-muted)]" />
+              <h2 className="text-sm font-bold uppercase tracking-wide text-[var(--text-tertiary)]">
+                Recently deleted
+              </h2>
+            </div>
+            <div className="glass divide-y divide-[var(--border-subtle)] overflow-hidden">
+              {deletedWorkspaces.map((ws) => (
+                <div key={ws._id} className="flex items-center gap-4 px-5 py-3.5">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold text-[var(--text-secondary)]">{ws.name}</p>
+                    <p className="mt-0.5 text-xs text-[var(--text-muted)]">
+                      Deleted {new Date(ws.deletedAt!).toLocaleDateString()} · {daysLeftLabel(ws.purgesAt)}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => void handleRestore(ws._id)}
+                    disabled={restoringId === ws._id}
+                    className="flex shrink-0 items-center gap-1.5 rounded-lg border border-[var(--border-primary)] px-3 py-1.5 text-xs font-semibold text-[var(--text-secondary)] hover:bg-[var(--card-bg-hover)] disabled:opacity-50"
+                  >
+                    {restoringId === ws._id ? (
+                      <Loader2 className="size-3.5 animate-spin" />
+                    ) : (
+                      <RotateCcw className="size-3.5" />
+                    )}
+                    Restore
+                  </button>
+                </div>
+              ))}
+            </div>
+            <p className="mt-2 text-xs text-[var(--text-muted)]">
+              Permanently removed 7 days after deletion.
+            </p>
+            {restoreError && (
+              <p className="mt-2 text-xs text-[var(--semantic-danger)]">{restoreError}</p>
+            )}
+          </section>
         )}
 
         {/* Delete workspace confirmation — portaled to document.body so it

@@ -41,7 +41,7 @@ export default defineSchema({
       borderRadius: v.optional(v.string()),
       buttonStyle: v.optional(v.string()),
     })),
-  }),
+  }).index('by_deletedAt', ['deletedAt']),
 
   memberships: defineTable({
     workspaceId: v.id('workspaces'),

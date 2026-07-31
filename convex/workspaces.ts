@@ -1,6 +1,10 @@
 import { v } from 'convex/values';
-import { mutation, query } from './_generated/server';
+import { mutation, query, internalMutation } from './_generated/server';
 import { getAuthUserId } from '@convex-dev/auth/server';
+import { internal } from './_generated/api';
+
+/** How long a deleted workspace stays recoverable before the daily purge cron removes it for good. */
+export const WORKSPACE_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
 
 /** List all workspaces the current user is a member of. */
 export const listMine = query({
@@ -104,6 +108,119 @@ export const remove = mutation({
     if (confirmName !== ws.name) throw new Error('Workspace name did not match');
 
     await ctx.db.patch(workspaceId, { deletedAt: Date.now() });
+  },
+});
+
+/**
+ * Workspaces the caller owns that are currently soft-deleted — the
+ * "Recently deleted" list. Reuses listMine's membership-scan pattern
+ * (membership rows survive a soft-delete) rather than a table-wide scan,
+ * since a person's own membership count is inherently small.
+ */
+export const listDeleted = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return [];
+
+    const memberships = await ctx.db
+      .query('memberships')
+      .withIndex('by_user', (q) => q.eq('userId', userId))
+      .collect();
+    const owned = memberships.filter((m) => m.role === 'owner');
+
+    const workspaces = await Promise.all(owned.map((m) => ctx.db.get(m.workspaceId)));
+
+    return workspaces
+      .filter((ws): ws is NonNullable<typeof ws> => ws != null && ws.deletedAt != null)
+      .map((ws) => ({ ...ws, purgesAt: ws.deletedAt! + WORKSPACE_RETENTION_MS }))
+      .sort((a, b) => b.deletedAt! - a.deletedAt!);
+  },
+});
+
+/** Undo a soft-delete within the retention window (owner only). */
+export const restore = mutation({
+  args: { workspaceId: v.id('workspaces') },
+  handler: async (ctx, { workspaceId }) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error('Unauthenticated');
+
+    const ws = await ctx.db.get(workspaceId);
+    if (!ws) throw new Error('Not found');
+    if (ws.ownerId !== userId) throw new Error('Only the workspace owner can restore it');
+    if (!ws.deletedAt) throw new Error('Workspace is not deleted');
+
+    await ctx.db.patch(workspaceId, { deletedAt: undefined });
+  },
+});
+
+/**
+ * Permanently purge one workspace that has been soft-deleted for longer
+ * than WORKSPACE_RETENTION_MS, cascading through everything it owns.
+ * Scheduled daily by convex/crons.ts; self-reschedules immediately after
+ * a successful purge so a backlog drains same-day instead of one workspace
+ * per cron tick, and stops on its own once nothing is left to do.
+ *
+ * Unlike the interactive `remove` mutation (soft-delete only, on purpose —
+ * see its comment), this is the point where data actually goes away, so it
+ * cascades for real: memberships, pending invites, modules → lessons →
+ * blocks → presence, and the analytics tables. Notifications are left
+ * alone — there's no by_workspace index for them (they're only optionally
+ * tagged with a workspaceId) and a dangling reference on an old
+ * notification is harmless, it just won't resolve a link anymore.
+ *
+ * Does NOT delete uploaded R2/storage blobs referenced by block content —
+ * no code path in this app deletes those on any deletion today (module
+ * soft-delete doesn't either), and extracting every storageId out of 15+
+ * block-type payloads is a real, separate piece of work. Flagged, not
+ * silently scoped in here.
+ */
+export const purgeExpiredWorkspaces = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const cutoff = Date.now() - WORKSPACE_RETENTION_MS;
+    const [ws] = await ctx.db
+      .query('workspaces')
+      .withIndex('by_deletedAt', (q) => q.lte('deletedAt', cutoff))
+      .take(1);
+    if (!ws) return;
+
+    const [memberships, invites, modules, links, profiles, gaps, recs] = await Promise.all([
+      ctx.db.query('memberships').withIndex('by_workspace', (q) => q.eq('workspaceId', ws._id)).collect(),
+      ctx.db.query('pendingInvites').withIndex('by_workspace', (q) => q.eq('workspaceId', ws._id)).collect(),
+      ctx.db.query('modules').withIndex('by_workspace', (q) => q.eq('workspaceId', ws._id)).collect(),
+      ctx.db.query('analyticsLinks').withIndex('by_workspace', (q) => q.eq('workspaceId', ws._id)).collect(),
+      ctx.db.query('analysisProfiles').withIndex('by_workspace', (q) => q.eq('workspaceId', ws._id)).collect(),
+      ctx.db.query('trainingGaps').withIndex('by_workspace', (q) => q.eq('workspaceId', ws._id)).collect(),
+      ctx.db.query('courseRecommendations').withIndex('by_workspace', (q) => q.eq('workspaceId', ws._id)).collect(),
+    ]);
+
+    for (const mod of modules) {
+      const [lessons, blocks, presenceRows] = await Promise.all([
+        ctx.db.query('lessons').withIndex('by_module', (q) => q.eq('moduleId', mod._id)).collect(),
+        ctx.db.query('blocks').withIndex('by_module', (q) => q.eq('moduleId', mod._id)).collect(),
+        ctx.db.query('presence').withIndex('by_module', (q) => q.eq('moduleId', mod._id)).collect(),
+      ]);
+      await Promise.all([
+        ...blocks.map((b) => ctx.db.delete(b._id)),
+        ...lessons.map((l) => ctx.db.delete(l._id)),
+        ...presenceRows.map((p) => ctx.db.delete(p._id)),
+      ]);
+      await ctx.db.delete(mod._id);
+    }
+
+    await Promise.all([
+      ...memberships.map((m) => ctx.db.delete(m._id)),
+      ...invites.map((i) => ctx.db.delete(i._id)),
+      ...links.map((l) => ctx.db.delete(l._id)),
+      ...profiles.map((p) => ctx.db.delete(p._id)),
+      ...gaps.map((g) => ctx.db.delete(g._id)),
+      ...recs.map((r) => ctx.db.delete(r._id)),
+    ]);
+
+    await ctx.db.delete(ws._id);
+
+    await ctx.scheduler.runAfter(0, internal.workspaces.purgeExpiredWorkspaces, {});
   },
 });
 
