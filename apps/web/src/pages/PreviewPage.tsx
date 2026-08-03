@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from '@tanstack/react-router';
 import { api } from '~convex/_generated/api';
 import type { Id } from '~convex/_generated/dataModel';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { CSSProperties } from 'react';
 import { buildPreviewHtml } from '../lib/scormExport';
 import type { ExportBlock, ExportLesson, ExportModule, ExportTheme } from '../lib/scormExport';
 import {
@@ -29,6 +30,13 @@ function viewportClass(mode: ViewMode): string {
   if (mode === 'tablet') return 'max-w-[760px] rounded-[1.75rem] border-[10px] border-slate-900 shadow-2xl';
   return 'max-w-5xl rounded-3xl border border-slate-200 shadow-xl';
 }
+
+// Phone/tablet emulate a real device's logical viewport height (capped so a short
+// window still fits); desktop instead fills the available authoring area.
+const frameScreenStyle = (mode: ViewMode): CSSProperties => ({
+  height: mode === 'desktop' ? 'calc(100vh - 8.5rem)' : 'min(844px, calc(100vh - 8.5rem))',
+  minHeight: '680px',
+});
 
 /** Parse block JSON content and collect all storageId references */
 function extractStorageIds(blocks: Array<{ type: string; content?: string }>): string[] {
@@ -263,31 +271,21 @@ export function PreviewPage() {
       </header>
 
       <main className="flex flex-1 justify-center overflow-auto px-3 py-6 sm:px-6">
-        <section className={`w-full overflow-hidden ${viewportClass(viewMode)}`}>
+        {/* self-start: without it, main's flex row stretches this section to the
+            row's full height, leaving dead space inside the bezel below the iframe. */}
+        <section className={`w-full self-start overflow-hidden ${viewportClass(viewMode)}`}>
           {iframeHtml ? (
             <iframe
               srcDoc={iframeHtml}
               title="Learner preview"
               sandbox="allow-scripts allow-same-origin allow-popups"
               className="block w-full border-0 bg-white"
-              style={{
-                height:
-                  viewMode === 'desktop'
-                    ? 'calc(100vh - 8.5rem)'
-                    : 'min(844px, calc(100vh - 8.5rem))',
-                minHeight: '680px',
-              }}
+              style={frameScreenStyle(viewMode)}
             />
           ) : (
             <div
               className="flex items-center justify-center bg-white"
-              style={{
-                height:
-                  viewMode === 'desktop'
-                    ? 'calc(100vh - 8.5rem)'
-                    : 'min(844px, calc(100vh - 8.5rem))',
-                minHeight: '680px',
-              }}
+              style={frameScreenStyle(viewMode)}
             >
               <Loader2 className="size-5 animate-spin text-indigo-300" />
             </div>
