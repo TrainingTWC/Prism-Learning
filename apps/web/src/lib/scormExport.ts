@@ -561,9 +561,31 @@ function renderBlock(
       if (pairs.length === 0) return '';
       // shuffle deterministically (server has no Date.now sensitive concerns; client will see consistent order)
       const shuffled = [...pairs].sort(() => Math.random() - 0.5);
-      const terms = pairs.map((t) => `<div class="prism-mt-term" data-tid="${escapeHtml(t.id)}"><strong>${escapeHtml(t.term)}</strong><div class="prism-mt-slot">Drop here</div></div>`).join('');
+      const terms = pairs.map((t) => `<div class="prism-mt-term" data-tid="${escapeHtml(t.id)}"><strong>${escapeHtml(t.term)}</strong><div class="prism-mt-slot">Tap or drop</div></div>`).join('');
       const defs = shuffled.map((d) => `<div class="prism-mt-def" draggable="true" data-did="${escapeHtml(d.id)}">${escapeHtml(d.definition)}</div>`).join('');
-      return `<div class="prism-matching"><div class="prism-mt-cols"><div class="prism-mt-terms">${terms}</div><div class="prism-mt-defs">${defs}</div></div><button type="button" class="prism-mt-check">Check</button><script>(function(){var r=document.currentScript.parentElement,drag=null;r.querySelectorAll('.prism-mt-def').forEach(function(d){d.addEventListener('dragstart',function(){drag=d});d.addEventListener('dragend',function(){drag=null})});r.querySelectorAll('.prism-mt-term').forEach(function(t){t.addEventListener('dragover',function(e){e.preventDefault()});t.addEventListener('drop',function(e){e.preventDefault();if(!drag)return;var slot=t.querySelector('.prism-mt-slot');slot.textContent=drag.textContent;slot.setAttribute('data-did',drag.getAttribute('data-did'));drag.style.display='none'})});r.querySelector('.prism-mt-check').addEventListener('click',function(){r.querySelectorAll('.prism-mt-term').forEach(function(t){var slot=t.querySelector('.prism-mt-slot');var ok=slot.getAttribute('data-did')===t.getAttribute('data-tid');t.classList.remove('correct','wrong');t.classList.add(ok?'correct':'wrong')})})})();</script></div>`;
+      // Interaction supports both HTML5 drag (desktop) and tap-to-place (touch —
+      // dragstart never fires on touch, so drag alone leaves the block
+      // uncompletable on phones). Tap a definition to select it, tap a term to
+      // place it, tap a filled term to send its definition back to the bank.
+      return `<div class="prism-matching"><div class="prism-mt-cols"><div class="prism-mt-terms"><div class="prism-mt-head">Terms</div>${terms}</div><div class="prism-mt-defs"><div class="prism-mt-head">Definitions</div>${defs}</div></div><button type="button" class="prism-mt-check">Check</button><script>(function(){
+var r=document.currentScript.parentElement,drag=null,sel=null;
+var defs=[].slice.call(r.querySelectorAll('.prism-mt-def'));
+function defBy(did){for(var i=0;i<defs.length;i++){if(defs[i].getAttribute('data-did')===did)return defs[i]}return null}
+function select(d){if(sel)sel.classList.remove('selected');sel=d;if(sel)sel.classList.add('selected');r.classList.toggle('picking',!!sel)}
+function clear(t){var slot=t.querySelector('.prism-mt-slot');var did=slot.getAttribute('data-did');if(!did)return;var prev=defBy(did);if(prev)prev.hidden=false;slot.removeAttribute('data-did');slot.textContent='Tap or drop';t.classList.remove('correct','wrong')}
+function place(t,d){clear(t);var slot=t.querySelector('.prism-mt-slot');slot.textContent=d.textContent;slot.setAttribute('data-did',d.getAttribute('data-did'));d.hidden=true;t.classList.remove('correct','wrong');select(null)}
+defs.forEach(function(d){
+d.addEventListener('dragstart',function(){drag=d});
+d.addEventListener('dragend',function(){drag=null});
+d.addEventListener('click',function(){select(sel===d?null:d)});
+});
+r.querySelectorAll('.prism-mt-term').forEach(function(t){
+t.addEventListener('dragover',function(e){e.preventDefault()});
+t.addEventListener('drop',function(e){e.preventDefault();if(drag)place(t,drag)});
+t.addEventListener('click',function(){if(sel)place(t,sel);else clear(t)});
+});
+r.querySelector('.prism-mt-check').addEventListener('click',function(){select(null);r.querySelectorAll('.prism-mt-term').forEach(function(t){var slot=t.querySelector('.prism-mt-slot');var ok=slot.getAttribute('data-did')===t.getAttribute('data-tid');t.classList.remove('correct','wrong');t.classList.add(ok?'correct':'wrong')})});
+})();</script></div>`;
     }
 
     case 'sorting': {
@@ -1057,15 +1079,23 @@ html[data-theme="dark"] .prism-callout--tip{color:#d8b4fe}
 .prism-rc-hint{position:absolute;bottom:8px;right:10px;font-size:10px;font-weight:700;opacity:.5;text-transform:uppercase;letter-spacing:1px}
 /* ── Matching ── */
 .prism-matching{border:2px solid rgba(0,0,0,.08);border-radius:12px;padding:16px;margin:1.5rem 0;background:rgba(0,0,0,.02)}
-.prism-mt-cols{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-.prism-mt-term{background:#fff;color:#1a1a2e;border-radius:10px;padding:12px;margin-bottom:8px;border:2px solid #e2e8f0;display:flex;align-items:center;gap:12px;min-height:60px}
+/* auto-fit stacks the two columns once the container drops below ~500px, so the
+   block stays inside its card on phone-width viewports without a media query */
+.prism-mt-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
+.prism-mt-terms,.prism-mt-defs{min-width:0}
+.prism-mt-head{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;opacity:.6;margin-bottom:8px}
+.prism-mt-term{background:#fff;color:#1a1a2e;border-radius:10px;padding:12px;margin-bottom:8px;border:2px solid #e2e8f0;display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;min-height:60px;cursor:pointer}
 .prism-mt-term.correct{border-color:#10b981}
 .prism-mt-term.wrong{border-color:#ef4444}
-.prism-mt-term strong{font-size:14px;flex-shrink:0}
-.prism-mt-slot{flex:1;font-size:13px;padding:6px 10px;border-radius:6px;border:1px dashed #cbd5e1;text-align:center;color:#94a3b8}
+.prism-mt-term strong{font-size:14px;flex:0 1 auto;min-width:0;overflow-wrap:break-word}
+/* flex-basis + wrap: the slot drops to its own line rather than overflowing when
+   the term label is long */
+.prism-mt-slot{flex:1 1 140px;min-width:0;font-size:13px;padding:6px 10px;border-radius:6px;border:1px dashed #cbd5e1;text-align:center;color:#94a3b8;overflow-wrap:break-word}
 .prism-mt-slot[data-did]{background:rgba(0,0,0,.05);border:none;color:#1a1a2e}
-.prism-mt-def{background:var(--prism-accent);color:#fff;border-radius:10px;padding:12px;margin-bottom:8px;cursor:grab;font-size:13px;font-weight:500;box-shadow:0 2px 6px rgba(0,0,0,.12)}
-.prism-mt-check{padding:8px 20px;border-radius:8px;border:none;background:var(--prism-accent);color:#fff;font-weight:700;cursor:pointer;margin-top:12px;float:right}
+.prism-matching.picking .prism-mt-slot:not([data-did]){border-color:var(--prism-accent);color:var(--prism-accent)}
+.prism-mt-def{background:var(--prism-accent);color:#fff;border-radius:10px;padding:12px;margin-bottom:8px;cursor:grab;font-size:13px;font-weight:500;box-shadow:0 2px 6px rgba(0,0,0,.12);overflow-wrap:break-word}
+.prism-mt-def.selected{outline:3px solid rgba(0,0,0,.35);outline-offset:2px}
+.prism-mt-check{display:block;padding:8px 20px;border-radius:8px;border:none;background:var(--prism-accent);color:#fff;font-weight:700;cursor:pointer;margin:12px 0 0 auto}
 /* ── Sorting ── */
 .prism-sorting{border:2px solid rgba(0,0,0,.08);border-radius:12px;padding:16px;margin:1.5rem 0;background:rgba(0,0,0,.02)}
 .prism-sort-prompt{font-size:15px;font-weight:600;margin:0 0 12px;color:#1e293b}
