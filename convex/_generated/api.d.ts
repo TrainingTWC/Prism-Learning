@@ -19,6 +19,7 @@ import type * as members from "../members.js";
 import type * as modules from "../modules.js";
 import type * as notifications from "../notifications.js";
 import type * as presence from "../presence.js";
+import type * as sso from "../sso.js";
 import type * as users from "../users.js";
 import type * as workspaces from "../workspaces.js";
 
@@ -40,6 +41,7 @@ declare const fullApi: ApiFromModules<{
   modules: typeof modules;
   notifications: typeof notifications;
   presence: typeof presence;
+  sso: typeof sso;
   users: typeof users;
   workspaces: typeof workspaces;
 }>;

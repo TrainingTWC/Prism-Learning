@@ -7,6 +7,7 @@ import {
 import { AppLayout } from './components/AppLayout';
 import { MobileGuard } from './components/MobileGuard';
 import { SignInPage } from './pages/SignInPage';
+import { SsoCallbackPage } from './pages/SsoCallbackPage';
 import { IntelligenceDashboardPage } from './pages/IntelligenceDashboardPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { WorkspacePage } from './pages/WorkspacePage';
@@ -33,6 +34,12 @@ const signInRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/sign-in',
   component: SignInPage,
+});
+
+const ssoCallbackRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/sso/callback',
+  component: SsoCallbackPage,
 });
 
 // Protected layout — enforces auth
@@ -124,6 +131,7 @@ const rendererDemoRoute = createRoute({
 
 const routeTree = rootRoute.addChildren([
   signInRoute,
+  ssoCallbackRoute,
   rendererDemoRoute,
   protectedRoute.addChildren([dashboardRoute, intelligenceRoute, workspaceRoute, membersRoute, moduleListRoute, moduleEditorRoute, themeEditorRoute, buildWithAIRoute, analyticsRoute, previewRoute]),
 ]);

@@ -176,7 +176,9 @@ export default defineSchema({
     lastComputedAt: v.optional(v.number()),
     createdAt: v.number(),
     updatedAt: v.number(),
-  }).index('by_workspace', ['workspaceId']),
+  })
+    .index('by_workspace', ['workspaceId'])
+    .index('by_companyCode', ['companyCode']),
 
   /** Materialized gap analysis results — recomputed on demand */
   trainingGaps: defineTable({

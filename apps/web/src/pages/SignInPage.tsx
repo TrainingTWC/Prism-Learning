@@ -315,6 +315,13 @@ export function SignInPage() {
               )}
               {sendingLink ? 'Sending link…' : 'Send magic link instead'}
             </button>
+
+            <a
+              href={`https://app.prismintelligence.in/login?redirect_uri=${encodeURIComponent(`${window.location.origin}/sso/callback`)}&app=authoring`}
+              className="mt-3 flex w-full items-center justify-center text-sm font-semibold text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
+            >
+              Sign in with Prism
+            </a>
           </div>
         )}
       </div>

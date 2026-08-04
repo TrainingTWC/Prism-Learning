@@ -1,8 +1,23 @@
-import { convexAuth } from '@convex-dev/auth/server';
+import { convexAuth, createAccount, retrieveAccount } from '@convex-dev/auth/server';
 import { Email } from '@convex-dev/auth/providers/Email';
 import { Password } from '@convex-dev/auth/providers/Password';
+import { ConvexCredentials } from '@convex-dev/auth/providers/ConvexCredentials';
 import { ConvexError } from 'convex/values';
 import { Resend } from 'resend';
+import { createRemoteJWKSet, jwtVerify } from 'jose';
+import { internal } from './_generated/api';
+
+// prism-platform signs session JWTs with RS256 and publishes its public key
+// here — no shared secret to configure or rotate on this side.
+const PRISM_JWKS_URL = 'https://effervescent-gopher-848.convex.site/.well-known/jwks.json';
+const prismJwks = createRemoteJWKSet(new URL(PRISM_JWKS_URL));
+
+interface PrismClaims {
+  email?: string;
+  name?: string;
+  empId?: string;
+  companySlug?: string;
+}
 
 /**
  * Magic-link auth via email.
@@ -67,6 +82,60 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
         if (password.length < 4) {
           throw new ConvexError('Password or PIN must be at least 4 characters.');
         }
+      },
+    }),
+
+    /**
+     * SSO via prism-platform. Verifies the RS256 JWT it issued, then finds or
+     * creates the matching Convex Auth account — links to an existing
+     * Email/Password account by verified email if one exists, otherwise
+     * creates a new user. See convex/sso.ts for the employeeProfiles /
+     * workspace-membership side effects that run after.
+     */
+    ConvexCredentials({
+      id: 'prism-sso',
+      authorize: async (credentials, ctx) => {
+        const token = credentials.token;
+        if (typeof token !== 'string' || !token) {
+          throw new ConvexError('Missing sign-in token.');
+        }
+
+        let claims: PrismClaims;
+        try {
+          const { payload } = await jwtVerify(token, prismJwks, { issuer: 'prism-platform' });
+          claims = payload as PrismClaims;
+        } catch {
+          throw new ConvexError('Invalid or expired sign-in link.');
+        }
+        if (!claims.email || !claims.empId) {
+          throw new ConvexError('Sign-in token is missing required fields.');
+        }
+        const email = claims.email.trim().toLowerCase();
+
+        const existing = await retrieveAccount(ctx, {
+          provider: 'prism-sso',
+          account: { id: email },
+        }).catch(() => null);
+
+        const userId = existing
+          ? existing.user._id
+          : (
+              await createAccount(ctx, {
+                provider: 'prism-sso',
+                account: { id: email },
+                profile: { email, name: claims.name ?? email, emailVerificationTime: Date.now() },
+                shouldLinkViaEmail: true,
+              })
+            ).user._id;
+
+        await ctx.runMutation(internal.sso.linkSsoEmployee, {
+          userId,
+          email,
+          employeeId: claims.empId,
+          companyCode: (claims.companySlug ?? '').trim().toUpperCase(),
+        });
+
+        return { userId };
       },
     }),
   ],
