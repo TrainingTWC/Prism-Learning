@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import type { Id } from '~convex/_generated/dataModel';
 import { ToggleLeft } from 'lucide-react';
+import { InlineRichText } from './InlineRichText';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 export type TrueFalsePayload = {
@@ -8,6 +9,11 @@ export type TrueFalsePayload = {
   correctAnswer: boolean;
   trueFeedback: string;
   falseFeedback: string;
+  /**
+   * Overrides the module-level "Assessment mode" export setting for this
+   * question specifically. undefined = inherit the module default.
+   */
+  assessment?: boolean;
 };
 
 function defaultPayload(): TrueFalsePayload {
@@ -56,7 +62,26 @@ export function TrueFalseBlockEditor({
         <span className="text-xs font-semibold uppercase tracking-wide text-violet-600">
           True / False
         </span>
+        <select
+          value={payload.assessment === undefined ? 'inherit' : payload.assessment ? 'on' : 'off'}
+          onChange={(e) => {
+            const v = e.target.value;
+            commit({ ...payload, assessment: v === 'inherit' ? undefined : v === 'on' });
+          }}
+          title="Whether this question hides the correct answer/feedback and just records a right/wrong result — overrides the module's export-time setting"
+          className="ml-auto rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-medium text-slate-600"
+        >
+          <option value="inherit">Assessment: module default</option>
+          <option value="on">Assessment: always on</option>
+          <option value="off">Assessment: always off</option>
+        </select>
       </div>
+      {payload.assessment === true && (
+        <p className="border-b border-amber-100 bg-amber-50/60 px-4 py-1.5 text-[11px] text-amber-700">
+          This question always hides the correct answer and feedback, regardless of the module's
+          export setting.
+        </p>
+      )}
 
       <div className="p-4 space-y-4">
         {/* Statement */}
@@ -64,12 +89,11 @@ export function TrueFalseBlockEditor({
           <label className="block text-[11px] font-semibold uppercase tracking-wide text-slate-400 mb-1">
             Statement
           </label>
-          <textarea
-            rows={2}
+          <InlineRichText
             value={payload.statement}
-            onChange={(e) => commit({ ...payload, statement: e.target.value })}
+            onChange={(html) => commit({ ...payload, statement: html })}
             placeholder="Enter a true or false statement…"
-            className="w-full resize-none rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800 placeholder-slate-400 outline-none focus:border-violet-300 focus:ring-1 focus:ring-violet-200"
+            multiline
           />
         </div>
 
@@ -104,24 +128,20 @@ export function TrueFalseBlockEditor({
             <label className="block text-[11px] font-semibold uppercase tracking-wide text-slate-400 mb-1">
               "True" feedback
             </label>
-            <input
-              type="text"
+            <InlineRichText
               value={payload.trueFeedback}
-              onChange={(e) => commit({ ...payload, trueFeedback: e.target.value })}
+              onChange={(html) => commit({ ...payload, trueFeedback: html })}
               placeholder={`Shown when learner picks True…`}
-              className="w-full rounded-lg border border-slate-200 px-3 py-1.5 text-xs text-slate-700 placeholder-slate-400 outline-none focus:border-violet-300 focus:ring-1 focus:ring-violet-200"
             />
           </div>
           <div>
             <label className="block text-[11px] font-semibold uppercase tracking-wide text-slate-400 mb-1">
               "False" feedback
             </label>
-            <input
-              type="text"
+            <InlineRichText
               value={payload.falseFeedback}
-              onChange={(e) => commit({ ...payload, falseFeedback: e.target.value })}
+              onChange={(html) => commit({ ...payload, falseFeedback: html })}
               placeholder={`Shown when learner picks False…`}
-              className="w-full rounded-lg border border-slate-200 px-3 py-1.5 text-xs text-slate-700 placeholder-slate-400 outline-none focus:border-violet-300 focus:ring-1 focus:ring-violet-200"
             />
           </div>
         </div>

@@ -1,8 +1,8 @@
-# Prism Learning
+# Prism Authoring
 
 ## What This Is
 
-Prism Learning is a Rise-360-style learning module authoring tool for small teams. Authors collaborate in realtime to build polished, themed, block-based learning modules — text, images, video embeds, quizzes, accordions, and Lottie animations — and export them as SCORM 1.2 packages that drop straight into any LMS.
+Prism Authoring is a Rise-360-style learning module authoring tool for small teams. Authors collaborate in realtime to build polished, themed, block-based learning modules — text, images, video embeds, quizzes, accordions, and Lottie animations — and export them as SCORM 1.2 packages that drop straight into any LMS.
 
 The product is for a small team of authors (the user + a few collaborators) who currently lack a clean, opinionated tool for producing modular learning content without design effort.
 
@@ -121,6 +121,17 @@ If theming, realtime co-editing, and a valid SCORM export all work, the product 
 | Video embeds only (YouTube/Vimeo URL) | Avoids storage + transcoding pipeline; covers the realistic need | — Pending |
 | Async-with-locking dropped in favor of realtime co-edit | User explicitly chose realtime; Convex makes it cheap, so no reason to compromise | — Pending |
 | Tiptap (ProseMirror) for the rich-text editor | Industry standard for collaborative rich text; well-supported React bindings; works cleanly with Convex sync model | — Pending |
+
+## Current Milestone: v1.1 — Authoring & SCORM Bug Fix Sprint
+
+**Goal:** Fix five production-blocking bugs in the live app — three that break exported SCORM packages in real LMS environments, and two that impair the authoring UX.
+
+**Target fixes:**
+- Gallery/carousel block broken in exported SCORM (JS init pattern fails in LMS iframe)
+- Lottie animations missing in SCORM export (CDN dependency blocked by LMS CSP; R2 URL used as path)
+- SCORM completion/score not reported to LMS (minimal API shim shadows real LMS API)
+- Lesson title in main content area not clickable for inline rename (static h2, only pencil button works)
+- Tabs block content editor missing rich text (plain textarea instead of Tiptap editor)
 
 ## Evolution
 

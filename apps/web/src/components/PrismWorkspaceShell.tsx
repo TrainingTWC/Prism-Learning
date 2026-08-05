@@ -60,7 +60,7 @@ export function PrismWorkspaceShell({
   const [theme, setTheme] = useState<'dark' | 'light'>(() => localStorage.getItem('prism-theme') === 'light' ? 'light' : 'dark');
   const [passwordModalOpen, setPasswordModalOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const resolvedWorkspaceName = workspaceName ?? 'Prism Learning';
+  const resolvedWorkspaceName = workspaceName ?? 'Prism Authoring';
   const { signOut } = useAuthActions();
   const navigate = useNavigate();
   const me = useQuery(api.users.getMe);
@@ -141,8 +141,8 @@ export function PrismWorkspaceShell({
       <aside className="prism-sidebar">
         <div className="border-b border-[var(--sidebar-border)] px-5 py-5">
           <Link to="/" className="prism-brand-link mb-5 flex items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)] transition hover:opacity-80">
-            <img src="/prism-logo.png" className="size-8 shrink-0" alt="Prism Learning" />
-            <span className="prism-brand-wordmark">Prism Learning</span>
+            <img src="/prism-logo.png" className="size-8 shrink-0" alt="Prism Authoring" />
+            <span className="prism-brand-wordmark">Prism Authoring</span>
           </Link>
           <p className="prism-sidebar-label truncate text-lg font-bold tracking-tight text-[var(--text-primary)]">{resolvedWorkspaceName}</p>
           {workspaceRole && (
@@ -156,7 +156,7 @@ export function PrismWorkspaceShell({
         <div className="prism-sidebar-label px-4 py-4">
           <div className="flex items-center gap-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--input-bg)] px-3 py-2 text-[var(--text-muted)]">
             <Search className="size-3.5" />
-            <span className="text-xs">Search Prism Learning...</span>
+            <span className="text-xs">Search Prism Authoring...</span>
           </div>
         </div>
 

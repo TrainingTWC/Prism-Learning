@@ -54,10 +54,7 @@ export function HotspotsBlockRenderer({
         <div
           style={{
             position: 'absolute',
-            left: `${open.xPct}%`,
-            top: `${open.yPct}%`,
-            transform: `translate(${open.xPct > 50 ? 'calc(-100% - 24px)' : '24px'}, -50%)`,
-            maxWidth: 280, minWidth: 200,
+            left: 12, right: 12, bottom: 12,
             background: '#fff', color: '#1a1a2e',
             borderRadius: 12, padding: 16,
             boxShadow: '0 10px 30px rgba(0,0,0,0.25)',

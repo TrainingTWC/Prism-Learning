@@ -7,7 +7,12 @@ type DividerStyle = 'line' | 'space' | 'dots';
 export type DividerPayload = {
   style: DividerStyle;
   label: string;
+  padding: number;
 };
+
+const MIN_PADDING = 0;
+const MAX_PADDING = 96;
+const PADDING_STEP = 4;
 
 const STYLE_OPTIONS: { value: DividerStyle; label: string; preview: React.ReactNode }[] = [
   {
@@ -33,9 +38,29 @@ const STYLE_OPTIONS: { value: DividerStyle; label: string; preview: React.ReactN
   },
 ];
 
+function defaultPaddingForStyle(style: DividerStyle) {
+  return style === 'space' ? 32 : 48;
+}
+
+function clampPadding(value: unknown, style: DividerStyle) {
+  const numeric = typeof value === 'number' ? value : Number(value);
+  if (!Number.isFinite(numeric)) return defaultPaddingForStyle(style);
+  return Math.min(MAX_PADDING, Math.max(MIN_PADDING, Math.round(numeric)));
+}
+
 function parse(content?: string): DividerPayload {
-  if (!content) return { style: 'line', label: '' };
-  try { return JSON.parse(content) as DividerPayload; } catch { return { style: 'line', label: '' }; }
+  if (!content) return { style: 'line', label: '', padding: defaultPaddingForStyle('line') };
+  try {
+    const parsed = JSON.parse(content) as Partial<DividerPayload>;
+    const style = STYLE_OPTIONS.some((opt) => opt.value === parsed.style) ? parsed.style! : 'line';
+    return {
+      style,
+      label: typeof parsed.label === 'string' ? parsed.label : '',
+      padding: clampPadding(parsed.padding, style),
+    };
+  } catch {
+    return { style: 'line', label: '', padding: defaultPaddingForStyle('line') };
+  }
 }
 
 export function DividerBlockEditor({
@@ -96,6 +121,35 @@ export function DividerBlockEditor({
             />
           </div>
         )}
+
+        <div>
+          <div className="mb-1 flex items-center justify-between gap-3">
+            <label className="text-xs font-medium text-slate-500">Padding</label>
+            <span className="text-xs font-semibold tabular-nums text-slate-400">{payload.padding}px</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <input
+              type="range"
+              min={MIN_PADDING}
+              max={MAX_PADDING}
+              step={PADDING_STEP}
+              value={payload.padding}
+              onChange={(e) => commit({ ...payload, padding: clampPadding(e.target.value, payload.style) })}
+              className="h-2 flex-1 accent-indigo-500"
+              aria-label="Divider padding"
+            />
+            <input
+              type="number"
+              min={MIN_PADDING}
+              max={MAX_PADDING}
+              step={PADDING_STEP}
+              value={payload.padding}
+              onChange={(e) => commit({ ...payload, padding: clampPadding(e.target.value, payload.style) })}
+              className="w-20 rounded-lg border border-slate-200 px-2 py-1.5 text-right text-xs font-medium text-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+              aria-label="Divider padding in pixels"
+            />
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -15,7 +15,7 @@ export function MobileGuard({ children }: { children: React.ReactNode }) {
           <Monitor className="mx-auto mb-4 size-12 text-slate-300" strokeWidth={1.5} />
           <h2 className="mb-2 text-lg font-semibold text-slate-800">Best viewed on a larger screen</h2>
           <p className="text-sm leading-relaxed text-slate-500">
-            Prism Learning is a desktop authoring tool. Open it on a laptop or desktop for the best
+            Prism Authoring is a desktop tool. Open it on a laptop or desktop for the best
             experience.
           </p>
         </div>

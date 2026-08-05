@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { ImageBlock, ResolveAsset } from './types';
+import { sanitizeInline } from './sanitizeInline';
 
 interface Payload {
   storageId?: string;
@@ -107,9 +108,11 @@ export function ImageBlockRenderer({ block, resolveAsset }: Props) {
         </div>
       </div>
       {payload.caption && (
-        <figcaption className="mt-2 text-center text-sm text-slate-500">
-          {payload.caption}
-        </figcaption>
+        <figcaption
+          className="mt-2 text-center text-sm text-slate-500"
+          // eslint-disable-next-line react/no-danger -- sanitized via sanitizeInline
+          dangerouslySetInnerHTML={{ __html: sanitizeInline(payload.caption) }}
+        />
       )}
       {open && <Lightbox src={src} alt={payload.altText ?? ''} onClose={() => setOpen(false)} />}
     </figure>

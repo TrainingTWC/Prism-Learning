@@ -130,6 +130,55 @@ export const add = mutation({
   },
 });
 
+/**
+ * Append several pre-filled blocks to a lesson in one call. Used by the quiz
+ * importers (Prism Intelligence checklist + CSV), where creating each block
+ * and then patching its content separately would be N round-trips and would
+ * briefly show a page full of empty blocks.
+ */
+export const addMany = mutation({
+  args: {
+    lessonId: v.id('lessons'),
+    moduleId: v.id('modules'),
+    blocks: v.array(
+      v.object({
+        type: v.union(v.literal('mcq'), v.literal('trueFalse')),
+        content: v.string(),
+      }),
+    ),
+  },
+  handler: async (ctx, { lessonId, moduleId, blocks }) => {
+    const { userId, lesson } = await requireLessonMember(ctx, lessonId);
+    if (lesson.moduleId !== moduleId) throw new Error('Forbidden');
+    if (blocks.length === 0) return [];
+    if (blocks.length > 200) throw new Error('Too many blocks in one import (max 200)');
+
+    const existing = await ctx.db
+      .query('blocks')
+      .withIndex('by_lesson', (q) => q.eq('lessonId', lessonId))
+      .collect();
+    let order = existing.reduce((max, b) => Math.max(max, b.order), 0);
+
+    const now = Date.now();
+    const ids: Id<'blocks'>[] = [];
+    for (const b of blocks) {
+      order += 1000;
+      ids.push(
+        await ctx.db.insert('blocks', {
+          lessonId,
+          moduleId: lesson.moduleId,
+          type: b.type,
+          order,
+          content: b.content,
+          updatedAt: now,
+          lastEditedBy: userId,
+        }),
+      );
+    }
+    return ids;
+  },
+});
+
 /** Update block content (rich text HTML). Per-field LWW — last writer wins. */
 export const updateContent = mutation({
   args: { blockId: v.id('blocks'), content: v.string() },

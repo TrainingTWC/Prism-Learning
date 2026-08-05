@@ -107,13 +107,13 @@ export interface CalloutBlock {
 export interface DividerBlock {
   id: string;
   type: 'divider';
-  content: string; // JSON: { style: 'line'|'space'|'dots'; label?: string }
+  content: string; // JSON: { style: 'line'|'space'|'dots'; label?: string; padding?: number }
 }
 
 export interface FlashcardBlock {
   id: string;
   type: 'flashcard';
-  content: string; // JSON: { cards: { id: string; front: string; back: string }[] }
+  content: string; // JSON: { cards: { id: string; front: string; back: string; frontImageStorageId?: string; frontAudioStorageId?: string; backImageStorageId?: string; backAudioStorageId?: string }[] }
 }
 
 export interface ProcessBlock {
@@ -125,7 +125,7 @@ export interface ProcessBlock {
 export interface TabsBlock {
   id: string;
   type: 'tabs';
-  content: string; // JSON: { tabs: { id: string; title: string; content: string }[] }
+  content: string; // JSON: { tabs: { id: string; title: string; content: string; imageStorageId?: string; audioStorageId?: string }[] }
 }
 
 export interface ButtonBlock {

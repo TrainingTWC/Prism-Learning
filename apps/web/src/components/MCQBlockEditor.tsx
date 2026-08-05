@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import type { Id } from '~convex/_generated/dataModel';
 import { Plus, Trash2, CheckCircle2, Circle, GripVertical, ChevronDown, ChevronUp } from 'lucide-react';
+import { InlineRichText } from './InlineRichText';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 export type MCQOption = {
@@ -16,6 +17,11 @@ export type MCQPayload = {
   multiSelect: boolean;
   /** Show per-option feedback in preview/export */
   showFeedback: boolean;
+  /**
+   * Overrides the module-level "Assessment mode" export setting for this
+   * question specifically. undefined = inherit the module default.
+   */
+  assessment?: boolean;
 };
 
 function emptyOption(id: string): MCQOption {
@@ -155,8 +161,28 @@ export function MCQBlockEditor({
             </span>
             <span className="text-sm font-medium text-slate-700">Show feedback</span>
           </label>
+          {/* Per-question assessment override */}
+          <select
+            value={payload.assessment === undefined ? 'inherit' : payload.assessment ? 'on' : 'off'}
+            onChange={(e) => {
+              const v = e.target.value;
+              commit({ ...payload, assessment: v === 'inherit' ? undefined : v === 'on' });
+            }}
+            title="Whether this question hides answers/feedback and just records a right/wrong result — overrides the module's export-time setting"
+            className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-medium text-slate-600"
+          >
+            <option value="inherit">Assessment: module default</option>
+            <option value="on">Assessment: always on</option>
+            <option value="off">Assessment: always off</option>
+          </select>
         </div>
       </div>
+      {payload.assessment === true && (
+        <p className="border-b border-amber-100 bg-amber-50/60 px-4 py-1.5 text-[11px] text-amber-700">
+          This question always hides the correct answer and feedback, regardless of the module's
+          export setting.
+        </p>
+      )}
 
       <div className="p-4 space-y-4">
         {/* Question */}
@@ -164,12 +190,11 @@ export function MCQBlockEditor({
           <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">
             Question
           </label>
-          <textarea
-            rows={3}
+          <InlineRichText
             value={payload.question}
-            onChange={(e) => setQuestion(e.target.value)}
+            onChange={(html) => setQuestion(html)}
             placeholder="Enter the question…"
-            className="w-full resize-none rounded-lg border border-slate-200 px-4 py-3 text-base text-slate-800 placeholder-slate-400 outline-none focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100"
+            multiline
           />
         </div>
 
@@ -213,13 +238,13 @@ export function MCQBlockEditor({
                     )}
                   </button>
 
-                  <input
-                    type="text"
-                    value={opt.text}
-                    onChange={(e) => setOptionText(opt.id, e.target.value)}
-                    placeholder={`Option ${opt.id.toUpperCase()}…`}
-                    className="flex-1 bg-transparent text-base text-slate-700 placeholder-slate-400 outline-none"
-                  />
+                  <div className="flex-1">
+                    <InlineRichText
+                      value={opt.text}
+                      onChange={(html) => setOptionText(opt.id, html)}
+                      placeholder={`Option ${opt.id.toUpperCase()}…`}
+                    />
+                  </div>
 
                   {/* Feedback toggle */}
                   {payload.showFeedback && (
@@ -257,12 +282,10 @@ export function MCQBlockEditor({
                 {/* Feedback row */}
                 {payload.showFeedback && expandedFeedback === opt.id && (
                   <div className="mt-1.5 ml-12 mr-2">
-                    <input
-                      type="text"
+                    <InlineRichText
                       value={opt.feedback}
-                      onChange={(e) => setOptionFeedback(opt.id, e.target.value)}
+                      onChange={(html) => setOptionFeedback(opt.id, html)}
                       placeholder="Feedback shown after selection…"
-                      className="w-full rounded-lg border border-slate-200 px-4 py-2 text-sm text-slate-700 placeholder-slate-400 outline-none focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100"
                     />
                   </div>
                 )}

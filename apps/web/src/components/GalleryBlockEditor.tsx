@@ -3,6 +3,7 @@ import { useMutation, useQuery } from 'convex/react';
 import { api } from '~convex/_generated/api';
 import type { Id } from '~convex/_generated/dataModel';
 import { Loader2, Upload, Trash2, Plus, Images, LayoutGrid, GalleryHorizontal } from 'lucide-react';
+import { CaptionEditor } from './CaptionEditor';
 
 type Item = { storageId: string; altText: string; caption: string };
 type Payload = { layout: 'carousel' | 'grid'; items: Item[] };
@@ -90,12 +91,12 @@ export function GalleryBlockEditor({
                   </button>
                   <span className="absolute left-1.5 top-1.5 rounded-md bg-black/60 px-1.5 text-[10px] font-bold text-white">{i + 1}</span>
                 </div>
-                <input
-                  value={it.caption}
-                  onChange={(e) => update(i, { caption: e.target.value })}
-                  placeholder="Caption…"
-                  className="w-full border-t border-[var(--border-primary)] bg-transparent px-2 py-1.5 text-xs text-[var(--text-primary)] outline-none"
-                />
+                <div className="border-t border-[var(--border-primary)] p-1.5">
+                  <CaptionEditor
+                    value={it.caption}
+                    onChange={(html) => update(i, { caption: html })}
+                  />
+                </div>
               </div>
             ))}
           </div>

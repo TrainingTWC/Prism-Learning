@@ -42,6 +42,13 @@ export interface ExportOptions {
   passingScore: number;
   /** 'completed': finish last lesson; 'passed': score ≥ passingScore */
   completionCriteria: 'completed' | 'passed';
+  /**
+   * Assessment mode: quiz blocks accept an answer and lock it in without
+   * revealing correctness or feedback, and the module reports passed /
+   * incomplete against `passingScore`. Individual blocks can opt out via
+   * their own `assessment` field. Defaults to false (teaching behaviour).
+   */
+  assessmentMode?: boolean;
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -60,6 +67,97 @@ function escapeHtml(s: string) {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
+}
+
+/**
+ * Sanitize inline/block rich-text HTML for the exported package (image /
+ * gallery captions, and — as of the remaining-text-surfaces conversion —
+ * accordion/callout/quote/flashcard/process/quiz fields authored via
+ * InlineRichText). `p` is allowed so multiline fields keep paragraph breaks.
+ * Legacy plain-string content (no `<`) is escaped as before.
+ */
+function sanitizeInlineHtml(s: string) {
+  if (!s.includes('<')) return escapeHtml(s);
+  return DOMPurify.sanitize(s, {
+    ALLOWED_TAGS: ['p', 'span', 'strong', 'em', 'b', 'i', 'u', 's', 'br', 'a'],
+    ALLOWED_ATTR: ['style', 'class', 'href', 'target', 'rel'],
+    ALLOW_DATA_ATTR: false,
+  });
+}
+
+/**
+ * Render a multiline (paragraph-capable) rich-text field for direct HTML
+ * embedding, optionally with a styling class.
+ *
+ * Rich content authored via `InlineRichText` (multiline mode) already
+ * carries its own Tiptap-produced `<p>` wrapper(s). Nesting that inside a
+ * `<p class="...">` template (as the legacy plain-text shape used) would be
+ * invalid HTML — browsers auto-close the outer `<p>` the moment they see a
+ * nested `<p>` start tag, silently dropping the outer tag's class. So:
+ *  - Legacy plain-string content (no `<`): wrapped in `<p class="...">` —
+ *    byte-identical to the original escapeHtml-based template.
+ *  - Rich content (has `<`): wrapped in a `<div class="...">` instead so the
+ *    class survives; CSS written as plain class selectors (not tag-qualified
+ *    `p.foo`) or as `.container p{...}` descendant selectors keeps applying
+ *    via inheritance / descendant matching either way.
+ */
+function sanitizeMultilineHtml(s: string, cls?: string): string {
+  const clsAttr = cls ? ` class="${cls}"` : '';
+  if (!s.includes('<')) return `<p${clsAttr}>${escapeHtml(s)}</p>`;
+  const body = sanitizeInlineHtml(s);
+  return cls ? `<div${clsAttr}>${body}</div>` : body;
+}
+
+/**
+ * Sanitize rich-text HTML for embedding inside an HTML attribute value that
+ * will later be read via `getAttribute()`/`dataset` and assigned directly to
+ * `.innerHTML` in the exported runtime (quiz per-option / true-false
+ * feedback). The body HTML is sanitized FIRST (via `sanitizeInlineHtml`),
+ * then HTML-attribute-encoded exactly once so the browser's attribute
+ * parser decodes it back to the exact sanitized string when read at
+ * runtime — safe because that string was already DOMPurify-sanitized
+ * before this encoding pass (nested-encoding, not double-escaping: the
+ * attribute parse step and the later innerHTML-assignment step each decode
+ * exactly one of the two encoding passes).
+ */
+function sanitizeForFeedbackAttr(s: string): string {
+  return escapeHtml(sanitizeInlineHtml(s));
+}
+
+/**
+ * A parser-blocking <script src> (no async/defer) pauses rendering of
+ * everything after it in the page until that request resolves. A stray
+ * external script pointed at a slow or dead host (e.g. a browser-injected
+ * tag accidentally copied into a Custom HTML block) can stall an entire
+ * SCORM lesson for minutes. Add defer to any external script tag missing
+ * both attributes so the rest of the block/page renders immediately
+ * regardless of that script's network behavior. Custom HTML otherwise stays
+ * fully unsanitized/unmodified — this is a narrow, additive attribute
+ * insertion via regex rather than a full reparse, so nothing else in the
+ * author's markup is touched.
+ */
+function deferExternalScripts(html: string): string {
+  return html.replace(
+    /<script\b([^>]*?)\bsrc=(["'])(.*?)\2([^>]*)>/gi,
+    (match, before: string, quote: string, src: string, after: string) => {
+      if (/\b(?:async|defer)\b/i.test(before + after)) return match;
+      return `<script${before} src=${quote}${src}${quote}${after} defer>`;
+    },
+  );
+}
+
+function defaultDividerPadding(style?: string) {
+  return style === 'space' ? 32 : 48;
+}
+
+function dividerPadding(value: unknown, style?: string) {
+  const numeric = typeof value === 'number' ? value : Number(value);
+  if (!Number.isFinite(numeric)) return defaultDividerPadding(style);
+  return Math.min(96, Math.max(0, Math.round(numeric)));
+}
+
+function dividerPaddingStyle(value: unknown, style?: string) {
+  return `--prism-divider-padding:${dividerPadding(value, style)}px`;
 }
 
 function toEmbedUrl(raw: string): string | null {
@@ -93,7 +191,21 @@ const CALLOUT_ICONS: Record<string, string> = {
 
 // ── Block → HTML ───────────────────────────────────────────────────────────
 
-function renderBlock(block: ExportBlock, assetMap: Record<string, string>): string {
+/**
+ * Resolve whether a quiz block behaves as an assessment question. The block's
+ * own `assessment` field wins when set; otherwise the module-level default
+ * from ExportOptions applies.
+ */
+function resolveAssess(blockAssessment: unknown, moduleDefault: boolean): boolean {
+  return typeof blockAssessment === 'boolean' ? blockAssessment : moduleDefault;
+}
+
+function renderBlock(
+  block: ExportBlock,
+  assetMap: Record<string, string>,
+  /** Module-level assessment default; per-block `assessment` overrides it */
+  assessDefault = false,
+): string {
   const c = block.content ?? '';
   switch (block.type) {
     case 'richText': {
@@ -119,7 +231,7 @@ function renderBlock(block: ExportBlock, assetMap: Record<string, string>): stri
       if (!src) return '';
       return `<figure class="prism-img">
   <img src="${escapeHtml(src)}" alt="${escapeHtml(p.altText ?? '')}" />
-  ${p.caption ? `<figcaption>${escapeHtml(p.caption)}</figcaption>` : ''}
+  ${p.caption ? `<figcaption>${sanitizeInlineHtml(p.caption)}</figcaption>` : ''}
 </figure>`;
     }
 
@@ -143,49 +255,67 @@ function renderBlock(block: ExportBlock, assetMap: Record<string, string>): stri
     }
 
     case 'mcq': {
-      let p: { question?: string; options?: Array<{ id: string; text: string; isCorrect: boolean; feedback?: string }>; multiSelect?: boolean; showFeedback?: boolean } = {};
+      let p: { question?: string; options?: Array<{ id: string; text: string; isCorrect: boolean; feedback?: string }>; multiSelect?: boolean; showFeedback?: boolean; assessment?: boolean } = {};
       try { p = JSON.parse(c) as typeof p; } catch { /* */ }
-      const opts = (p.options ?? []).map((o) =>
-        `<li>
-  <button type="button" class="prism-opt" data-id="${escapeHtml(o.id)}" data-correct="${o.isCorrect}" data-feedback="${escapeHtml(o.feedback ?? '')}">
-    <span class="prism-opt-marker"></span>${escapeHtml(o.text)}
+      const assess = resolveAssess(p.assessment, assessDefault);
+      const opts = (p.options ?? []).map((o) => {
+        // Feedback HTML is sanitized at build time and stored in a data
+        // attribute; the exported runtime reads it via getAttribute() and
+        // assigns it to innerHTML only after the learner selects this option
+        // (see buildInteractionJs) — see sanitizeForFeedbackAttr for why the
+        // nested sanitize+escape encoding round-trips safely. Assessment
+        // questions never render feedback markup at all — nothing to leak.
+        const feedbackAttr = o.feedback && !assess ? ` data-feedback="${sanitizeForFeedbackAttr(o.feedback)}"` : '';
+        const feedbackCls = `prism-opt-feedback ${o.isCorrect ? 'prism-opt-feedback--ok' : 'prism-opt-feedback--bad'}`;
+        return `<li>
+  <button type="button" class="prism-opt" data-id="${escapeHtml(o.id)}" data-correct="${o.isCorrect}">
+    <span class="prism-opt-marker"></span>${sanitizeInlineHtml(o.text)}
   </button>
-</li>`,
-      ).join('');
-      return `<div class="prism-mcq" data-multi="${p.multiSelect ?? false}" data-feedback="${p.showFeedback ?? true}">
-  <p class="prism-q">${escapeHtml(p.question ?? '')}</p>
+  ${o.feedback && !assess ? `<p class="${feedbackCls}"${feedbackAttr} style="display:none"></p>` : ''}
+</li>`;
+      }).join('');
+      return `<div class="prism-mcq" data-multi="${p.multiSelect ?? false}" data-feedback="${p.showFeedback ?? true}" data-assessment="${assess}">
+  ${sanitizeMultilineHtml(p.question ?? '', 'prism-q')}
   <ul class="prism-opts">${opts}</ul>
   <div class="prism-actions">
     <button type="button" class="prism-submit" disabled>Submit</button>
     <span class="prism-result"></span>
-    <button type="button" class="prism-retry" style="display:none">Try again</button>
+    ${assess ? '' : '<button type="button" class="prism-retry" style="display:none">Try again</button>'}
   </div>
 </div>`;
     }
 
     case 'trueFalse': {
-      let p: { statement?: string; correctAnswer?: boolean; trueFeedback?: string; falseFeedback?: string } = {};
+      let p: { statement?: string; correctAnswer?: boolean; trueFeedback?: string; falseFeedback?: string; assessment?: boolean } = {};
       try { p = JSON.parse(c) as typeof p; } catch { /* */ }
-      return `<div class="prism-tf" data-correct="${p.correctAnswer ?? true}" data-tf="${escapeHtml(p.trueFeedback ?? '')}" data-ff="${escapeHtml(p.falseFeedback ?? '')}">
-  <p class="prism-q">${escapeHtml(p.statement ?? '')}</p>
+      const assess = resolveAssess(p.assessment, assessDefault);
+      // tf/ff feedback is sanitized at build time and stored in data-tf/data-ff;
+      // the exported runtime reads it and assigns it to innerHTML (see
+      // buildInteractionJs + sanitizeForFeedbackAttr for the encoding
+      // rationale). Assessment questions never emit tf/ff data at all.
+      return `<div class="prism-tf" data-correct="${p.correctAnswer ?? true}" data-assessment="${assess}" data-tf="${assess ? '' : sanitizeForFeedbackAttr(p.trueFeedback ?? '')}" data-ff="${assess ? '' : sanitizeForFeedbackAttr(p.falseFeedback ?? '')}">
+  ${sanitizeMultilineHtml(p.statement ?? '', 'prism-q')}
   <div class="prism-tf-btns">
     <button type="button" data-answer="true">True</button>
     <button type="button" data-answer="false">False</button>
   </div>
-  <div class="prism-result" style="display:none"></div>
-  <button type="button" class="prism-retry" style="display:none">Try again</button>
+  ${assess ? '' : '<div class="prism-result" style="display:none"></div><button type="button" class="prism-retry" style="display:none">Try again</button>'}
 </div>`;
     }
 
     case 'accordion': {
-      let p: { sections?: Array<{ id: string; title: string; content: string }> } = {};
+      let p: { sections?: Array<{ id: string; title: string; content: string; imageStorageId?: string; audioStorageId?: string }> } = {};
       try { p = JSON.parse(c) as typeof p; } catch { /* */ }
-      const sections = (p.sections ?? []).map((s, i) =>
-        `<div class="prism-acc-item">
-  <button type="button" class="prism-acc-btn" data-idx="${i}">${escapeHtml(s.title)}<span class="prism-acc-arrow">▼</span></button>
-  <div class="prism-acc-body" style="display:none"><p>${escapeHtml(s.content)}</p></div>
-</div>`,
-      ).join('');
+      const sections = (p.sections ?? []).map((s, i) => {
+        const imgSrc = s.imageStorageId ? assetMap[s.imageStorageId] : undefined;
+        const audioSrc = s.audioStorageId ? assetMap[s.audioStorageId] : undefined;
+        const imageHtml = imgSrc ? `<img src="${escapeHtml(imgSrc)}" alt="" class="prism-acc-img" />` : '';
+        const audioHtml = audioSrc ? `<audio controls src="${escapeHtml(audioSrc)}"></audio>` : '';
+        return `<div class="prism-acc-item">
+  <button type="button" class="prism-acc-btn" data-idx="${i}"><span class="prism-acc-title">${sanitizeInlineHtml(s.title)}</span><span class="prism-acc-arrow">▼</span></button>
+  <div class="prism-acc-body" style="display:none">${imageHtml}${sanitizeMultilineHtml(s.content)}${audioHtml}</div>
+</div>`;
+      }).join('');
       return `<div class="prism-acc">${sections}</div>`;
     }
 
@@ -194,8 +324,8 @@ function renderBlock(block: ExportBlock, assetMap: Record<string, string>): stri
       try { p = JSON.parse(c) as typeof p; } catch { /* */ }
       if (!p.text) return '';
       return `<blockquote class="prism-quote">
-  <p>${escapeHtml(p.text)}</p>
-  ${p.attribution ? `<cite>${escapeHtml(p.attribution)}</cite>` : ''}
+  ${sanitizeMultilineHtml(p.text)}
+  ${p.attribution ? `<cite>${sanitizeInlineHtml(p.attribution)}</cite>` : ''}
 </blockquote>`;
     }
 
@@ -207,37 +337,64 @@ function renderBlock(block: ExportBlock, assetMap: Record<string, string>): stri
       return `<div class="prism-callout prism-callout--${escapeHtml(variant)}">
   <span class="prism-callout-icon">${icon}</span>
   <div>
-    ${p.title ? `<p class="prism-callout-title">${escapeHtml(p.title)}</p>` : ''}
-    <p>${escapeHtml(p.body ?? '')}</p>
+    ${p.title ? sanitizeMultilineHtml(p.title, 'prism-callout-title') : ''}
+    ${sanitizeMultilineHtml(p.body ?? '')}
   </div>
 </div>`;
     }
 
     case 'divider': {
-      let p: { style?: string; label?: string } = {};
+      let p: { style?: string; label?: string; padding?: number } = {};
       try { p = JSON.parse(c) as typeof p; } catch { /* */ }
       const style = p.style ?? 'line';
-      if (style === 'space') return `<div class="prism-divider prism-divider--space"></div>`;
-      if (style === 'dots') return `<div class="prism-divider prism-divider--dots">···</div>`;
+      const paddingStyle = dividerPaddingStyle(p.padding, style);
+      if (style === 'space') return `<div class="prism-divider prism-divider--space" style="${paddingStyle}"></div>`;
+      if (style === 'dots') return `<div class="prism-divider prism-divider--dots" style="${paddingStyle}">&middot;&middot;&middot;</div>`;
       return p.label
-        ? `<div class="prism-divider prism-divider--label"><span>${escapeHtml(p.label)}</span></div>`
-        : `<hr class="prism-divider prism-divider--line" />`;
+        ? `<div class="prism-divider prism-divider--label" style="${paddingStyle}"><span>${escapeHtml(p.label)}</span></div>`
+        : `<div class="prism-divider prism-divider--line" style="${paddingStyle}"></div>`;
     }
 
     case 'flashcard': {
-      let p: { cards?: Array<{ id: string; front: string; back: string }> } = {};
+      let p: { cards?: Array<{
+        id: string; front: string; back: string;
+        frontImageStorageId?: string; frontAudioStorageId?: string;
+        backImageStorageId?: string; backAudioStorageId?: string;
+        /** legacy: shared image/audio authored before front/back became independent */
+        imageStorageId?: string; audioStorageId?: string;
+      }> } = {};
       try { p = JSON.parse(c) as typeof p; } catch { /* */ }
       const cards = p.cards ?? [];
       if (!cards.length) return '';
-      const cardsHtml = cards.map((card, i) =>
-        `<div class="prism-fc-card" data-idx="${i}" style="${i > 0 ? 'display:none' : ''}">
-  <div class="prism-fc-inner" data-flipped="false">
-    <div class="prism-fc-front"><p>${escapeHtml(card.front)}</p></div>
-    <div class="prism-fc-back" style="display:none"><p>${escapeHtml(card.back)}</p></div>
+      const cardsHtml = cards.map((card, i) => {
+        // Legacy cards stored one shared image/audio for both faces — fold
+        // those into the back face (this project's original use case) so
+        // cards authored before front/back became independent keep showing
+        // their media without needing a re-save in the editor.
+        const backImageId = card.frontImageStorageId || card.backImageStorageId ? card.backImageStorageId : card.imageStorageId;
+        const backAudioId = card.frontAudioStorageId || card.backAudioStorageId ? card.backAudioStorageId : card.audioStorageId;
+        const frontImgSrc = card.frontImageStorageId ? assetMap[card.frontImageStorageId] : undefined;
+        const frontAudioSrc = card.frontAudioStorageId ? assetMap[card.frontAudioStorageId] : undefined;
+        const backImgSrc = backImageId ? assetMap[backImageId] : undefined;
+        const backAudioSrc = backAudioId ? assetMap[backAudioId] : undefined;
+        const frontImageHtml = frontImgSrc ? `<img src="${escapeHtml(frontImgSrc)}" alt="" />` : '';
+        const frontAudioHtml = frontAudioSrc
+          ? `<audio controls src="${escapeHtml(frontAudioSrc)}" onclick="event.stopPropagation()"></audio>`
+          : '';
+        const backImageHtml = backImgSrc ? `<img src="${escapeHtml(backImgSrc)}" alt="" />` : '';
+        const backAudioHtml = backAudioSrc
+          ? `<audio controls src="${escapeHtml(backAudioSrc)}" onclick="event.stopPropagation()"></audio>`
+          : '';
+        return `<div class="prism-fc-card" data-idx="${i}" style="${i > 0 ? 'display:none' : ''}">
+  <div class="prism-fc-scene">
+    <div class="prism-fc-inner" data-flipped="false">
+      <div class="prism-fc-face prism-fc-front">${frontImageHtml}${sanitizeMultilineHtml(card.front)}${frontAudioHtml}</div>
+      <div class="prism-fc-face prism-fc-back">${backImageHtml}${sanitizeMultilineHtml(card.back)}${backAudioHtml}</div>
+    </div>
   </div>
   <button type="button" class="prism-fc-flip">Tap to reveal</button>
-</div>`,
-      ).join('');
+</div>`;
+      }).join('');
       return `<div class="prism-flashcards" data-total="${cards.length}" data-current="0">
   ${cardsHtml}
   <div class="prism-fc-nav">
@@ -256,7 +413,7 @@ function renderBlock(block: ExportBlock, assetMap: Record<string, string>): stri
   <div class="prism-process-num">${i + 1}</div>
   <div class="prism-process-body">
     <p class="prism-process-title">${escapeHtml(step.title)}</p>
-    ${step.body ? `<p class="prism-process-desc">${escapeHtml(step.body)}</p>` : ''}
+    ${step.body ? sanitizeMultilineHtml(step.body, 'prism-process-desc') : ''}
   </div>
 </div>`,
       ).join('');
@@ -264,16 +421,20 @@ function renderBlock(block: ExportBlock, assetMap: Record<string, string>): stri
     }
 
     case 'tabs': {
-      let p: { tabs?: Array<{ id: string; title: string; content: string }> } = {};
+      let p: { tabs?: Array<{ id: string; title: string; content: string; imageStorageId?: string; audioStorageId?: string }> } = {};
       try { p = JSON.parse(c) as typeof p; } catch { /* */ }
       const tabs = p.tabs ?? [];
       if (!tabs.length) return '';
       const tabBtns = tabs.map((t, i) =>
-        `<button type="button" class="prism-tab-btn${i === 0 ? ' active' : ''}" data-idx="${i}">${escapeHtml(t.title)}</button>`,
+        `<button type="button" class="prism-tab-btn${i === 0 ? ' active' : ''}" data-idx="${i}">${t.title || `Tab ${i + 1}`}</button>`,
       ).join('');
-      const tabPanels = tabs.map((t, i) =>
-        `<div class="prism-tab-panel" data-idx="${i}" style="${i > 0 ? 'display:none' : ''}"><p>${escapeHtml(t.content)}</p></div>`,
-      ).join('');
+      const tabPanels = tabs.map((t, i) => {
+        const imgSrc = t.imageStorageId ? assetMap[t.imageStorageId] : undefined;
+        const audioSrc = t.audioStorageId ? assetMap[t.audioStorageId] : undefined;
+        const imageHtml = imgSrc ? `<img src="${escapeHtml(imgSrc)}" alt="" class="prism-tab-img" />` : '';
+        const audioHtml = audioSrc ? `<audio controls src="${escapeHtml(audioSrc)}"></audio>` : '';
+        return `<div class="prism-tab-panel prism-rich-content" data-idx="${i}" style="${i > 0 ? 'display:none' : ''}">${imageHtml}${t.content}${audioHtml}</div>`;
+      }).join('');
       return `<div class="prism-tabs">
   <div class="prism-tabs-bar">${tabBtns}</div>
   <div class="prism-tabs-panels">${tabPanels}</div>
@@ -293,10 +454,22 @@ function renderBlock(block: ExportBlock, assetMap: Record<string, string>): stri
     }
 
     case 'customHtml': {
-      // In SCORM export, author controls their own output — use raw HTML (no sanitization)
+      // In SCORM export, author controls their own output — use raw HTML (no
+      // sanitization), aside from deferring external <script src> tags (see
+      // deferExternalScripts) so one bad script can't hang the whole page.
+      //
+      // Mounted in the LIGHT DOM on purpose. A previous revision isolated this
+      // in an open Shadow DOM to stop a pasted <style> leaking into the rest of
+      // the lesson, but author widgets routinely drive themselves with
+      // `document.getElementById` / `document.querySelector` and inline `on*=`
+      // handlers. Those cannot see nodes inside a shadow root (and inline
+      // handlers resolve against global scope), so shadow-mounting silently
+      // broke every scripted widget — only its static markup rendered.
+      // Script compatibility was chosen over style isolation; the known
+      // trade-off is that a pasted <style> is a global stylesheet again.
       let p: { html?: string } = {};
       try { p = JSON.parse(c) as typeof p; } catch { /* */ }
-      return `<div class="prism-custom-html">${p.html ?? ''}</div>`;
+      return `<div class="prism-custom-html">${deferExternalScripts(p.html ?? '')}</div>`;
     }
 
     case 'hotspots': {
@@ -307,8 +480,8 @@ function renderBlock(block: ExportBlock, assetMap: Record<string, string>): stri
       if (!src) return '';
       const hs = p.hotspots ?? [];
       const dots = hs.map((h, i) => `<button type="button" class="prism-hs-dot" data-hid="${escapeHtml(h.id)}" style="left:${h.xPct}%;top:${h.yPct}%">${i + 1}</button>`).join('');
-      const pops = hs.map((h) => `<div class="prism-hs-pop" data-hid="${escapeHtml(h.id)}" style="left:${h.xPct}%;top:${h.yPct}%;transform:translate(${h.xPct > 50 ? 'calc(-100% - 24px)' : '24px'},-50%)"><div class="prism-hs-pop-h"><strong>${escapeHtml(h.title)}</strong><button type="button" class="prism-hs-close" aria-label="Close">×</button></div>${h.body ? `<p>${escapeHtml(h.body)}</p>` : ''}</div>`).join('');
-      return `<div class="prism-hotspots"><img src="${escapeHtml(src)}" alt="${escapeHtml(p.altText ?? '')}"/>${dots}${pops}<script>(function(){var r=document.currentScript.parentElement;r.querySelectorAll('.prism-hs-dot').forEach(function(d){d.addEventListener('click',function(){var id=d.getAttribute('data-hid');r.querySelectorAll('.prism-hs-pop').forEach(function(p){p.style.display=p.getAttribute('data-hid')===id&&p.style.display!=='block'?'block':'none'})})});r.querySelectorAll('.prism-hs-close').forEach(function(b){b.addEventListener('click',function(e){e.stopPropagation();b.closest('.prism-hs-pop').style.display='none'})})})();</script></div>`;
+      const pops = hs.map((h) => `<div class="prism-hs-pop" data-hid="${escapeHtml(h.id)}"><div class="prism-hs-pop-h"><strong>${escapeHtml(h.title)}</strong><button type="button" class="prism-hs-close" aria-label="Close">×</button></div>${h.body ? `<p>${escapeHtml(h.body)}</p>` : ''}</div>`).join('');
+      return `<div class="prism-hotspots"><img src="${escapeHtml(src)}" alt="${escapeHtml(p.altText ?? '')}"/>${dots}${pops}<script>(function(){var r=document.currentScript.parentElement;var pops=[].slice.call(r.querySelectorAll('.prism-hs-pop'));var bd=null;function closeSheet(){pops.forEach(function(p){p.style.display='none';p.classList.remove('prism-hs-sheet');if(p.parentElement!==r)r.appendChild(p);});if(bd&&bd.parentElement)bd.parentElement.removeChild(bd);bd=null;}function openSheet(id){var t=null;pops.forEach(function(p){if(p.getAttribute('data-hid')===id)t=p;});if(!t)return;var wasOpen=t.style.display==='block';closeSheet();if(wasOpen)return;bd=document.createElement('div');bd.className='prism-hs-backdrop';bd.addEventListener('click',closeSheet);document.body.appendChild(bd);document.body.appendChild(t);t.classList.add('prism-hs-sheet');t.style.display='block';}r.querySelectorAll('.prism-hs-dot').forEach(function(d){d.addEventListener('click',function(e){e.stopPropagation();openSheet(d.getAttribute('data-hid'));});});pops.forEach(function(p){var b=p.querySelector('.prism-hs-close');if(b)b.addEventListener('click',function(e){e.stopPropagation();closeSheet();});});document.addEventListener('keydown',function(e){if(e.key==='Escape')closeSheet();});})();</script></div>`;
     }
 
     case 'gallery': {
@@ -318,11 +491,11 @@ function renderBlock(block: ExportBlock, assetMap: Record<string, string>): stri
       const items = (p.items ?? []).filter((it) => assetMap[it.storageId]);
       if (items.length === 0) return '';
       if (p.layout === 'grid') {
-        return `<div class="prism-gallery-grid">${items.map((it) => `<figure><img src="${escapeHtml(assetMap[it.storageId]!)}" alt="${escapeHtml(it.altText)}"/>${it.caption ? `<figcaption>${escapeHtml(it.caption)}</figcaption>` : ''}</figure>`).join('')}</div>`;
+        return `<div class="prism-gallery-grid">${items.map((it) => `<figure><img src="${escapeHtml(assetMap[it.storageId]!)}" alt="${escapeHtml(it.altText)}"/>${it.caption ? `<figcaption>${sanitizeInlineHtml(it.caption)}</figcaption>` : ''}</figure>`).join('')}</div>`;
       }
-      const slides = items.map((it, i) => `<div class="prism-g-slide${i === 0 ? ' active' : ''}"><img src="${escapeHtml(assetMap[it.storageId]!)}" alt="${escapeHtml(it.altText)}"/>${it.caption ? `<p>${escapeHtml(it.caption)}</p>` : ''}</div>`).join('');
+      const slides = items.map((it, i) => `<div class="prism-g-slide${i === 0 ? ' active' : ''}"><img src="${escapeHtml(assetMap[it.storageId]!)}" alt="${escapeHtml(it.altText)}"/>${it.caption ? `<p>${sanitizeInlineHtml(it.caption)}</p>` : ''}</div>`).join('');
       const dots = items.map((_, i) => `<button type="button" class="prism-g-dot${i === 0 ? ' active' : ''}" data-i="${i}" aria-label="Slide ${i + 1}"></button>`).join('');
-      return `<div class="prism-gallery"><div class="prism-g-slides">${slides}</div><div class="prism-g-controls"><button type="button" class="prism-g-prev" aria-label="Previous">‹</button><div class="prism-g-dots">${dots}</div><button type="button" class="prism-g-next" aria-label="Next">›</button></div><script>(function(){var r=document.currentScript.parentElement,i=0,n=${items.length};function go(j){i=(j+n)%n;r.querySelectorAll('.prism-g-slide').forEach(function(s,k){s.classList.toggle('active',k===i)});r.querySelectorAll('.prism-g-dot').forEach(function(d,k){d.classList.toggle('active',k===i)})}r.querySelector('.prism-g-prev').addEventListener('click',function(){go(i-1)});r.querySelector('.prism-g-next').addEventListener('click',function(){go(i+1)});r.querySelectorAll('.prism-g-dot').forEach(function(d){d.addEventListener('click',function(){go(parseInt(d.getAttribute('data-i')))})})})();</script></div>`;
+      return `<div class="prism-gallery" data-prism-gallery="${items.length}"><div class="prism-g-slides">${slides}</div><div class="prism-g-controls"><button type="button" class="prism-g-prev" aria-label="Previous">‹</button><div class="prism-g-dots">${dots}</div><button type="button" class="prism-g-next" aria-label="Next">›</button></div></div>`;
     }
 
     case 'compare': {
@@ -388,9 +561,31 @@ function renderBlock(block: ExportBlock, assetMap: Record<string, string>): stri
       if (pairs.length === 0) return '';
       // shuffle deterministically (server has no Date.now sensitive concerns; client will see consistent order)
       const shuffled = [...pairs].sort(() => Math.random() - 0.5);
-      const terms = pairs.map((t) => `<div class="prism-mt-term" data-tid="${escapeHtml(t.id)}"><strong>${escapeHtml(t.term)}</strong><div class="prism-mt-slot">Drop here</div></div>`).join('');
+      const terms = pairs.map((t) => `<div class="prism-mt-term" data-tid="${escapeHtml(t.id)}"><strong>${escapeHtml(t.term)}</strong><div class="prism-mt-slot">Tap or drop</div></div>`).join('');
       const defs = shuffled.map((d) => `<div class="prism-mt-def" draggable="true" data-did="${escapeHtml(d.id)}">${escapeHtml(d.definition)}</div>`).join('');
-      return `<div class="prism-matching"><div class="prism-mt-cols"><div class="prism-mt-terms">${terms}</div><div class="prism-mt-defs">${defs}</div></div><button type="button" class="prism-mt-check">Check</button><script>(function(){var r=document.currentScript.parentElement,drag=null;r.querySelectorAll('.prism-mt-def').forEach(function(d){d.addEventListener('dragstart',function(){drag=d});d.addEventListener('dragend',function(){drag=null})});r.querySelectorAll('.prism-mt-term').forEach(function(t){t.addEventListener('dragover',function(e){e.preventDefault()});t.addEventListener('drop',function(e){e.preventDefault();if(!drag)return;var slot=t.querySelector('.prism-mt-slot');slot.textContent=drag.textContent;slot.setAttribute('data-did',drag.getAttribute('data-did'));drag.style.display='none'})});r.querySelector('.prism-mt-check').addEventListener('click',function(){r.querySelectorAll('.prism-mt-term').forEach(function(t){var slot=t.querySelector('.prism-mt-slot');var ok=slot.getAttribute('data-did')===t.getAttribute('data-tid');t.classList.remove('correct','wrong');t.classList.add(ok?'correct':'wrong')})})})();</script></div>`;
+      // Interaction supports both HTML5 drag (desktop) and tap-to-place (touch —
+      // dragstart never fires on touch, so drag alone leaves the block
+      // uncompletable on phones). Tap a definition to select it, tap a term to
+      // place it, tap a filled term to send its definition back to the bank.
+      return `<div class="prism-matching"><div class="prism-mt-cols"><div class="prism-mt-terms"><div class="prism-mt-head">Terms</div>${terms}</div><div class="prism-mt-defs"><div class="prism-mt-head">Definitions</div>${defs}</div></div><button type="button" class="prism-mt-check">Check</button><script>(function(){
+var r=document.currentScript.parentElement,drag=null,sel=null;
+var defs=[].slice.call(r.querySelectorAll('.prism-mt-def'));
+function defBy(did){for(var i=0;i<defs.length;i++){if(defs[i].getAttribute('data-did')===did)return defs[i]}return null}
+function select(d){if(sel)sel.classList.remove('selected');sel=d;if(sel)sel.classList.add('selected');r.classList.toggle('picking',!!sel)}
+function clear(t){var slot=t.querySelector('.prism-mt-slot');var did=slot.getAttribute('data-did');if(!did)return;var prev=defBy(did);if(prev)prev.hidden=false;slot.removeAttribute('data-did');slot.textContent='Tap or drop';t.classList.remove('correct','wrong')}
+function place(t,d){clear(t);var slot=t.querySelector('.prism-mt-slot');slot.textContent=d.textContent;slot.setAttribute('data-did',d.getAttribute('data-did'));d.hidden=true;t.classList.remove('correct','wrong');select(null)}
+defs.forEach(function(d){
+d.addEventListener('dragstart',function(){drag=d});
+d.addEventListener('dragend',function(){drag=null});
+d.addEventListener('click',function(){select(sel===d?null:d)});
+});
+r.querySelectorAll('.prism-mt-term').forEach(function(t){
+t.addEventListener('dragover',function(e){e.preventDefault()});
+t.addEventListener('drop',function(e){e.preventDefault();if(drag)place(t,drag)});
+t.addEventListener('click',function(){if(sel)place(t,sel);else clear(t)});
+});
+r.querySelector('.prism-mt-check').addEventListener('click',function(){select(null);r.querySelectorAll('.prism-mt-term').forEach(function(t){var slot=t.querySelector('.prism-mt-slot');var ok=slot.getAttribute('data-did')===t.getAttribute('data-tid');t.classList.remove('correct','wrong');t.classList.add(ok?'correct':'wrong')})});
+})();</script></div>`;
     }
 
     case 'sorting': {
@@ -425,7 +620,7 @@ function renderBlock(block: ExportBlock, assetMap: Record<string, string>): stri
       const uid = `lottie_${Math.random().toString(36).slice(2, 9)}`;
       return `<div class="prism-lottie" style="max-width:480px;margin:1.5rem auto;text-align:center">
   <div id="${uid}"></div>
-  <script>(function(){function _init(){lottie.loadAnimation({container:document.getElementById('${uid}'),renderer:'svg',loop:${loop},autoplay:${autoplay},path:'${escapeHtml(src)}'});}if(window.lottie){_init();}else{var s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js';s.onload=_init;document.head.appendChild(s);}})();</script>
+  <script>(function(){function _init(){if(!window.lottie)return;lottie.loadAnimation({container:document.getElementById('${uid}'),renderer:'svg',loop:${loop},autoplay:${autoplay},path:'${escapeHtml(src)}'});}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',_init);}else{_init();}})();</script>
 </div>`;
     }
 
@@ -455,7 +650,7 @@ function buildManifest(mod: ExportModule): string {
     </resource>`;
   const resources = welcomeResource + '\n' + mod.lessons
     .map(
-      (l, i) => `    <resource identifier="res_${i}" type="webcontent" adlcp:scormtype="sco"
+      (_, i) => `    <resource identifier="res_${i}" type="webcontent" adlcp:scormtype="sco"
       href="lesson_${i}.html">
       <file href="lesson_${i}.html"/>
     </resource>`,
@@ -491,7 +686,7 @@ ${resources}
 // ── CSS ────────────────────────────────────────────────────────────────────
 
 function buildCss(theme: ExportTheme): string {
-  return `/* Prism Learning — premium SCORM theme */
+  return `/* Prism Authoring — premium SCORM theme */
 :root {
   --prism-primary: ${theme.primary};
   --prism-accent: ${theme.accent};
@@ -637,6 +832,7 @@ h1{font-family:var(--prism-font-heading);font-size:2.5rem;line-height:1.12;font-
 .prism-complete-card{background:var(--prism-surface);border:1px solid var(--prism-border);border-radius:24px;padding:36px 32px;max-width:420px;width:100%;text-align:center;box-shadow:var(--prism-shadow-card);animation:prism-complete-pop var(--prism-motion-slow) var(--prism-ease-emphasized) both}
 @keyframes prism-complete-pop{from{opacity:0;transform:scale(.92) translateY(8px)}to{opacity:1;transform:scale(1) translateY(0)}}
 .prism-complete-check{width:72px;height:72px;border-radius:50%;margin:0 auto 18px;background:linear-gradient(135deg,var(--prism-primary),var(--prism-accent));display:flex;align-items:center;justify-content:center;color:#fff;font-size:38px;box-shadow:0 18px 40px -12px var(--prism-primary);animation:prism-check-bounce 700ms var(--prism-ease-emphasized) both}
+.prism-complete-check.fail{background:linear-gradient(135deg,#ef4444,#dc2626);box-shadow:0 18px 40px -12px #ef4444}
 @keyframes prism-check-bounce{0%{transform:scale(.4);opacity:0}50%{transform:scale(1.1)}100%{transform:scale(1);opacity:1}}
 .prism-complete h2{font-family:var(--prism-font-heading);font-size:1.5rem;font-weight:800;color:var(--prism-text);margin-bottom:8px;letter-spacing:-.01em}
 .prism-complete p{font-size:14px;color:var(--prism-text-muted);line-height:1.6;margin-bottom:22px}
@@ -684,6 +880,13 @@ html[data-theme="dark"] .prism-opt.correct{color:#6ee7b7}
 html[data-theme="dark"] .prism-opt.wrong{color:#fca5a5}
 .prism-opt-marker{width:1.25rem;height:1.25rem;margin-top:.15rem;border-radius:50%;border:2px solid currentColor;display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;flex-shrink:0}
 .prism-opt-marker:not(:empty){animation:prism-marker-pop var(--prism-motion-base) var(--prism-ease-emphasized) both}
+.prism-opt-marker.filled{background:currentColor;animation:prism-marker-pop var(--prism-motion-base) var(--prism-ease-emphasized) both}
+.prism-opt-feedback{margin-top:8px;margin-left:2.5rem;margin-right:.5rem;padding:.5rem .75rem;border-radius:8px;background:color-mix(in srgb, var(--prism-surface) 70%, transparent);font-size:.8rem;line-height:1.4;box-shadow:var(--prism-shadow-soft);animation:prism-feedback-enter var(--prism-motion-base) var(--prism-ease-emphasized) both}
+.prism-opt-feedback--ok{color:var(--prism-correct,#16a34a)}
+.prism-opt-feedback--bad{color:var(--prism-incorrect,#dc2626)}
+.prism-opt:disabled{opacity:.6;cursor:default;pointer-events:none}
+.prism-tf-btns button:disabled{opacity:.6;cursor:default;pointer-events:none}
+.prism-tf-btns button.locked{border-color:var(--prism-primary)}
 .prism-actions{margin-top:14px;display:flex;align-items:center;gap:.75rem}
 .prism-submit{min-height:44px;background:linear-gradient(135deg,var(--prism-primary),var(--prism-accent));color:#fff;border:0;border-radius:12px;padding:.6rem 1.25rem;font:inherit;font-size:.9rem;font-weight:700;cursor:pointer;box-shadow:0 10px 22px -10px var(--prism-primary);transition:transform var(--prism-motion-fast),opacity var(--prism-motion-base),filter var(--prism-motion-fast)}
 .prism-submit:hover:not(:disabled){filter:brightness(1.05)}
@@ -709,8 +912,12 @@ html[data-theme="dark"] .prism-tf-btns button.selected-bad{color:#fca5a5}
 .prism-acc-item:last-child{border-bottom:0}
 .prism-acc-btn{display:flex;justify-content:space-between;align-items:center;width:100%;min-height:3rem;padding:.95rem 1.25rem;font:inherit;font-size:.95rem;line-height:1.5;font-weight:700;color:var(--prism-text);border:0;background:none;cursor:pointer;text-align:left;transition:background-color var(--prism-motion-base)}
 .prism-acc-btn:hover{background:var(--prism-surface-2)}
+.prism-acc-title{flex:1;min-width:0}
+.prism-acc-title p{margin:0;display:inline}
 .prism-acc-arrow{font-size:.65rem;transition:transform var(--prism-motion-base) var(--prism-ease-standard);margin-left:.5rem;color:var(--prism-text-muted)}
 .prism-acc-body{padding:.5rem 1.25rem 1rem;font-size:.92rem;line-height:1.7;color:var(--prism-text-2);border-top:1px solid var(--prism-border-subtle);animation:prism-feedback-enter var(--prism-motion-base) var(--prism-ease-emphasized) both}
+.prism-acc-img{max-height:16rem;max-width:100%;border-radius:12px;object-fit:contain;display:block;margin:.5rem auto 1rem}
+.prism-acc-body audio{width:100%;margin-top:1rem;display:block}
 
 /* ── Reduced motion ── */
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}.prism-block{animation:none}.prism-progress::after{display:none}}
@@ -755,15 +962,22 @@ html[data-theme="dark"] .prism-callout--success{color:#86efac}
 html[data-theme="dark"] .prism-callout--tip{color:#d8b4fe}
 .prism-callout-title{font-weight:700;margin-bottom:.375rem;font-size:.95rem}
 .prism-callout p{font-size:.9rem;line-height:1.6;margin:0}
-.prism-divider--line{border:none;border-top:2px solid var(--prism-border);margin:3rem 0}
-.prism-divider--space{height:2rem;margin:1rem 0}
-.prism-divider--dots{text-align:center;color:var(--prism-text-faint);font-size:1.5rem;letter-spacing:.4em;margin:3rem 0;display:block}
-.prism-divider--label{display:flex;align-items:center;gap:.75rem;margin:3rem 0;color:var(--prism-text-muted);font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em}
+.prism-divider{--prism-divider-padding:48px}
+.prism-divider--line{padding:var(--prism-divider-padding) 0}
+.prism-divider--line::before{content:'';display:block;border-top:2px solid var(--prism-border)}
+.prism-divider--space{height:calc(var(--prism-divider-padding) * 2)}
+.prism-divider--dots{text-align:center;color:var(--prism-text-faint);font-size:1.5rem;letter-spacing:.4em;padding:var(--prism-divider-padding) 0;display:block}
+.prism-divider--label{display:flex;align-items:center;gap:.75rem;padding:var(--prism-divider-padding) 0;color:var(--prism-text-muted);font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em}
 .prism-divider--label::before,.prism-divider--label::after{content:'';flex:1;border-top:1.5px solid var(--prism-border)}
 .prism-flashcards{background:var(--prism-surface-2);border:1px solid var(--prism-border);border-radius:20px;padding:1.25rem;margin:1.75rem 0}
-.prism-fc-inner{min-height:10rem;background:var(--prism-surface);border-radius:14px;border:1.5px solid var(--prism-border);padding:1.5rem;display:flex;align-items:center;justify-content:center;text-align:center;margin-bottom:.875rem;box-shadow:var(--prism-shadow-soft);color:var(--prism-text)}
+.prism-fc-scene{perspective:1600px;margin-bottom:.875rem;cursor:pointer}
+.prism-fc-inner{display:grid;width:100%;transition:transform .6s cubic-bezier(.4,.15,.2,1);transform-style:preserve-3d}
+.prism-fc-inner[data-flipped="true"]{transform:rotateY(180deg)}
+.prism-fc-face{grid-row:1;grid-column:1;min-height:12rem;background:var(--prism-surface);border-radius:14px;border:1.5px solid var(--prism-border);padding:1.5rem;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;box-shadow:var(--prism-shadow-soft);color:var(--prism-text);backface-visibility:hidden;-webkit-backface-visibility:hidden}
+.prism-fc-face img{max-height:8rem;max-width:100%;border-radius:10px;object-fit:contain;margin-bottom:.75rem}
+.prism-fc-face audio{width:100%;max-width:16rem;margin-top:.75rem}
+.prism-fc-back{transform:rotateY(180deg)}
 .prism-fc-front p,.prism-fc-back p{font-size:.98rem;line-height:1.65;color:var(--prism-text);margin:0}
-.prism-fc-back{display:none}
 .prism-fc-flip{width:100%;min-height:44px;background:linear-gradient(135deg,var(--prism-primary),var(--prism-accent));color:#fff;border:0;border-radius:10px;font:inherit;font-size:.9rem;font-weight:700;cursor:pointer;margin-bottom:.75rem;transition:filter .15s;box-shadow:0 10px 22px -12px var(--prism-primary)}
 .prism-fc-flip:hover{filter:brightness(1.05)}
 .prism-fc-nav{display:flex;align-items:center;justify-content:space-between;gap:.5rem}
@@ -783,6 +997,8 @@ html[data-theme="dark"] .prism-callout--tip{color:#d8b4fe}
 .prism-tab-btn{flex-shrink:0;padding:.85rem 1.1rem;font:inherit;font-size:.875rem;font-weight:600;border:0;background:none;cursor:pointer;color:var(--prism-text-muted);border-bottom:2px solid transparent;margin-bottom:-2px;transition:color .15s,border-color .15s;white-space:nowrap}
 .prism-tab-btn:hover{color:var(--prism-text)}
 .prism-tab-btn.active{color:var(--prism-primary);border-bottom-color:var(--prism-primary)}
+.prism-tab-img{max-height:16rem;max-width:100%;border-radius:12px;object-fit:contain;display:block;margin:0 auto 1rem}
+.prism-tab-panel audio{width:100%;margin-top:1rem;display:block}
 .prism-tabs-panels{padding:1.25rem}
 .prism-tab-panel{font-size:.92rem;line-height:1.7;color:var(--prism-text-2)}
 .prism-tab-panel p{margin:0}
@@ -794,13 +1010,17 @@ html[data-theme="dark"] .prism-callout--tip{color:#d8b4fe}
 .prism-btn--outline{background:transparent;color:var(--prism-primary);border:2px solid var(--prism-primary)}
 .prism-btn--ghost{background:transparent;color:var(--prism-primary);border:none;text-decoration:underline}
 .prism-phone{display:none}
-.prism-custom-html{margin:1.5rem 0}
+.prism-custom-html{margin:1.5rem 0;max-width:100%;overflow-x:auto}
 /* ── Hotspots ── */
 .prism-hotspots{position:relative;border-radius:12px;overflow:hidden;margin:1.5rem 0}
 .prism-hotspots img{width:100%;display:block}
 .prism-hs-dot{position:absolute;transform:translate(-50%,-50%);width:36px;height:36px;border-radius:50%;background:var(--prism-accent);color:#fff;border:none;cursor:pointer;font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 6px rgba(0,0,0,.1),0 4px 12px rgba(0,0,0,.3);animation:prism-hs-pulse 2s ease-in-out infinite}
 @keyframes prism-hs-pulse{0%,100%{box-shadow:0 0 0 6px rgba(0,0,0,.1),0 4px 12px rgba(0,0,0,.3)}50%{box-shadow:0 0 0 12px rgba(0,0,0,.05),0 4px 12px rgba(0,0,0,.3)}}
-.prism-hs-pop{position:absolute;max-width:280px;min-width:200px;background:#fff;color:#1a1a2e;border-radius:12px;padding:16px;box-shadow:0 10px 30px rgba(0,0,0,.25);display:none;z-index:5}
+.prism-hs-pop{display:none}
+.prism-hs-backdrop{position:fixed;inset:0;z-index:55;background:rgba(2,6,14,.55);backdrop-filter:blur(4px);animation:prism-fade-in var(--prism-motion-fast) both}
+.prism-hs-sheet{position:fixed;left:0;right:0;bottom:0;z-index:56;max-height:70vh;overflow-y:auto;background:var(--prism-surface);color:var(--prism-text);border-radius:20px 20px 0 0;padding:18px 20px calc(20px + env(safe-area-inset-bottom,0px));box-shadow:0 -12px 40px rgba(0,0,0,.35);animation:prism-hs-sheet-in var(--prism-motion-base) var(--prism-ease-emphasized) both}
+.prism-hs-sheet::before{content:'';display:block;width:38px;height:4px;border-radius:999px;background:var(--prism-border);margin:0 auto 14px}
+@keyframes prism-hs-sheet-in{from{transform:translateY(100%)}to{transform:translateY(0)}}
 .prism-hs-pop-h{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
 .prism-hs-pop-h strong{font-size:14px;color:var(--prism-accent)}
 .prism-hs-close{background:none;border:none;cursor:pointer;color:#999;font-size:18px;line-height:1}
@@ -859,15 +1079,23 @@ html[data-theme="dark"] .prism-callout--tip{color:#d8b4fe}
 .prism-rc-hint{position:absolute;bottom:8px;right:10px;font-size:10px;font-weight:700;opacity:.5;text-transform:uppercase;letter-spacing:1px}
 /* ── Matching ── */
 .prism-matching{border:2px solid rgba(0,0,0,.08);border-radius:12px;padding:16px;margin:1.5rem 0;background:rgba(0,0,0,.02)}
-.prism-mt-cols{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-.prism-mt-term{background:#fff;color:#1a1a2e;border-radius:10px;padding:12px;margin-bottom:8px;border:2px solid #e2e8f0;display:flex;align-items:center;gap:12px;min-height:60px}
+/* auto-fit stacks the two columns once the container drops below ~500px, so the
+   block stays inside its card on phone-width viewports without a media query */
+.prism-mt-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
+.prism-mt-terms,.prism-mt-defs{min-width:0}
+.prism-mt-head{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;opacity:.6;margin-bottom:8px}
+.prism-mt-term{background:#fff;color:#1a1a2e;border-radius:10px;padding:12px;margin-bottom:8px;border:2px solid #e2e8f0;display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;min-height:60px;cursor:pointer}
 .prism-mt-term.correct{border-color:#10b981}
 .prism-mt-term.wrong{border-color:#ef4444}
-.prism-mt-term strong{font-size:14px;flex-shrink:0}
-.prism-mt-slot{flex:1;font-size:13px;padding:6px 10px;border-radius:6px;border:1px dashed #cbd5e1;text-align:center;color:#94a3b8}
+.prism-mt-term strong{font-size:14px;flex:0 1 auto;min-width:0;overflow-wrap:break-word}
+/* flex-basis + wrap: the slot drops to its own line rather than overflowing when
+   the term label is long */
+.prism-mt-slot{flex:1 1 140px;min-width:0;font-size:13px;padding:6px 10px;border-radius:6px;border:1px dashed #cbd5e1;text-align:center;color:#94a3b8;overflow-wrap:break-word}
 .prism-mt-slot[data-did]{background:rgba(0,0,0,.05);border:none;color:#1a1a2e}
-.prism-mt-def{background:var(--prism-accent);color:#fff;border-radius:10px;padding:12px;margin-bottom:8px;cursor:grab;font-size:13px;font-weight:500;box-shadow:0 2px 6px rgba(0,0,0,.12)}
-.prism-mt-check{padding:8px 20px;border-radius:8px;border:none;background:var(--prism-accent);color:#fff;font-weight:700;cursor:pointer;margin-top:12px;float:right}
+.prism-matching.picking .prism-mt-slot:not([data-did]){border-color:var(--prism-accent);color:var(--prism-accent)}
+.prism-mt-def{background:var(--prism-accent);color:#fff;border-radius:10px;padding:12px;margin-bottom:8px;cursor:grab;font-size:13px;font-weight:500;box-shadow:0 2px 6px rgba(0,0,0,.12);overflow-wrap:break-word}
+.prism-mt-def.selected{outline:3px solid rgba(0,0,0,.35);outline-offset:2px}
+.prism-mt-check{display:block;padding:8px 20px;border-radius:8px;border:none;background:var(--prism-accent);color:#fff;font-weight:700;cursor:pointer;margin:12px 0 0 auto}
 /* ── Sorting ── */
 .prism-sorting{border:2px solid rgba(0,0,0,.08);border-radius:12px;padding:16px;margin:1.5rem 0;background:rgba(0,0,0,.02)}
 .prism-sort-prompt{font-size:15px;font-weight:600;margin:0 0 12px;color:#1e293b}
@@ -902,8 +1130,17 @@ html[data-theme="dark"] .prism-callout--tip{color:#d8b4fe}
 
 function buildInteractionJs(): string {
   return `(function(){
+// Quiz blocks live across multiple lesson pages, each a separate full page
+// load — window.__prismTotal/__prismCorrect would reset to 0 on every
+// navigation without this. sessionStorage carries the running score forward
+// for the length of one attempt; the per-lesson init script clears it when
+// lesson_0 loads (a fresh course launch), so a genuine restart still zeroes
+// out cleanly. Swallow storage errors (e.g. private-mode Safari) — scoring
+// then simply doesn't survive navigation, same as before this fix existed.
+function persistScore(){try{sessionStorage.setItem('prism-score-total',String(window.__prismTotal||0));sessionStorage.setItem('prism-score-correct',String(window.__prismCorrect||0));}catch(e){}}
 // MCQ
 document.querySelectorAll('.prism-mcq').forEach(function(el){
+  var assess=el.dataset.assessment==='true';
   var multi=el.dataset.multi==='true';
   var fb=el.dataset.feedback==='true';
   var submit=el.querySelector('.prism-submit');
@@ -911,13 +1148,20 @@ document.querySelectorAll('.prism-mcq').forEach(function(el){
   var retry=el.querySelector('.prism-retry');
   var opts=el.querySelectorAll('.prism-opt');
   var selected=new Set();
+  // Whether this question currently contributes to the running score, and
+  // whether that contribution is "correct" — tracked so a teaching-mode
+  // retry adjusts window.__prismCorrect instead of the old behaviour, which
+  // incremented window.__prismTotal on every resubmission and silently
+  // inflated the denominator on each retry.
+  var counted=false,countedCorrect=false;
   opts.forEach(function(btn){
     btn.addEventListener('click',function(){
       if(el.dataset.submitted==='1')return;
-      if(!multi){selected.clear();opts.forEach(function(b){b.classList.remove('selected')});}
+      if(!multi){selected.clear();opts.forEach(function(b){b.classList.remove('selected');var bm=b.querySelector('.prism-opt-marker');if(bm){bm.textContent='';bm.classList.remove('filled');}});}
       var id=btn.dataset.id;
-      if(selected.has(id)){selected.delete(id);btn.classList.remove('selected');}
-      else{selected.add(id);btn.classList.add('selected');}
+      var marker=btn.querySelector('.prism-opt-marker');
+      if(selected.has(id)){selected.delete(id);btn.classList.remove('selected');if(marker){marker.textContent='';marker.classList.remove('filled');}}
+      else{selected.add(id);btn.classList.add('selected');if(marker){if(multi){marker.classList.remove('filled');marker.textContent='✓';}else{marker.textContent='';marker.classList.add('filled');}}}
       submit.disabled=selected.size===0;
     });
   });
@@ -927,11 +1171,41 @@ document.querySelectorAll('.prism-mcq').forEach(function(el){
     opts.forEach(function(btn){
       var id=btn.dataset.id;
       var correct=btn.dataset.correct==='true';
+      var isSel=selected.has(id);
+      if(isSel&&!correct)allOk=false;
+      else if(!isSel&&correct)allOk=false;
+    });
+    if(assess){
+      // Lock the answer in silently — no correct/wrong classes, no marker
+      // change beyond the learner's own selection, no feedback, no retry.
+      opts.forEach(function(btn){btn.disabled=true;});
+      submit.style.display='none';
+      if(!counted){window.__prismTotal=(window.__prismTotal||0)+1;counted=true;}
+      if(allOk&&!countedCorrect){window.__prismCorrect=(window.__prismCorrect||0)+1;countedCorrect=true;}
+      persistScore();
+      if(window.__prismAPI){try{window.__prismAPI.LMSCommit('');}catch(e){}}
+      return;
+    }
+    opts.forEach(function(btn){
+      var id=btn.dataset.id;
+      var correct=btn.dataset.correct==='true';
       var marker=btn.querySelector('.prism-opt-marker');
-      if(selected.has(id)){
+      var isSel=selected.has(id);
+      if(isSel){
+        if(marker)marker.classList.remove('filled');
         if(correct){btn.classList.add('correct');if(marker)marker.textContent='✓';}
-        else{btn.classList.add('wrong');if(marker)marker.textContent='✗';allOk=false;}
-      } else if(correct && !selected.has(id)){allOk=false;}
+        else{btn.classList.add('wrong');if(marker)marker.textContent='✗';}
+      }
+      // Per-option feedback: only reveal for the option the learner picked,
+      // and only when the author enabled feedback (fb). The feedback HTML
+      // was DOMPurify-sanitized at build time (see sanitizeForFeedbackAttr);
+      // reading it back via getAttribute() and assigning to innerHTML here
+      // is safe because it was never raw/untrusted at this point.
+      var fbEl=btn.parentElement?btn.parentElement.querySelector('.prism-opt-feedback'):null;
+      if(fbEl){
+        if(fb&&isSel){fbEl.innerHTML=fbEl.getAttribute('data-feedback')||'';fbEl.style.display='';}
+        else{fbEl.style.display='none';fbEl.innerHTML='';}
+      }
     });
     result.textContent=allOk?'✓ Nailed it!':'✗ Not quite — give it another go!';
     result.className='prism-result '+(allOk?'ok':'bad');
@@ -939,45 +1213,73 @@ document.querySelectorAll('.prism-mcq').forEach(function(el){
     else{opts.forEach(function(btn){if(btn.classList.contains('wrong')){btn.classList.remove('prism-shake');void btn.offsetWidth;btn.classList.add('prism-shake');}});}
     submit.style.display='none';
     retry.style.display='inline';
-    window.__prismTotal=(window.__prismTotal||0)+1;
-    if(allOk)window.__prismCorrect=(window.__prismCorrect||0)+1;
-    // SCORM score
-    if(typeof API!=='undefined'){
-      try{API.LMSSetValue('cmi.core.score.raw',allOk?'100':'0');API.LMSSetValue('cmi.core.score.min','0');API.LMSSetValue('cmi.core.score.max','100');API.LMSCommit('');}catch(e){}
+    if(!counted){window.__prismTotal=(window.__prismTotal||0)+1;counted=true;}
+    if(allOk&&!countedCorrect){window.__prismCorrect=(window.__prismCorrect||0)+1;countedCorrect=true;}
+    else if(!allOk&&countedCorrect){window.__prismCorrect=(window.__prismCorrect||0)-1;countedCorrect=false;}
+    persistScore();
+    // SCORM score — only numeric score/status are written to CMI, never
+    // authored question/option/feedback text. If cmi.interactions.* writes
+    // are ever added here, any authored text must be tag-stripped first
+    // (never write raw or sanitized-HTML strings to CMI).
+    if(window.__prismAPI){
+      try{window.__prismAPI.LMSSetValue('cmi.core.score.raw',allOk?'100':'0');window.__prismAPI.LMSSetValue('cmi.core.score.min','0');window.__prismAPI.LMSSetValue('cmi.core.score.max','100');window.__prismAPI.LMSCommit('');}catch(e){}
     }
   });
-  retry.addEventListener('click',function(){
+  if(retry)retry.addEventListener('click',function(){
     el.dataset.submitted='0';
     selected.clear();
-    opts.forEach(function(btn){btn.classList.remove('selected','correct','wrong');var m=btn.querySelector('.prism-opt-marker');if(m)m.textContent='';});
+    opts.forEach(function(btn){
+      btn.classList.remove('selected','correct','wrong');
+      var m=btn.querySelector('.prism-opt-marker');if(m){m.textContent='';m.classList.remove('filled');}
+      var fbEl=btn.parentElement?btn.parentElement.querySelector('.prism-opt-feedback'):null;
+      if(fbEl){fbEl.style.display='none';fbEl.innerHTML='';}
+    });
     result.textContent='';submit.style.display='';submit.disabled=true;retry.style.display='none';
   });
 });
 // True/False
 document.querySelectorAll('.prism-tf').forEach(function(el){
+  var assess=el.dataset.assessment==='true';
   var correct=el.dataset.correct==='true';
   var tf=el.dataset.tf||'';var ff=el.dataset.ff||'';
   var res=el.querySelector('.prism-result');
   var retry=el.querySelector('.prism-retry');
-  el.querySelectorAll('.prism-tf-btns button').forEach(function(btn){
+  var counted=false,countedCorrect=false;
+  var btns=el.querySelectorAll('.prism-tf-btns button');
+  btns.forEach(function(btn){
     btn.addEventListener('click',function(){
       if(el.dataset.answered==='1')return;
       el.dataset.answered='1';
       var answer=btn.dataset.answer==='true';
       var ok=answer===correct;
+      if(assess){
+        // Lock both buttons in with no right/wrong indication whatsoever.
+        btn.classList.add('locked');
+        btns.forEach(function(b){b.disabled=true;});
+        if(!counted){window.__prismTotal=(window.__prismTotal||0)+1;counted=true;}
+        if(ok&&!countedCorrect){window.__prismCorrect=(window.__prismCorrect||0)+1;countedCorrect=true;}
+        persistScore();
+        if(window.__prismAPI){try{window.__prismAPI.LMSCommit('');}catch(e){}}
+        return;
+      }
       btn.className=ok?'selected-ok':'selected-bad';
       if(ok){btn.classList.remove('prism-correct-pop');void btn.offsetWidth;btn.classList.add('prism-correct-pop');}
       else{btn.classList.remove('prism-shake');void btn.offsetWidth;btn.classList.add('prism-shake');}
-      if(res){res.textContent=(ok?'Correct! ':'Not quite. ')+(answer?tf:ff);res.style.display='';}
+      // tf/ff were DOMPurify-sanitized at build time (see
+      // sanitizeForFeedbackAttr); the fixed prefix is a literal string, so
+      // this innerHTML assignment carries no unsanitized author content.
+      if(res){res.innerHTML=(ok?'Correct! ':'Not quite. ')+(answer?tf:ff);res.style.display='';}
       if(retry)retry.style.display='inline';
-      window.__prismTotal=(window.__prismTotal||0)+1;
-      if(ok)window.__prismCorrect=(window.__prismCorrect||0)+1;
-      if(typeof API!=='undefined'){try{API.LMSCommit('');}catch(e){}}
+      if(!counted){window.__prismTotal=(window.__prismTotal||0)+1;counted=true;}
+      if(ok&&!countedCorrect){window.__prismCorrect=(window.__prismCorrect||0)+1;countedCorrect=true;}
+      else if(!ok&&countedCorrect){window.__prismCorrect=(window.__prismCorrect||0)-1;countedCorrect=false;}
+      persistScore();
+      if(window.__prismAPI){try{window.__prismAPI.LMSCommit('');}catch(e){}}
     });
   });
   if(retry)retry.addEventListener('click',function(){
     el.dataset.answered='0';
-    el.querySelectorAll('.prism-tf-btns button').forEach(function(b){b.className='';});
+    btns.forEach(function(b){b.className='';});
     if(res){res.textContent='';res.style.display='none';}
     retry.style.display='none';
   });
@@ -1001,7 +1303,15 @@ document.querySelectorAll('.prism-flashcards').forEach(function(fc){
   var count=fc.querySelector('.prism-fc-count');
   var prev=fc.querySelector('.prism-fc-prev');
   var next=fc.querySelector('.prism-fc-next');
+  function setFlipped(card,flipped){
+    var inner=card.querySelector('.prism-fc-inner');
+    var btn=card.querySelector('.prism-fc-flip');
+    if(!inner)return;
+    inner.dataset.flipped=flipped?'true':'false';
+    if(btn)btn.textContent=flipped?'Tap to see question':'Tap to reveal';
+  }
   function goTo(idx){
+    setFlipped(cards[current],false);
     cards[current].style.display='none';
     current=idx;
     cards[current].style.display='';
@@ -1009,25 +1319,12 @@ document.querySelectorAll('.prism-flashcards').forEach(function(fc){
     if(prev)prev.disabled=(current===0);
     if(next)next.disabled=(current===total-1);
   }
-  fc.querySelectorAll('.prism-fc-flip').forEach(function(btn){
-    btn.addEventListener('click',function(){
-      var inner=btn.previousElementSibling;
-      if(!inner)return;
-      var flipped=inner.dataset.flipped==='true';
-      var front=inner.querySelector('.prism-fc-front');
-      var back=inner.querySelector('.prism-fc-back');
-      if(!flipped){
-        if(front)front.style.display='none';
-        if(back)back.style.display='flex';
-        btn.textContent='Tap to flip back';
-        inner.dataset.flipped='true';
-      } else {
-        if(front)front.style.display='flex';
-        if(back)back.style.display='none';
-        btn.textContent='Tap to reveal';
-        inner.dataset.flipped='false';
-      }
-    });
+  cards.forEach(function(card){
+    var inner=card.querySelector('.prism-fc-inner');
+    var btn=card.querySelector('.prism-fc-flip');
+    function toggle(){ setFlipped(card, inner.dataset.flipped!=='true'); }
+    if(inner)inner.addEventListener('click',toggle);
+    if(btn)btn.addEventListener('click',toggle);
   });
   if(prev)prev.addEventListener('click',function(){if(current>0)goTo(current-1);});
   if(next)next.addEventListener('click',function(){if(current<total-1)goTo(current+1);});
@@ -1045,6 +1342,15 @@ document.querySelectorAll('.prism-tabs').forEach(function(tabs){
       if(panels[idx])panels[idx].style.display='';
     });
   });
+});
+// Gallery carousel
+document.querySelectorAll('.prism-gallery[data-prism-gallery]').forEach(function(r){
+  var i=0,n=parseInt(r.getAttribute('data-prism-gallery')||'1',10);
+  function go(j){i=(j+n)%n;r.querySelectorAll('.prism-g-slide').forEach(function(s,k){s.classList.toggle('active',k===i)});r.querySelectorAll('.prism-g-dot').forEach(function(d,k){d.classList.toggle('active',k===i)})}
+  var prev=r.querySelector('.prism-g-prev'),next=r.querySelector('.prism-g-next');
+  if(prev)prev.addEventListener('click',function(){go(i-1)});
+  if(next)next.addEventListener('click',function(){go(i+1)});
+  r.querySelectorAll('.prism-g-dot').forEach(function(d){d.addEventListener('click',function(){go(parseInt(d.getAttribute('data-i')||'0',10))})});
 });
 // Image lightbox
 document.querySelectorAll('.prism-lesson img').forEach(function(img){
@@ -1127,7 +1433,7 @@ function buildWelcomePage(mod: ExportModule, _theme: ExportTheme, hasLogo: boole
 <script src="assets/scorm12.min.js"></script>
 <script>
 (function(){
-  var api=(typeof API!=='undefined')?API:(window.parent&&window.parent.API)||(window.top&&window.top.API)||null;
+  var api=(function(){function findAPI(w){var n=0;while(w.parent&&w.parent!==w&&n<7){n++;if(w.parent.API)return w.parent.API;w=w.parent;}return null;}return window.API||findAPI(window)||(window.opener&&(window.opener.API||findAPI(window.opener)))||window.__prismFallbackAPI||null;})();
   if(api){try{api.LMSInitialize('');api.LMSSetValue('cmi.core.lesson_status','not attempted');api.LMSCommit('');}catch(e){}}
   document.getElementById('startBtn').addEventListener('click',function(){
     var inner=document.querySelector('.prism-welcome-inner');
@@ -1173,7 +1479,7 @@ function buildGoodbyePage(_theme: ExportTheme): string {
 <script src="assets/scorm12.min.js"></script>
 <script>
 (function(){
-  var api=(typeof API!=='undefined')?API:(window.parent&&window.parent.API)||(window.top&&window.top.API)||null;
+  var api=(function(){function findAPI(w){var n=0;while(w.parent&&w.parent!==w&&n<7){n++;if(w.parent.API)return w.parent.API;w=w.parent;}return null;}return window.API||findAPI(window)||(window.opener&&(window.opener.API||findAPI(window.opener)))||window.__prismFallbackAPI||null;})();
   if(api){try{api.LMSCommit('');api.LMSFinish('');}catch(e){}}
 })();
 </script>
@@ -1197,7 +1503,7 @@ function buildLessonPage(
   const pct = Math.round(((lessonIdx + 1) / total) * 100);
 
   const blocksHtml = lesson.blocks
-    .map((b, i) => `<div class="prism-block" style="--i:${i}">${renderBlock(b, assetMap)}</div>`)
+    .map((b, i) => `<div class="prism-block" style="--i:${i}">${renderBlock(b, assetMap, options.assessmentMode ?? false)}</div>`)
     .join('\n');
 
   // Lesson dots — clickable chips representing every lesson
@@ -1231,6 +1537,7 @@ function buildLessonPage(
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
 <title>${escapeHtml(lesson.title)} · ${escapeHtml(mod.title)}</title>
 <link rel="stylesheet" href="styles.css"/>
+<script src="assets/lottie.min.js"></script>
 <script>(function(){try{var t=localStorage.getItem('prism-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);else if(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();</script>
 </head>
 <body data-criteria="${options.completionCriteria}" data-passing="${options.passingScore}">
@@ -1277,9 +1584,9 @@ function buildLessonPage(
 
 <div class="prism-complete" data-prism-complete aria-hidden="true">
   <div class="prism-complete-card" role="dialog" aria-label="Module complete">
-    <div class="prism-complete-check">✓</div>
-    <h2>You crushed it!</h2>
-    <p>That's a wrap on <strong>${escapeHtml(mod.title)}</strong>. Your progress has been saved. Keep it up!</p>
+    <div class="prism-complete-check" data-prism-complete-icon>✓</div>
+    <h2 data-prism-complete-title data-pass-title="You passed!" data-fail-title="Not quite there yet">You crushed it!</h2>
+    <p data-prism-complete-body data-pass-body="You met the required score for ${escapeHtml(mod.title)}. Nice work!" data-fail-body="You didn't reach the required score for ${escapeHtml(mod.title)} this time. Review the material and try again.">That's a wrap on <strong>${escapeHtml(mod.title)}</strong>. Your progress has been saved. Keep it up!</p>
     <div class="prism-complete-row">
       <button type="button" data-prism-restart>Restart</button>
       <button type="button" class="primary" data-prism-close-complete>Done</button>
@@ -1290,10 +1597,19 @@ function buildLessonPage(
 <script src="assets/scorm12.min.js"></script>
 <script>
 (function(){
-  var api=(typeof API!=='undefined')?API:(window.parent&&window.parent.API)||(window.top&&window.top.API)||null;
+  var api=(function(){function findAPI(w){var n=0;while(w.parent&&w.parent!==w&&n<7){n++;if(w.parent.API)return w.parent.API;w=w.parent;}return null;}return window.API||findAPI(window)||(window.opener&&(window.opener.API||findAPI(window.opener)))||window.__prismFallbackAPI||null;})();
   window.__prismAPI=api;
-  window.__prismCorrect=0;window.__prismTotal=0;
-  if(api){try{api.LMSInitialize('');api.LMSSetValue('cmi.core.lesson_status','incomplete');api.LMSCommit('');}catch(e){}}
+  // Quiz score is carried across lesson pages via sessionStorage (see
+  // buildInteractionJs) since each lesson is a full page load. lesson_0 is
+  // always the true entry point after the welcome page (no SCORM resume/
+  // bookmark support exists), so its load is what "starts a new attempt"
+  // and clears any score left over from a previous attempt in this tab.
+  ${lessonIdx === 0 ? "try{sessionStorage.removeItem('prism-score-total');sessionStorage.removeItem('prism-score-correct');}catch(e){}" : ''}
+  try{window.__prismTotal=parseInt(sessionStorage.getItem('prism-score-total')||'0',10)||0;}catch(e){window.__prismTotal=0;}
+  try{window.__prismCorrect=parseInt(sessionStorage.getItem('prism-score-correct')||'0',10)||0;}catch(e){window.__prismCorrect=0;}
+  if(api){try{api.LMSInitialize('');api.LMSSetValue('cmi.core.lesson_status',${isLast ? "'completed'" : "'incomplete'"});api.LMSCommit('');}catch(e){}}
+  // Safety net: commit+finish whenever this page unloads (covers tab-close, navigation away)
+  window.addEventListener('pagehide',function(){if(api){try{api.LMSCommit('');api.LMSFinish('');}catch(e){}}});
 })();
 </script>
 <script>
@@ -1329,13 +1645,31 @@ function buildLessonPage(
   var finishBtn=document.querySelector('[data-prism-finish]');
   function showComplete(){
     if(!complete)return;
-    complete.classList.add('show');complete.setAttribute('aria-hidden','false');
-    fireConfetti();
     var crit=document.body.dataset.criteria||'completed';
     var passing=parseInt(document.body.dataset.passing||'80',10);
     var score=window.__prismTotal>0?Math.round(window.__prismCorrect/window.__prismTotal*100):100;
-    var status=crit==='completed'?'completed':(score>=passing?'passed':'failed');
-    var api=window.__prismAPI;if(api){try{if(window.__prismTotal>0){api.LMSSetValue('cmi.core.score.raw',String(score));api.LMSSetValue('cmi.core.score.min','0');api.LMSSetValue('cmi.core.score.max','100');}api.LMSSetValue('cmi.core.lesson_status',status);api.LMSCommit('');}catch(e){}}
+    // Score-gated modules that miss the bar report 'incomplete' rather than
+    // 'failed' — most LMSs treat 'failed' as a locked, terminal attempt,
+    // whereas 'incomplete' generally allows the learner to re-enter and try
+    // again, which is the behaviour this product wants.
+    var passed=crit!=='passed'||score>=passing;
+    var status=crit==='completed'?'completed':(passed?'passed':'incomplete');
+    // Pass/fail wording is shown for score-gated modules only; modules using
+    // the plain 'completed' criteria keep the original celebratory copy.
+    if(crit==='passed'){
+      var icon=document.querySelector('[data-prism-complete-icon]');
+      var title=document.querySelector('[data-prism-complete-title]');
+      var body=document.querySelector('[data-prism-complete-body]');
+      if(icon){icon.textContent=passed?'✓':'!';icon.classList.toggle('fail',!passed);}
+      if(title)title.textContent=title.getAttribute(passed?'data-pass-title':'data-fail-title')||title.textContent;
+      if(body)body.textContent=body.getAttribute(passed?'data-pass-body':'data-fail-body')||body.textContent;
+    }
+    complete.classList.add('show');complete.setAttribute('aria-hidden','false');
+    if(passed)fireConfetti();
+    // The numeric score is still written to CMI for the LMS gradebook even
+    // though the on-screen modal only shows pass/fail — those are different
+    // audiences (admin reporting vs. the learner).
+    var api=window.__prismAPI;if(api){try{if(window.__prismTotal>0){api.LMSSetValue('cmi.core.score.raw',String(score));api.LMSSetValue('cmi.core.score.min','0');api.LMSSetValue('cmi.core.score.max','100');}api.LMSSetValue('cmi.core.lesson_status',status);api.LMSCommit('');api.LMSFinish('');}catch(e){}}
   }
   function fireConfetti(){
     var wrap=document.createElement('div');wrap.className='prism-confetti';document.body.appendChild(wrap);
@@ -1395,31 +1729,6 @@ function buildLessonPage(
     });
   });
 
-  // ── Touch swipe navigation ──
-  var swipeEl=document.querySelector('[data-prism-content]');
-  if(swipeEl){
-    var _sx=0,_sy=0,_sw=false;
-    swipeEl.addEventListener('touchstart',function(e){
-      _sx=e.touches[0].clientX;_sy=e.touches[0].clientY;_sw=true;
-    },{passive:true});
-    swipeEl.addEventListener('touchend',function(e){
-      if(!_sw)return;_sw=false;
-      var dx=e.changedTouches[0].clientX-_sx;
-      var dy=e.changedTouches[0].clientY-_sy;
-      if(Math.abs(dx)>Math.abs(dy)&&Math.abs(dx)>64){
-        var target=dx<0?document.querySelector('[data-prism-next]'):document.querySelector('[data-prism-prev]');
-        if(target){
-          var dir2=dx<0?'next':'prev';
-          var href2=target.getAttribute('href');
-          if(href2)navigateTo(href2,dir2);else target.click();
-        }
-      }
-    },{passive:true});
-    // Cancel swipe on scroll
-    swipeEl.addEventListener('touchmove',function(e){
-      if(_sw&&Math.abs(e.touches[0].clientY-_sy)>10)_sw=false;
-    },{passive:true});
-  }
 })();
 </script>
 <script src="assets/interaction.js"></script>
@@ -1628,22 +1937,6 @@ export function buildPreviewHtml(
     btn.addEventListener('click',function(e){addRipple(btn,e);});
   });
 
-  // Touch swipe
-  var swipeEl=document.querySelector('[data-prism-content]');
-  if(swipeEl){
-    var _sx=0,_sy=0,_sw=false;
-    swipeEl.addEventListener('touchstart',function(e){_sx=e.touches[0].clientX;_sy=e.touches[0].clientY;_sw=true;},{passive:true});
-    swipeEl.addEventListener('touchend',function(e){
-      if(!_sw)return;_sw=false;
-      var dx=e.changedTouches[0].clientX-_sx;
-      var dy=e.changedTouches[0].clientY-_sy;
-      if(Math.abs(dx)>Math.abs(dy)&&Math.abs(dx)>64){
-        if(dx<0){if(nextBtn)nextBtn.click();else if(finishBtn)finishBtn.click();}
-        else{if(prevBtn)prevBtn.click();}
-      }
-    },{passive:true});
-    swipeEl.addEventListener('touchmove',function(e){if(_sw&&Math.abs(e.touches[0].clientY-_sy)>10)_sw=false;},{passive:true});
-  }
 })();
 </script>
 </body>
@@ -1652,13 +1945,19 @@ export function buildPreviewHtml(
 
 // ── Main export function ───────────────────────────────────────────────────
 
+export interface ScormExportResult {
+  blob: Blob;
+  /** Human-readable warnings for assets that failed to bundle (block still exported, minus that asset) */
+  warnings: string[];
+}
+
 export async function buildScormPackage(
   mod: ExportModule,
   theme: ExportTheme,
   options: ExportOptions,
   /** Map of storageId → resolved URL for assets used in the module */
   resolveAssetUrl: (storageId: string) => Promise<string>,
-): Promise<Blob> {
+): Promise<ScormExportResult> {
   const zip = new JSZip();
 
   // Collect all storageIds needed
@@ -1668,8 +1967,45 @@ export async function buildScormPackage(
       if (!block.content) continue;
       try {
         const p = JSON.parse(block.content) as Record<string, unknown>;
+        // Top-level single asset fields
         if (typeof p.storageId === 'string') storageIds.add(p.storageId);
         if (typeof p.src === 'string' && p.srcType === 'storage') storageIds.add(p.src);
+        // Compare block (before/after)
+        if (typeof p.beforeStorageId === 'string') storageIds.add(p.beforeStorageId);
+        if (typeof p.afterStorageId === 'string') storageIds.add(p.afterStorageId);
+        // Gallery block — items array
+        if (Array.isArray(p.items)) {
+          for (const item of p.items as Array<Record<string, unknown>>) {
+            if (typeof item.storageId === 'string') storageIds.add(item.storageId);
+          }
+        }
+        // Tabs block — per-tab media
+        if (Array.isArray(p.tabs)) {
+          for (const tab of p.tabs as Array<Record<string, unknown>>) {
+            if (typeof tab.imageStorageId === 'string') storageIds.add(tab.imageStorageId);
+            if (typeof tab.audioStorageId === 'string') storageIds.add(tab.audioStorageId);
+          }
+        }
+        // Accordion block — per-section media
+        if (Array.isArray(p.sections)) {
+          for (const section of p.sections as Array<Record<string, unknown>>) {
+            if (typeof section.imageStorageId === 'string') storageIds.add(section.imageStorageId);
+            if (typeof section.audioStorageId === 'string') storageIds.add(section.audioStorageId);
+          }
+        }
+        // Flashcard / carousel-style blocks with cards array
+        if (Array.isArray(p.cards)) {
+          for (const card of p.cards as Array<Record<string, unknown>>) {
+            if (typeof card.storageId === 'string') storageIds.add(card.storageId);
+            if (typeof card.frontImageStorageId === 'string') storageIds.add(card.frontImageStorageId);
+            if (typeof card.frontAudioStorageId === 'string') storageIds.add(card.frontAudioStorageId);
+            if (typeof card.backImageStorageId === 'string') storageIds.add(card.backImageStorageId);
+            if (typeof card.backAudioStorageId === 'string') storageIds.add(card.backAudioStorageId);
+            // legacy: shared image/audio authored before front/back became independent
+            if (typeof card.imageStorageId === 'string') storageIds.add(card.imageStorageId);
+            if (typeof card.audioStorageId === 'string') storageIds.add(card.audioStorageId);
+          }
+        }
       } catch { /* not JSON */ }
     }
   }
@@ -1689,26 +2025,41 @@ export async function buildScormPackage(
     }
   } catch { /* skip */ }
 
+  const assetWarnings: string[] = [];
+
+  async function downloadAsset(id: string): Promise<void> {
+    const url = await resolveAssetUrl(id);
+    if (!url) throw new Error('no URL resolved');
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30_000);
+    let res: Response;
+    try {
+      res = await fetch(url, { signal: controller.signal });
+    } finally {
+      clearTimeout(timeoutId);
+    }
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const blob = await res.blob();
+    const ext = blob.type.split('/')[1] ?? 'bin';
+    const filename = `${id}.${ext}`;
+    assetsFolder.file(filename, blob);
+    assetMap[id] = `assets/${filename}`;
+  }
+
   await Promise.all(
     [...storageIds].map(async (id) => {
       try {
-        const url = await resolveAssetUrl(id);
-        if (!url) return;
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10_000);
-        let res: Response;
+        await downloadAsset(id);
+      } catch {
+        // one retry — transient network hiccups and timeouts are common on larger assets
         try {
-          res = await fetch(url, { signal: controller.signal });
-        } finally {
-          clearTimeout(timeoutId);
+          await downloadAsset(id);
+        } catch (err) {
+          const reason = err instanceof Error ? err.message : String(err);
+          assetWarnings.push(`Asset ${id} failed to bundle: ${reason}`);
+          console.error(`[scormExport] asset ${id} failed to bundle`, err);
         }
-        if (!res.ok) return;
-        const blob = await res.blob();
-        const ext = blob.type.split('/')[1] ?? 'bin';
-        const filename = `${id}.${ext}`;
-        assetsFolder.file(filename, blob);
-        assetMap[id] = `assets/${filename}`;
-      } catch { /* skip unreachable assets */ }
+      }
     }),
   );
 
@@ -1725,6 +2076,19 @@ export async function buildScormPackage(
     }
   } catch {
     assetsFolder.file('scorm12.min.js', minimalScormShim());
+  }
+
+  // Bundle lottie-web locally so lesson pages don't depend on external CDN
+  try {
+    const lottieRes = await fetch('https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js');
+    if (lottieRes.ok) {
+      const lottieJs = await lottieRes.text();
+      assetsFolder.file('lottie.min.js', lottieJs);
+    } else {
+      assetsFolder.file('lottie.min.js', '/* lottie-web unavailable */');
+    }
+  } catch {
+    assetsFolder.file('lottie.min.js', '/* lottie-web unavailable */');
   }
 
   assetsFolder.file('interaction.js', buildInteractionJs());
@@ -1744,13 +2108,14 @@ export async function buildScormPackage(
     zip.file(`lesson_${i}.html`, buildLessonPage(mod, i, assetMap, theme, options, logoPath));
   }
 
-  return zip.generateAsync({ type: 'blob', compression: 'DEFLATE' });
+  const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE' });
+  return { blob, warnings: assetWarnings };
 }
 
 // ── Minimal SCORM 1.2 shim (fallback if scorm-again import fails) ──────────
 
 function minimalScormShim(): string {
-  return `var API={
+  return `window.__prismFallbackAPI={
   LMSInitialize:function(){return"true"},
   LMSFinish:function(){return"true"},
   LMSGetValue:function(){return""},

@@ -61,6 +61,8 @@ import {
   GitMerge,
   ArrowUpDown,
   GitBranch,
+  AlertTriangle,
+  FileInput,
 } from 'lucide-react';
 import { RichTextBlockEditor } from '../components/RichTextBlockEditor';
 import { ImageBlockEditor } from '../components/ImageBlockEditor';
@@ -86,6 +88,7 @@ import { FillBlanksBlockEditor } from '../components/FillBlanksBlockEditor';
 import { MatchingBlockEditor } from '../components/MatchingBlockEditor';
 import { SortingBlockEditor } from '../components/SortingBlockEditor';
 import { ScenarioBlockEditor } from '../components/ScenarioBlockEditor';
+import { ImportQuizDialog } from '../components/ImportQuizDialog';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -214,8 +217,10 @@ export function ModuleEditorPage() {
   const [lessonsOpen, setLessonsOpen] = useState(true);
   // null = insert before first block, undefined = append at end, number = insert after that order
   const [insertAfterOrder, setInsertAfterOrder] = useState<number | null | undefined>(undefined);
+  const [importQuizOpen, setImportQuizOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [exportWarnings, setExportWarnings] = useState<string[]>([]);
   const [exportOptions, setExportOptions] = useState<ExportOptions>({ passingScore: 80, completionCriteria: 'completed' });
   const [theme, setTheme] = useState<'dark' | 'light'>(
     () => localStorage.getItem('prism-theme') === 'light' ? 'light' : 'dark'
@@ -236,7 +241,7 @@ export function ModuleEditorPage() {
       };
       // Fetch all blocks at export time (one-shot, not a live subscription)
       const allBlocks = (await convex.query(api.blocks.listByModule, { moduleId: modId })) as Block[];
-      const blob = await buildScormPackage(
+      const { blob, warnings } = await buildScormPackage(
         {
           id: modId,
           title: content.module.title,
@@ -257,6 +262,7 @@ export function ModuleEditorPage() {
       );
       const slug = content.module.title.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
       downloadBlob(blob, `${slug}_scorm12.zip`);
+      setExportWarnings(warnings);
     } finally {
       setExporting(false);
     }
@@ -535,7 +541,12 @@ export function ModuleEditorPage() {
                     key={lesson._id}
                     lesson={lesson}
                     isActive={activeLessonId === lesson._id}
-                    isRenaming={renamingLessonId === lesson._id}
+                    // For the ACTIVE lesson the canvas header renders its own inline
+                    // rename input (also autoFocus). Mounting both inputs at once makes
+                    // the second focus() blur the first, whose onBlur commits + closes
+                    // rename mode instantly. Suppress the sidebar input for the active
+                    // lesson so exactly one rename input ever mounts.
+                    isRenaming={renamingLessonId === lesson._id && lesson._id !== activeLessonId}
                     renameValue={renameLessonValue}
                     onSelect={() => setActiveLessonId(lesson._id)}
                     onStartRename={() => {
@@ -596,15 +607,42 @@ export function ModuleEditorPage() {
           ) : (
             <div className="mx-auto max-w-3xl px-8 py-8 space-y-4">
               <div className="flex items-center gap-3 pb-2 border-b border-[var(--border-primary)]">
-                <h2 className="text-xl font-bold text-[var(--text-primary)]">{activeLesson.title}</h2>
-                <button
-                  type="button"
-                  onClick={() => { setRenamingLessonId(activeLesson._id); setRenameLessonValue(activeLesson.title); }}
-                  className="rounded p-1 text-[var(--text-muted)] hover:bg-[var(--card-bg-hover)] hover:text-[var(--text-secondary)]"
-                  title="Rename lesson"
-                >
-                  <Pencil className="size-4" />
-                </button>
+                {renamingLessonId === activeLesson._id ? (
+                  <input
+                    autoFocus
+                    className="flex-1 text-xl font-bold text-[var(--text-primary)] bg-transparent border-b-2 border-indigo-500 outline-none"
+                    value={renameLessonValue}
+                    onChange={(e) => setRenameLessonValue(e.target.value)}
+                    onBlur={async () => {
+                      if (renameLessonValue.trim()) {
+                        await renameLesson({ lessonId: activeLesson._id, title: renameLessonValue.trim() });
+                      }
+                      setRenamingLessonId(null);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+                      if (e.key === 'Escape') setRenamingLessonId(null);
+                    }}
+                  />
+                ) : (
+                  <>
+                    <h2
+                      className="text-xl font-bold text-[var(--text-primary)] cursor-pointer hover:text-[var(--text-secondary)] transition-colors"
+                      onClick={() => { setRenamingLessonId(activeLesson._id); setRenameLessonValue(activeLesson.title); }}
+                      title="Click to rename"
+                    >
+                      {activeLesson.title}
+                    </h2>
+                    <button
+                      type="button"
+                      onClick={() => { setRenamingLessonId(activeLesson._id); setRenameLessonValue(activeLesson.title); }}
+                      className="rounded p-1 text-[var(--text-muted)] hover:bg-[var(--card-bg-hover)] hover:text-[var(--text-secondary)]"
+                      title="Rename lesson"
+                    >
+                      <Pencil className="size-4" />
+                    </button>
+                  </>
+                )}
               </div>
 
               {/* Blocks */}
@@ -722,6 +760,15 @@ export function ModuleEditorPage() {
             )}
           </div>
           <div className="flex-1 overflow-y-auto px-3 py-3">
+            <button
+              type="button"
+              onClick={() => setImportQuizOpen(true)}
+              disabled={!activeLessonId}
+              className="mb-3 flex w-full items-center gap-2 rounded-lg border border-dashed border-[var(--border-primary)] px-2.5 py-2 text-[11px] font-semibold text-[var(--text-secondary)] hover:border-[var(--ember-400)] hover:text-[var(--text-primary)] disabled:opacity-40"
+            >
+              <FileInput className="size-3.5" />
+              Import quiz questions
+            </button>
             {(['Content', 'Media', 'Interactive', 'Layout', 'Scenario', 'Advanced'] as const).map((group) => (
               <BlockLibraryGroup
                 key={group}
@@ -734,6 +781,17 @@ export function ModuleEditorPage() {
           </div>
         </aside>
       </div>
+
+    {/* ── Quiz import (Intelligence checklist / CSV) ── */}
+    {importQuizOpen && activeLessonId && (
+      <ImportQuizDialog
+        workspaceId={wsId}
+        moduleId={modId}
+        lessonId={activeLessonId}
+        onClose={() => setImportQuizOpen(false)}
+        onImported={() => setImportQuizOpen(false)}
+      />
+    )}
 
     {/* ── SCORM Export Dialog ── */}
     {exportDialogOpen && (
@@ -787,12 +845,53 @@ export function ModuleEditorPage() {
             <div className="mt-1 flex justify-between text-[11px] text-[var(--text-muted)]"><span>0%</span><span>50%</span><span>100%</span></div>
           </div>
 
+          {/* Assessment mode */}
+          <div className="mb-6">
+            <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-[var(--border-primary)] px-4 py-3 transition-colors hover:border-indigo-500 has-[:checked]:border-indigo-500 has-[:checked]:bg-indigo-500/10">
+              <input
+                type="checkbox"
+                checked={exportOptions.assessmentMode ?? false}
+                onChange={(e) => setExportOptions((o) => ({ ...o, assessmentMode: e.target.checked }))}
+                className="mt-0.5 accent-indigo-500"
+              />
+              <span>
+                <span className="block text-sm font-semibold text-[var(--text-primary)]">Assessment mode</span>
+                <span className="block text-xs text-[var(--text-muted)]">
+                  Quiz questions record an answer without revealing right/wrong or feedback. Pair
+                  with "achieves the pass score" above so the course reports passed or incomplete.
+                  Individual questions can override this in their own block editor.
+                </span>
+              </span>
+            </label>
+          </div>
+
           <div className="flex gap-3 justify-end">
             <button type="button" onClick={() => setExportDialogOpen(false)} className="rounded-lg border border-[var(--border-primary)] px-4 py-2 text-sm font-semibold text-[var(--text-secondary)] hover:bg-[var(--card-bg-hover)]">Cancel</button>
             <button type="button" onClick={() => void handleExportScorm(exportOptions)} className="flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700">
               <Download className="size-4" /> Export
             </button>
           </div>
+        </div>
+      </div>
+    )}
+
+    {exportWarnings.length > 0 && (
+      <div className="fixed bottom-6 right-6 z-50 max-w-sm rounded-xl border border-amber-500/40 bg-[var(--card-bg)] px-4 py-3 shadow-xl">
+        <div className="flex items-start gap-3">
+          <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-500" />
+          <div className="flex-1 text-sm text-[var(--text-primary)]">
+            <p className="font-semibold">Export completed with warnings</p>
+            <ul className="mt-1 list-disc pl-4 text-[var(--text-secondary)]">
+              {exportWarnings.map((w) => <li key={w}>{w}</li>)}
+            </ul>
+          </div>
+          <button
+            type="button"
+            onClick={() => setExportWarnings([])}
+            className="text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
+          >
+            <X className="size-3.5" />
+          </button>
         </div>
       </div>
     )}

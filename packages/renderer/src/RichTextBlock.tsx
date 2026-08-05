@@ -18,7 +18,7 @@ export function RichTextBlock({ block }: Props) {
       'span', 'div', 'figure', 'figcaption', 'img',
       'table', 'thead', 'tbody', 'tr', 'th', 'td',
     ],
-    ALLOWED_ATTR: ['href', 'target', 'rel', 'class', 'src', 'alt', 'width', 'height'],
+    ALLOWED_ATTR: ['href', 'target', 'rel', 'class', 'src', 'alt', 'width', 'height', 'style'],
     ALLOW_DATA_ATTR: false,
     FORCE_BODY: false,
   });

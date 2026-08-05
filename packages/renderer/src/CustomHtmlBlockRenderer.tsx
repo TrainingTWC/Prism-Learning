@@ -31,14 +31,18 @@ const PURIFY_CONFIG: DOMPurifyConfig = {
 export function CustomHtmlBlockRenderer({ block }: Props) {
   let payload: Payload = {};
   try { payload = JSON.parse(block.content) as Payload; } catch { /* empty */ }
+
   if (!payload.html) return null;
 
   const safe = DOMPurify.sanitize(payload.html, PURIFY_CONFIG);
 
+  // Light DOM on purpose — see the matching note in scormExport.ts. Shadow DOM
+  // isolated pasted <style> but hid every node from the author's own
+  // `document.*` queries, breaking scripted widgets outright.
   return (
     <div
       className="prism-custom-html my-6"
-      // biome-ignore lint/security/noDangerouslySetInnerHtml: sanitized by DOMPurify
+      // eslint-disable-next-line react/no-danger -- sanitized by DOMPurify
       dangerouslySetInnerHTML={{ __html: safe }}
     />
   );

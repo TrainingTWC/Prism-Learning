@@ -165,6 +165,24 @@
 
 ---
 
+## v1.1 Requirements — Bug Fix Sprint
+
+> These are production-blocking bugs confirmed in the live deployed app.
+> Root causes are known; requirements are expressed as observable, testable outcomes.
+
+### SCORM Export Bugs
+
+- [ ] **SCO-FIX-01** — Gallery block in carousel mode must display only one slide at a time in the exported SCORM package, with Prev/Next buttons and dot indicators functioning correctly without requiring external scripts or `document.currentScript`.
+- [ ] **SCO-FIX-02** — Lottie animation blocks must render and play in the exported SCORM package without making any external network calls (CDN-free, self-contained); lottie-web must be bundled locally and animation data must be embedded inline.
+- [ ] **SCO-FIX-03** — After a learner completes the last lesson and clicks "Finish", the SCORM package must correctly report `cmi.core.lesson_status` (completed/passed/failed) and `cmi.core.score.raw` to the real LMS API; the no-op fallback shim must never shadow the LMS-provided `window.API`.
+
+### Authoring UX Bugs
+
+- [ ] **UX-FIX-01** — Clicking the lesson title `<h2>` in the main content area must activate inline rename mode, identical in behavior to clicking the pencil icon.
+- [ ] **UX-FIX-02** — Tab content in the Tabs block editor must use a rich text editor (Tiptap) supporting bold, italic, text color, headings, and lists; existing tab content must render correctly in the Tabs block renderer.
+
+---
+
 ## Traceability
 
 <!-- Filled by roadmapper: maps each REQ-ID to the phase that delivers it. -->
@@ -246,6 +264,16 @@
 | RSP-02 | Phase 1: Foundations & Auth | Pending |
 
 **Coverage:** 73 / 73 v1 requirements mapped to exactly one phase. No orphans.
+
+### v1.1 Traceability
+
+| REQ-ID | Phase | Status |
+|--------|-------|--------|
+| SCO-FIX-01 | Phase 9: Critical Bug Fixes | Pending |
+| SCO-FIX-02 | Phase 9: Critical Bug Fixes | Pending |
+| SCO-FIX-03 | Phase 9: Critical Bug Fixes | Pending |
+| UX-FIX-01 | Phase 9: Critical Bug Fixes | Pending |
+| UX-FIX-02 | Phase 9: Critical Bug Fixes | Pending |
 
 ---
 

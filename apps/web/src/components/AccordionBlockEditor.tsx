@@ -1,7 +1,8 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import type { Id } from '~convex/_generated/dataModel';
 import { ChevronDown, ChevronRight, Plus, Trash2, GripVertical } from 'lucide-react';
 import { MediaUpload } from './MediaUpload';
+import { InlineRichText } from './InlineRichText';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 export type AccordionSection = {
@@ -32,7 +33,16 @@ function defaultPayload(): AccordionPayload {
 function parse(content?: string): AccordionPayload {
   if (!content) return defaultPayload();
   try {
-    return JSON.parse(content) as AccordionPayload;
+    const raw = JSON.parse(content) as AccordionPayload;
+    // Deduplicate section IDs — duplicate IDs cause both sections to open
+    // simultaneously and sync their content when typed into.
+    const seenIds = new Set<string>();
+    const sections = (raw.sections ?? []).map((s) => {
+      if (!s.id || seenIds.has(s.id)) return { ...s, id: uid() };
+      seenIds.add(s.id);
+      return s;
+    });
+    return { ...raw, sections };
   } catch {
     return defaultPayload();
   }
@@ -48,10 +58,24 @@ export function AccordionBlockEditor({
   initialContent?: string;
   onSave: (content: string) => void;
 }) {
+  // Parse once so both payload and expandedId use the same deduplicated IDs.
   const [payload, setPayload] = useState<AccordionPayload>(() => parse(initialContent));
   const [expandedId, setExpandedId] = useState<string | null>(
     () => parse(initialContent).sections[0]?.id ?? null,
   );
+
+  // If the stored data had duplicate IDs, persist the fixed version immediately.
+  useEffect(() => {
+    if (!initialContent) return;
+    try {
+      const raw = JSON.parse(initialContent) as AccordionPayload;
+      const ids = (raw.sections ?? []).map((s) => s.id);
+      if (new Set(ids).size < ids.length) {
+        onSave(JSON.stringify(payload));
+      }
+    } catch { /* not JSON, nothing to fix */ }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const commit = useCallback(
     (next: AccordionPayload) => {
@@ -130,14 +154,23 @@ export function AccordionBlockEditor({
                   )}
                 </button>
 
-                {/* Title input */}
-                <input
-                  type="text"
-                  value={section.title}
-                  onChange={(e) => setTitle(section.id, e.target.value)}
-                  placeholder={`Section ${idx + 1} title…`}
-                  className="flex-1 bg-transparent text-sm font-medium text-slate-700 placeholder-slate-400 outline-none"
-                />
+                {/* Title preview — styled exactly as the learner sees it.
+                    Editing happens in the expanded panel so the formatting
+                    toolbar has room. */}
+                <button
+                  type="button"
+                  onClick={() => setExpandedId(isOpen ? null : section.id)}
+                  className="flex-1 truncate text-left text-sm font-medium text-slate-700 [&_p]:m-0 [&_p]:inline [&_strong]:font-bold [&_em]:italic [&_u]:underline"
+                >
+                  {section.title ? (
+                    <span
+                      // eslint-disable-next-line react/no-danger -- author-authored inline HTML, sanitized at render
+                      dangerouslySetInnerHTML={{ __html: section.title }}
+                    />
+                  ) : (
+                    <span className="text-slate-400">{`Section ${idx + 1} title…`}</span>
+                  )}
+                </button>
 
                 <button
                   type="button"
@@ -154,18 +187,22 @@ export function AccordionBlockEditor({
               {isOpen && (
                 <div className="border-t border-slate-100 bg-slate-50/60 px-4 py-3">
                   <label className="block text-[11px] font-semibold uppercase tracking-wide text-slate-400 mb-1.5">
+                    Title
+                  </label>
+                  <InlineRichText
+                    value={section.title}
+                    onChange={(html) => setTitle(section.id, html)}
+                    placeholder={`Section ${idx + 1} title…`}
+                  />
+                  <label className="mt-3 block text-[11px] font-semibold uppercase tracking-wide text-slate-400 mb-1.5">
                     Content
                   </label>
-                  <textarea
-                    rows={4}
+                  <InlineRichText
                     value={section.content}
-                    onChange={(e) => setContent(section.id, e.target.value)}
+                    onChange={(html) => setContent(section.id, html)}
                     placeholder="Content revealed when the learner expands this section…"
-                    className="w-full resize-y rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 placeholder-slate-400 outline-none focus:border-amber-300 focus:ring-1 focus:ring-amber-200"
+                    multiline
                   />
-                  <p className="mt-1 text-[11px] text-slate-400">
-                    Plain text — rich text support coming in preview phase.
-                  </p>
                   <div className="mt-2 flex flex-wrap gap-2">
                     <MediaUpload
                       accept="image/*"

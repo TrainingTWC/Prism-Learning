@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import type { Id } from '~convex/_generated/dataModel';
 import { ListOrdered, Plus, Trash2 } from 'lucide-react';
+import { InlineRichText } from './InlineRichText';
 
 export type ProcessStep = {
   id: string;
@@ -81,12 +82,11 @@ export function ProcessBlockEditor({
                 placeholder={`Step ${idx + 1} title`}
                 className="w-full rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-400"
               />
-              <textarea
+              <InlineRichText
                 value={step.body}
-                onChange={(e) => update(step.id, 'body', e.target.value)}
+                onChange={(html) => update(step.id, 'body', html)}
                 placeholder="Step description (optional)…"
-                rows={2}
-                className="w-full rounded-lg border border-slate-200 px-3 py-1.5 text-sm text-slate-600 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 resize-none"
+                multiline
               />
             </div>
 

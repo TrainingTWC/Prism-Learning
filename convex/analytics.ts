@@ -1,11 +1,11 @@
 /**
- * Analytics layer — bridges Prism Intelligence (PI) audit data to Prism Learning (PL).
+ * Analytics layer — bridges Prism Intelligence (PI) audit data to Prism Authoring (PA).
  *
- * PI and PL are SEPARATE Convex deployments on the same team. PI tables are NOT
- * accessible via ctx.db from PL. All PI data is fetched via Convex's HTTP API:
+ * PI and PA are SEPARATE Convex deployments on the same team. PI tables are NOT
+ * accessible via ctx.db from PA. All PI data is fetched via Convex's HTTP API:
  *   POST {PI_CONVEX_URL}/api/query  { path, args: { apiToken, ...rest } }
  *
- * Required env vars in the PL Convex dashboard:
+ * Required env vars in the PA Convex dashboard:
  *   PI_CONVEX_URL  — PI deployment URL, e.g. https://abc123.convex.cloud
  *   PI_API_TOKEN   — static token accepted by PI's validateRequest() guard
  */
@@ -13,7 +13,22 @@ import { v, ConvexError } from 'convex/values';
 import { action, internalMutation, internalQuery, mutation, query } from './_generated/server';
 import { getAuthUserId } from '@convex-dev/auth/server';
 import { internal, api } from './_generated/api';
-import type { Id } from './_generated/dataModel';
+import type { Doc, Id } from './_generated/dataModel';
+
+// ── Shared validators ─────────────────────────────────────────────────────
+// Declared before first use: these are referenced by computeGaps' args, which
+// are evaluated at module load, so defining them lower down would hit the TDZ.
+
+const thresholdsValidator = v.object({
+  critical: v.number(),
+  high: v.number(),
+  medium: v.number(),
+  low: v.number(),
+});
+
+const dimensionsValidator = v.array(
+  v.union(v.literal('region'), v.literal('areaManager'), v.literal('store')),
+);
 
 // ── PI response shapes ────────────────────────────────────────────────────
 // Minimal interfaces for data returned by PI's public Convex HTTP queries.
@@ -274,13 +289,69 @@ export const getGapSummary = query({
 // ── Gap computation ────────────────────────────────────────────────────────
 
 export const computeGaps = action({
-  args: { workspaceId: v.id('workspaces') },
-  handler: async (ctx, { workspaceId }) => {
+  args: {
+    workspaceId: v.id('workspaces'),
+    /** Run under a saved analysis profile. Omitted = legacy link defaults. */
+    profileId: v.optional(v.id('analysisProfiles')),
+    /**
+     * Ad-hoc config for running an unsaved panel state. Takes precedence over
+     * `profileId` so the user can tweak a loaded profile and run without
+     * having to save first.
+     */
+    overrides: v.optional(
+      v.object({
+        programs: v.array(v.string()),
+        fromDate: v.optional(v.number()),
+        toDate: v.optional(v.number()),
+        lookbackDays: v.number(),
+        benchmarkScore: v.number(),
+        thresholds: thresholdsValidator,
+        minSubmissions: v.number(),
+        dimensions: dimensionsValidator,
+      }),
+    ),
+  },
+  // Explicit annotations: these runQuery calls target functions declared in
+  // this same module, so TS cannot infer the types without a cycle (TS7022).
+  handler: async (
+    ctx,
+    { workspaceId, profileId, overrides },
+  ): Promise<{
+    gapCount: number;
+    submissionCount: number;
+    appliedProfileId: Id<'analysisProfiles'> | null;
+    programsAnalysed: string;
+  }> => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new ConvexError('Not authenticated');
 
-    const link = await ctx.runQuery(internal.analytics.getLinkInternal, { workspaceId });
+    const link: Doc<'analyticsLinks'> | null = await ctx.runQuery(
+      internal.analytics.getLinkInternal,
+      { workspaceId },
+    );
     if (!link) throw new ConvexError('No PI company linked — connect Prism Intelligence first');
+
+    // Resolve the effective config: profile when given, else the link's own
+    // benchmark/lookback with the original hardcoded thresholds.
+    const profile: Doc<'analysisProfiles'> | null = profileId
+      ? await ctx.runQuery(internal.analytics.getProfileInternal, { profileId })
+      : null;
+    if (profileId && !profile) throw new ConvexError('Analysis profile not found');
+
+    // Precedence: inline overrides > saved profile > link defaults.
+    const cfg = overrides ?? {
+      programs: profile?.programs ?? DEFAULT_PROFILE.programs,
+      fromDate: profile?.fromDate,
+      toDate: profile?.toDate,
+      lookbackDays: profile?.lookbackDays ?? link.lookbackDays,
+      benchmarkScore: profile?.benchmarkScore ?? link.benchmarkScore,
+      thresholds: profile?.thresholds ?? DEFAULT_PROFILE.thresholds,
+      minSubmissions: profile?.minSubmissions ?? DEFAULT_PROFILE.minSubmissions,
+      dimensions: profile?.dimensions ?? DEFAULT_PROFILE.dimensions,
+    };
+    if (cfg.dimensions.length === 0)
+      throw new ConvexError('Select at least one dimension to analyse');
+    const programFilter = new Set(cfg.programs);
 
     const piUrl = (process.env.PI_CONVEX_URL ?? '').replace(/\/+$/, '');
     const piToken = process.env.PI_API_TOKEN;
@@ -289,7 +360,10 @@ export const computeGaps = action({
         'PI_CONVEX_URL and PI_API_TOKEN must be set as environment variables in the Convex dashboard',
       );
 
-    const since = Date.now() - link.lookbackDays * 24 * 60 * 60 * 1000;
+    // Explicit from/to window when the profile pins dates, otherwise the
+    // rolling lookback window.
+    const since = cfg.fromDate ?? Date.now() - cfg.lookbackDays * 24 * 60 * 60 * 1000;
+    const until = cfg.toDate ?? Number.POSITIVE_INFINITY;
 
     // Fetch stores (with regionName joined), programs, and submissions from PI via HTTP
     let rawStores: unknown, rawPrograms: unknown, rawSubmissions: unknown;
@@ -320,12 +394,12 @@ export const computeGaps = action({
       (Array.isArray(rawPrograms) ? (rawPrograms as PIProgram[]) : []).map((p) => [p._id, p]),
     );
 
-    // Exclude drafts; require a percentage score; limit to the lookback window
+    // Exclude drafts; require a percentage score; limit to the analysis window
     const submissions = (Array.isArray(rawSubmissions) ? (rawSubmissions as PISubmission[]) : []).filter(
       (s) =>
         s.status !== 'draft' &&
         s.percentage != null &&
-        (s.submittedAt == null || s.submittedAt >= since),
+        (s.submittedAt == null || (s.submittedAt >= since && s.submittedAt <= until)),
     );
 
     type AggEntry = {
@@ -375,16 +449,20 @@ export const computeGaps = action({
       if (!store) continue;
       const program = programMap.get(sub.programId);
       if (!program) continue;
+      // Empty program list means "all programs" (default behaviour)
+      if (programFilter.size > 0 && !programFilter.has(program.name)) continue;
 
       // stores:list from PI hydrates regionName via a region join
       const regionName = store.regionName?.trim() || store.city?.trim() || 'Unknown Region';
       const amName = store.amName?.trim() || 'Unassigned';
       const storeName = store.storeName?.trim() || store._id;
-      const dims = [
-        ['region', regionName],
-        ['areaManager', amName],
-        ['store', storeName],
-      ] as const;
+      const dims = (
+        [
+          ['region', regionName],
+          ['areaManager', amName],
+          ['store', storeName],
+        ] as const
+      ).filter(([dim]) => cfg.dimensions.includes(dim));
 
       for (const [dim, val] of dims) add(dim, val, program.name, 'Overall', sub.percentage);
 
@@ -399,7 +477,7 @@ export const computeGaps = action({
       processed++;
     }
 
-    const benchmark = link.benchmarkScore;
+    const benchmark = cfg.benchmarkScore;
     type GapRecord = {
       workspaceId: Id<'workspaces'>;
       piCompanyId: string;
@@ -417,12 +495,18 @@ export const computeGaps = action({
 
     const gaps: GapRecord[] = [];
     for (const [, e] of agg) {
-      if (e.count < 2) continue;
+      if (e.count < cfg.minSubmissions) continue;
       const avg = Math.round((e.sum / e.count) * 10) / 10;
       const gap = Math.round((benchmark - avg) * 10) / 10;
-      if (gap < 2) continue;
+      if (gap < cfg.thresholds.low) continue;
       const severity: GapRecord['severity'] =
-        gap > 25 ? 'critical' : gap > 15 ? 'high' : gap > 8 ? 'medium' : 'low';
+        gap > cfg.thresholds.critical
+          ? 'critical'
+          : gap > cfg.thresholds.high
+            ? 'high'
+            : gap > cfg.thresholds.medium
+              ? 'medium'
+              : 'low';
       gaps.push({
         workspaceId,
         piCompanyId: link.piCompanyId,
@@ -443,7 +527,240 @@ export const computeGaps = action({
     const topGaps = gaps.slice(0, 200);
 
     await ctx.runMutation(internal.analytics.storeGaps, { workspaceId, gaps: topGaps });
-    return { gapCount: topGaps.length, submissionCount: processed };
+    if (profileId) {
+      await ctx.runMutation(internal.analytics.markProfileRun, { profileId });
+    }
+    return {
+      gapCount: topGaps.length,
+      submissionCount: processed,
+      /** Echoed so the dashboard can show exactly what the run used */
+      appliedProfileId: profileId ?? null,
+      programsAnalysed: cfg.programs.length === 0 ? 'all' : cfg.programs.join(', '),
+    };
+  },
+});
+
+// ── Checklist import ─────────────────────────────────────────────────────
+
+/** A PI checklist question, as returned inside programs:list */
+export type PIQuestion = {
+  id: string;
+  text: string;
+  questionType: string;
+  order?: number;
+  weight?: number;
+  options?: Array<{ label: string; value: string; score?: number }>;
+};
+
+/**
+ * Full program definitions (sections + questions) for the workspace's linked
+ * PI company. Powers "import checklist" in the module builder — unlike the
+ * analytics path, this needs the question text and options, not just scores.
+ */
+export const listPIPrograms = action({
+  args: { workspaceId: v.id('workspaces') },
+  handler: async (
+    ctx,
+    { workspaceId },
+  ): Promise<
+    Array<{
+      id: string;
+      name: string;
+      sections: Array<{ id: string; title: string; questions: PIQuestion[] }>;
+    }>
+  > => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new ConvexError('Not authenticated');
+
+    const link: Doc<'analyticsLinks'> | null = await ctx.runQuery(
+      internal.analytics.getLinkInternal,
+      { workspaceId },
+    );
+    if (!link) throw new ConvexError('No PI company linked — connect Prism Intelligence first');
+
+    const piUrl = (process.env.PI_CONVEX_URL ?? '').replace(/\/+$/, '');
+    const piToken = process.env.PI_API_TOKEN;
+    if (!piUrl || !piToken)
+      throw new ConvexError('PI_CONVEX_URL and PI_API_TOKEN must be set in the Convex dashboard');
+
+    const raw = await callPIQuery(piUrl, piToken, 'programs:list', {
+      companyId: link.piCompanyId,
+    });
+
+    const programs = Array.isArray(raw) ? (raw as Array<Record<string, unknown>>) : [];
+    return programs.map((p) => ({
+      id: String(p._id ?? ''),
+      name: String(p.name ?? 'Untitled program'),
+      sections: (Array.isArray(p.sections) ? (p.sections as Array<Record<string, unknown>>) : [])
+        .map((s) => ({
+          id: String(s.id ?? ''),
+          title: String(s.title ?? 'Untitled section'),
+          questions: (Array.isArray(s.questions)
+            ? (s.questions as Array<Record<string, unknown>>)
+            : []
+          ).map((q) => ({
+            id: String(q.id ?? ''),
+            text: String(q.text ?? ''),
+            questionType: String(q.questionType ?? 'TEXT'),
+            order: typeof q.order === 'number' ? q.order : undefined,
+            weight: typeof q.weight === 'number' ? q.weight : undefined,
+            options: Array.isArray(q.options)
+              ? (q.options as Array<Record<string, unknown>>).map((o) => ({
+                  label: String(o.label ?? ''),
+                  value: String(o.value ?? ''),
+                  score: typeof o.score === 'number' ? o.score : undefined,
+                }))
+              : undefined,
+          })),
+        })),
+    }));
+  },
+});
+
+// ── Analysis profiles ────────────────────────────────────────────────────
+
+/** Defaults reproduce the pre-profile hardcoded behaviour exactly. */
+export const DEFAULT_PROFILE = {
+  programs: [] as string[],
+  lookbackDays: 90,
+  benchmarkScore: 75,
+  thresholds: { critical: 25, high: 15, medium: 8, low: 2 },
+  minSubmissions: 2,
+  dimensions: ['region', 'areaManager', 'store'] as Array<'region' | 'areaManager' | 'store'>,
+};
+
+export const listProfiles = query({
+  args: { workspaceId: v.id('workspaces') },
+  handler: async (ctx, { workspaceId }) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return [];
+    return ctx.db
+      .query('analysisProfiles')
+      .withIndex('by_workspace', (q) => q.eq('workspaceId', workspaceId))
+      .collect();
+  },
+});
+
+export const saveProfile = mutation({
+  args: {
+    /** Omit to create; provide to update in place */
+    profileId: v.optional(v.id('analysisProfiles')),
+    workspaceId: v.id('workspaces'),
+    name: v.string(),
+    programs: v.array(v.string()),
+    fromDate: v.optional(v.number()),
+    toDate: v.optional(v.number()),
+    lookbackDays: v.number(),
+    benchmarkScore: v.number(),
+    thresholds: thresholdsValidator,
+    minSubmissions: v.number(),
+    dimensions: dimensionsValidator,
+    isDefault: v.optional(v.boolean()),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new ConvexError('Not authenticated');
+
+    const name = args.name.trim();
+    if (!name) throw new ConvexError('Profile name cannot be empty');
+    if (args.dimensions.length === 0)
+      throw new ConvexError('Select at least one dimension to analyse');
+
+    const { critical, high, medium, low } = args.thresholds;
+    if (!(critical > high && high > medium && medium > low))
+      throw new ConvexError('Thresholds must decrease: critical > high > medium > low');
+    if (low < 0) throw new ConvexError('Thresholds cannot be negative');
+    if (args.fromDate != null && args.toDate != null && args.fromDate > args.toDate)
+      throw new ConvexError('Start date must be before end date');
+
+    // Only one default per workspace
+    if (args.isDefault) {
+      const existing = await ctx.db
+        .query('analysisProfiles')
+        .withIndex('by_workspace', (q) => q.eq('workspaceId', args.workspaceId))
+        .collect();
+      for (const p of existing) {
+        if (p.isDefault && p._id !== args.profileId) {
+          await ctx.db.patch(p._id, { isDefault: false });
+        }
+      }
+    }
+
+    const fields = {
+      workspaceId: args.workspaceId,
+      name,
+      programs: args.programs,
+      fromDate: args.fromDate,
+      toDate: args.toDate,
+      lookbackDays: args.lookbackDays,
+      benchmarkScore: args.benchmarkScore,
+      thresholds: args.thresholds,
+      minSubmissions: args.minSubmissions,
+      dimensions: args.dimensions,
+      isDefault: args.isDefault,
+      updatedAt: Date.now(),
+    };
+
+    if (args.profileId) {
+      const existing = await ctx.db.get(args.profileId);
+      if (!existing || existing.workspaceId !== args.workspaceId)
+        throw new ConvexError('Profile not found');
+      await ctx.db.patch(args.profileId, fields);
+      return args.profileId;
+    }
+
+    return ctx.db.insert('analysisProfiles', { ...fields, createdAt: Date.now() });
+  },
+});
+
+export const deleteProfile = mutation({
+  args: { profileId: v.id('analysisProfiles') },
+  handler: async (ctx, { profileId }) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new ConvexError('Not authenticated');
+    await ctx.db.delete(profileId);
+  },
+});
+
+export const getProfileInternal = internalQuery({
+  args: { profileId: v.id('analysisProfiles') },
+  handler: async (ctx, { profileId }) => ctx.db.get(profileId),
+});
+
+export const markProfileRun = internalMutation({
+  args: { profileId: v.id('analysisProfiles') },
+  handler: async (ctx, { profileId }) => {
+    await ctx.db.patch(profileId, { lastRunAt: Date.now() });
+  },
+});
+
+/**
+ * Titles of everything already authored in this workspace, used to make the
+ * recommendation AI aware of existing coverage (dedupe + extend).
+ */
+export const getModuleInventoryInternal = internalQuery({
+  args: { workspaceId: v.id('workspaces') },
+  handler: async (ctx, { workspaceId }) => {
+    const modules = (
+      await ctx.db
+        .query('modules')
+        .withIndex('by_workspace', (q) => q.eq('workspaceId', workspaceId))
+        .collect()
+    ).filter((m) => m.deletedAt == null); // soft-deleted modules aren't coverage
+
+    return Promise.all(
+      modules.map(async (m) => {
+        const lessons = await ctx.db
+          .query('lessons')
+          .withIndex('by_module', (q) => q.eq('moduleId', m._id))
+          .collect();
+        return {
+          moduleId: m._id,
+          title: m.title,
+          lessonTitles: lessons.map((l) => l.title).filter(Boolean),
+        };
+      }),
+    );
   },
 });
 
@@ -566,6 +883,22 @@ export const generateRecommendations = action({
       )
       .join('\n');
 
+    // Existing coverage — what this workspace has already authored. Without
+    // this the AI re-proposes courses that already exist.
+    const inventory: Array<{
+      moduleId: Id<'modules'>;
+      title: string;
+      lessonTitles: string[];
+    }> = await ctx.runQuery(internal.analytics.getModuleInventoryInternal, { workspaceId });
+    const inventoryText = inventory.length
+      ? inventory
+          .map(
+            (m, i) =>
+              `${i}. "${m.title}"${m.lessonTitles.length ? ` — lessons: ${m.lessonTitles.slice(0, 12).join('; ')}` : ' — (no lessons yet)'}`,
+          )
+          .join('\n')
+      : '(none — this workspace has no modules yet)';
+
     const apiKey = process.env.GROQ_API_KEY;
     if (!apiKey) throw new ConvexError('AI not configured — set GROQ_API_KEY in the Convex dashboard');
     const model = process.env.GROQ_MODEL ?? 'llama-3.3-70b-versatile';
@@ -583,8 +916,22 @@ Each recommendation:
   "estimatedLessons": 3,
   "priority": 8,
   "gapIndex": 0,
-  "level": "national"
+  "level": "national",
+  "kind": "new",
+  "existingModuleIndex": null,
+  "coverageNote": "short note on what already covers this, if anything"
 }
+
+Existing coverage:
+You are given a numbered list of modules this team has ALREADY authored. Use it:
+- Do NOT propose a course that duplicates an existing module.
+- If an existing module already addresses the gap but needs more depth or a
+  new angle, set "kind": "extend" and "existingModuleIndex" to that module's
+  0-based index, and describe the additions in rationale/keyTopics.
+- Only set "kind": "new" (with "existingModuleIndex": null) when nothing in
+  the list meaningfully covers the gap.
+- "coverageNote": one short sentence on what already exists for this gap, or
+  "no existing coverage".
 
 Rules:
 - Return 4–10 recommendations total
@@ -600,6 +947,9 @@ Rules:
     const userPrompt = `Company: ${link.piCompanyName}
 Benchmark: ${link.benchmarkScore}%
 ${isFiltered ? `Scope filter: ${scopeLabel}` : ''}
+
+Modules already authored in this workspace (index 0-based):
+${inventoryText}
 
 Training gaps (sorted by severity, index 0-based):
 ${gapText}
@@ -651,6 +1001,7 @@ Generate targeted course recommendations to close these gaps${isFiltered ? ` for
         workspaceId,
         topGaps,
         recs,
+        inventory,
       });
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
@@ -665,8 +1016,10 @@ export const storeRecommendations = internalMutation({
     workspaceId: v.id('workspaces'),
     topGaps: v.any(),
     recs: v.any(),
+    /** Same list shown to the AI — maps existingModuleIndex back to a real id */
+    inventory: v.optional(v.any()),
   },
-  handler: async (ctx, { workspaceId, topGaps, recs }) => {
+  handler: async (ctx, { workspaceId, topGaps, recs, inventory }) => {
     // Clear old pending/dismissed recs
     const existing = await ctx.db
       .query('courseRecommendations')
@@ -697,11 +1050,40 @@ export const storeRecommendations = internalMutation({
                 ? 'store'
                 : 'regional',
         status: 'pending',
+        ...resolveCoverage(rec, inventory),
         createdAt: now,
       });
     }
   },
 });
+
+/**
+ * Map the AI's `existingModuleIndex` back to a real module id. The index is
+ * only trusted when it lands on a real inventory row — a hallucinated index
+ * degrades to a plain "new" recommendation rather than a broken link.
+ */
+function resolveCoverage(
+  rec: { kind?: unknown; existingModuleIndex?: unknown; coverageNote?: unknown },
+  inventory: unknown,
+): { kind?: 'new' | 'extend'; extendsModuleId?: Id<'modules'>; coverageNote?: string } {
+  const list = Array.isArray(inventory)
+    ? (inventory as Array<{ moduleId: Id<'modules'> }>)
+    : [];
+  const idx = Number(rec.existingModuleIndex);
+  const target =
+    rec.kind === 'extend' && Number.isInteger(idx) && idx >= 0 && idx < list.length
+      ? list[idx]
+      : null;
+
+  const note =
+    typeof rec.coverageNote === 'string' && rec.coverageNote.trim()
+      ? rec.coverageNote.trim().slice(0, 300)
+      : undefined;
+
+  return target
+    ? { kind: 'extend', extendsModuleId: target.moduleId, coverageNote: note }
+    : { kind: 'new', coverageNote: note };
+}
 
 export const listRecommendations = query({
   args: { workspaceId: v.id('workspaces') },

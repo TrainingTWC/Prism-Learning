@@ -60,7 +60,7 @@ export function Module({ blocks, theme, resolveAsset }: ModuleProps) {
             rendered = <TrueFalseBlockRenderer block={block} />;
             break;
           case 'accordion':
-            rendered = <AccordionBlockRenderer block={block} />;
+            rendered = <AccordionBlockRenderer block={block} resolveAsset={resolveAsset} />;
             break;
           case 'quote':
             rendered = <QuoteBlockRenderer block={block} />;
@@ -72,13 +72,13 @@ export function Module({ blocks, theme, resolveAsset }: ModuleProps) {
             rendered = <DividerBlockRenderer block={block} />;
             break;
           case 'flashcard':
-            rendered = <FlashcardBlockRenderer block={block} />;
+            rendered = <FlashcardBlockRenderer block={block} resolveAsset={resolveAsset} />;
             break;
           case 'process':
             rendered = <ProcessBlockRenderer block={block} />;
             break;
           case 'tabs':
-            rendered = <TabsBlockRenderer block={block} />;
+            rendered = <TabsBlockRenderer block={block} resolveAsset={resolveAsset} />;
             break;
           case 'button':
             rendered = <ButtonBlockRenderer block={block} />;
