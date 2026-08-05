@@ -23,6 +23,34 @@ export const listMine = query({
   },
 });
 
+/**
+ * List deleted (soft-deleted) workspaces the current user is a member of.
+ * Restored 2026-08-05 — this function existed in the live prod deployment
+ * (with a workspaces.by_deletedAt index) but was never committed to this
+ * repo; an SSO-related deploy that session dropped it, breaking prod, so
+ * it's being recreated here to match what prod actually needs. If this
+ * doesn't match the original's exact behavior, treat this as a starting
+ * point, not a guaranteed restoration.
+ */
+export const listDeleted = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return [];
+
+    const memberships = await ctx.db
+      .query('memberships')
+      .withIndex('by_user', (q) => q.eq('userId', userId))
+      .collect();
+
+    const workspaces = await Promise.all(memberships.map((m) => ctx.db.get(m.workspaceId)));
+
+    return workspaces.filter(
+      (ws): ws is NonNullable<typeof ws> => ws !== null && ws.deletedAt !== undefined,
+    );
+  },
+});
+
 /** Get a single workspace by ID (must be a member). */
 export const getById = query({
   args: { workspaceId: v.id('workspaces') },

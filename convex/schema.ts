@@ -20,6 +20,7 @@ export default defineSchema({
     name: v.string(),
     ownerId: v.id('users'),
     createdAt: v.number(),
+    deletedAt: v.optional(v.number()),
     /** Phase 6 theming — optional so existing rows stay valid */
     theme: v.optional(v.object({
       primary: v.string(),
@@ -37,7 +38,7 @@ export default defineSchema({
       borderRadius: v.optional(v.string()),
       buttonStyle: v.optional(v.string()),
     })),
-  }),
+  }).index('by_deletedAt', ['deletedAt']),
 
   memberships: defineTable({
     workspaceId: v.id('workspaces'),
