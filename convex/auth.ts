@@ -1,4 +1,4 @@
-import { convexAuth, createAccount, retrieveAccount } from '@convex-dev/auth/server';
+import { convexAuth } from '@convex-dev/auth/server';
 import { Email } from '@convex-dev/auth/providers/Email';
 import { Password } from '@convex-dev/auth/providers/Password';
 import { ConvexCredentials } from '@convex-dev/auth/providers/ConvexCredentials';
@@ -112,21 +112,12 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
         }
         const email = claims.email.trim().toLowerCase();
 
-        const existing = await retrieveAccount(ctx, {
-          provider: 'prism-sso',
-          account: { id: email },
-        }).catch(() => null);
-
-        const userId = existing
-          ? existing.user._id
-          : (
-              await createAccount(ctx, {
-                provider: 'prism-sso',
-                account: { id: email },
-                profile: { email, name: claims.name ?? email, emailVerificationTime: Date.now() },
-                shouldLinkViaEmail: true,
-              })
-            ).user._id;
+        // See convex/sso.ts::linkOrCreateSsoUser for why this doesn't use
+        // createAccount/retrieveAccount's own shouldLinkViaEmail linking.
+        const userId = await ctx.runMutation(internal.sso.linkOrCreateSsoUser, {
+          email,
+          name: claims.name,
+        });
 
         await ctx.runMutation(internal.sso.linkSsoEmployee, {
           userId,

@@ -3,6 +3,70 @@ import { internal } from './_generated/api';
 import { internalMutation } from './_generated/server';
 
 /**
+ * Finds-or-creates the Convex Auth user for an SSO login, replacing
+ * @convex-dev/auth's own createAccount/retrieveAccount + shouldLinkViaEmail
+ * for this provider. That built-in linking picks *a* user matching the
+ * email index, but some accounts here have duplicate `users` rows for the
+ * same email (pre-existing data, not caused by SSO) — its pick isn't
+ * necessarily the one with real workspace memberships, and it created a
+ * second, empty account on the two logins before this fix. This instead
+ * prefers, among same-email users, the one already holding the most
+ * memberships, so SSO always lands on the account that actually has data.
+ */
+export const linkOrCreateSsoUser = internalMutation({
+  args: { email: v.string(), name: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    const candidates = await ctx.db
+      .query('users')
+      .withIndex('email', (q) => q.eq('email', args.email))
+      .collect();
+
+    let userId = candidates[0]?._id;
+    if (candidates.length > 1) {
+      const withCounts = await Promise.all(
+        candidates.map(async (u) => ({
+          id: u._id,
+          count: (
+            await ctx.db
+              .query('memberships')
+              .withIndex('by_user', (q) => q.eq('userId', u._id))
+              .collect()
+          ).length,
+        })),
+      );
+      withCounts.sort((a, b) => b.count - a.count);
+      userId = withCounts[0]!.id;
+    }
+
+    if (!userId) {
+      userId = await ctx.db.insert('users', {
+        email: args.email,
+        name: args.name,
+        emailVerificationTime: Date.now(),
+      });
+    }
+
+    const existingAccount = await ctx.db
+      .query('authAccounts')
+      .withIndex('providerAndAccountId', (q) =>
+        q.eq('provider', 'prism-sso').eq('providerAccountId', args.email),
+      )
+      .first();
+    if (!existingAccount) {
+      await ctx.db.insert('authAccounts', {
+        provider: 'prism-sso',
+        providerAccountId: args.email,
+        userId,
+      });
+    } else if (existingAccount.userId !== userId) {
+      await ctx.db.patch(existingAccount._id, { userId });
+    }
+
+    return userId;
+  },
+});
+
+/**
  * Runs after a successful prism-sso ConvexCredentials authorize() (see
  * convex/auth.ts) — upserts the employeeProfiles bridge row and, if the
  * token's companySlug matches an analyticsLinks workspace, auto-joins that
