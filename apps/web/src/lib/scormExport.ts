@@ -9,6 +9,7 @@
  */
 import JSZip from 'jszip';
 import DOMPurify from 'dompurify';
+import lottieMinJs from 'lottie-web/build/player/lottie.min.js?raw';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -1793,7 +1794,7 @@ export function buildPreviewHtml(
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
 <title>${escapeHtml(lesson.title)}</title>
 <style>${buildCss(theme)}</style>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>
+<script>${lottieMinJs}</script>
 </head>
 <body>
 <div class="prism-shell">
@@ -2079,18 +2080,11 @@ export async function buildScormPackage(
     assetsFolder.file('scorm12.min.js', minimalScormShim());
   }
 
-  // Bundle lottie-web locally so lesson pages don't depend on external CDN
-  try {
-    const lottieRes = await fetch('https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js');
-    if (lottieRes.ok) {
-      const lottieJs = await lottieRes.text();
-      assetsFolder.file('lottie.min.js', lottieJs);
-    } else {
-      assetsFolder.file('lottie.min.js', '/* lottie-web unavailable */');
-    }
-  } catch {
-    assetsFolder.file('lottie.min.js', '/* lottie-web unavailable */');
-  }
+  // Bundle lottie-web locally so lesson pages don't depend on external CDN.
+  // Sourced from the npm package at build time (no runtime fetch) so the
+  // export can't silently degrade to a stub if the export machine has no
+  // network access or the CDN is blocked.
+  assetsFolder.file('lottie.min.js', lottieMinJs);
 
   assetsFolder.file('interaction.js', buildInteractionJs());
 
