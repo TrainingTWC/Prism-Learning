@@ -2,8 +2,15 @@
  * Convert an image File to WebP format using the Canvas API.
  * Caps the longer dimension at `maxPx` and compresses at `quality`.
  * Non-image files are returned unchanged.
+ *
+ * Animated GIFs are also returned unchanged: the Canvas API can only ever
+ * capture the single currently-decoded frame of a GIF (drawImage + toBlob
+ * has no concept of animation), so running a GIF through this pipeline
+ * silently and permanently flattens it to a static image. Skipping
+ * conversion preserves the animation.
  */
 export async function toWebP(file: File, maxPx = 1920, quality = 0.82): Promise<File> {
+  if (file.type === 'image/gif') return file;
   return new Promise((resolve) => {
     const img = new Image();
     const objectUrl = URL.createObjectURL(file);
