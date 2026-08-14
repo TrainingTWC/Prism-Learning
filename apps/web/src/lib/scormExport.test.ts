@@ -183,3 +183,128 @@ describe('scormExport module-wide quiz score', () => {
     expect(lesson0).toContain('data-quiz-total="0"');
   });
 });
+
+describe('scormExport completion screen pass/fail copy', () => {
+  it('Test 11: buildPreviewHtml emits fail/pass copy data attributes', () => {
+    const mod = makeSingleLessonModule();
+    const html = buildPreviewHtml(mod, 0, {}, theme, { passingScore: 80, completionCriteria: 'completed' });
+    expect(html).toContain('data-prism-complete-title');
+    expect(html).toContain('data-fail-title');
+    expect(html).toContain('data-fail-body');
+    expect(html).toContain('data-pass-title');
+    expect(html).toContain('data-pass-body');
+    expect(html).toContain('data-prism-complete-icon');
+  });
+
+  it('Test 12: preview and export emit the same set of pass/fail data attribute names', async () => {
+    const mod = makeSingleLessonModule();
+    const options = { passingScore: 80, completionCriteria: 'completed' as const };
+    const previewHtml = buildPreviewHtml(mod, 0, {}, theme, options);
+    const result = await buildScormPackage(mod, theme, options, async () => '');
+    const zip = await JSZip.loadAsync(result.blob);
+    const lesson0 = await zip.file('lesson_0.html')!.async('string');
+
+    const attrNames = [
+      'data-prism-complete-icon',
+      'data-prism-complete-title',
+      'data-pass-title',
+      'data-fail-title',
+      'data-prism-complete-body',
+      'data-pass-body',
+      'data-fail-body',
+    ];
+    for (const attr of attrNames) {
+      expect(previewHtml).toContain(attr);
+      expect(lesson0).toContain(attr);
+    }
+  });
+
+  it('Test 13: completed-criteria copy swap is not gated behind crit===passed', async () => {
+    const mod = makeSingleLessonModule();
+    const options = { passingScore: 80, completionCriteria: 'completed' as const };
+    const previewHtml = buildPreviewHtml(mod, 0, {}, theme, options);
+    const result = await buildScormPackage(mod, theme, options, async () => '');
+    const zip = await JSZip.loadAsync(result.blob);
+    const lesson0 = await zip.file('lesson_0.html')!.async('string');
+    expect(previewHtml).not.toContain("crit==='passed'");
+    expect(lesson0).not.toContain("crit==='passed'");
+  });
+
+  it('Test 14: authored overrides win in both builders and stock copy is gone', async () => {
+    const mod = makeSingleLessonModule();
+    const options = {
+      passingScore: 80,
+      completionCriteria: 'completed' as const,
+      completionCopy: {
+        failTitle: 'ZZFAILTITLEZZ',
+        failBody: 'ZZFAILBODYZZ',
+        passTitle: 'ZZPASSTITLEZZ',
+        passBody: 'ZZPASSBODYZZ',
+        defaultTitle: 'ZZDEFTITLEZZ',
+        defaultBody: 'ZZDEFBODYZZ',
+      },
+    };
+    const previewHtml = buildPreviewHtml(mod, 0, {}, theme, options);
+    const result = await buildScormPackage(mod, theme, options, async () => '');
+    const zip = await JSZip.loadAsync(result.blob);
+    const lesson0 = await zip.file('lesson_0.html')!.async('string');
+
+    for (const html of [previewHtml, lesson0]) {
+      expect(html).toContain('ZZFAILTITLEZZ');
+      expect(html).toContain('ZZFAILBODYZZ');
+      expect(html).toContain('ZZPASSTITLEZZ');
+      expect(html).toContain('ZZPASSBODYZZ');
+      expect(html).toContain('ZZDEFTITLEZZ');
+      expect(html).toContain('ZZDEFBODYZZ');
+      expect(html).not.toContain('You crushed it!');
+      expect(html).not.toContain('Not quite there yet');
+      expect(html).not.toContain('You passed!');
+    }
+  });
+
+  it('Test 15: blank/whitespace authored fields fall back to stock copy', async () => {
+    const mod = makeSingleLessonModule();
+    const options = {
+      passingScore: 80,
+      completionCriteria: 'completed' as const,
+      completionCopy: { failTitle: '   ', passTitle: '' },
+    };
+    const previewHtml = buildPreviewHtml(mod, 0, {}, theme, options);
+    const result = await buildScormPackage(mod, theme, options, async () => '');
+    const zip = await JSZip.loadAsync(result.blob);
+    const lesson0 = await zip.file('lesson_0.html')!.async('string');
+
+    for (const html of [previewHtml, lesson0]) {
+      expect(html).toContain('You crushed it!');
+      expect(html).toContain('You passed!');
+      expect(html).toContain('Not quite there yet');
+    }
+  });
+
+  it('Test 16: authored copy is HTML-escaped, never raw markup', async () => {
+    const mod = makeSingleLessonModule();
+    const options = {
+      passingScore: 80,
+      completionCriteria: 'completed' as const,
+      completionCopy: { failTitle: '&lt;img src=x onerror=alert(1)&gt;' },
+    };
+    const previewHtml = buildPreviewHtml(mod, 0, {}, theme, options);
+    const result = await buildScormPackage(mod, theme, options, async () => '');
+    const zip = await JSZip.loadAsync(result.blob);
+    const lesson0 = await zip.file('lesson_0.html')!.async('string');
+
+    for (const html of [previewHtml, lesson0]) {
+      expect(html).toContain('&amp;lt;img');
+      expect(html).not.toContain('<img');
+    }
+  });
+
+  it('Test 17: lesson_status logic is untouched by the copy-swap change', async () => {
+    const mod = makeSingleLessonModule();
+    const options = { passingScore: 80, completionCriteria: 'completed' as const };
+    const result = await buildScormPackage(mod, theme, options, async () => '');
+    const zip = await JSZip.loadAsync(result.blob);
+    const lesson0 = await zip.file('lesson_0.html')!.async('string');
+    expect(lesson0).toContain("crit==='completed'?'completed':");
+  });
+});
