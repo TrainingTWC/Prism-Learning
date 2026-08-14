@@ -110,22 +110,6 @@ function sanitizeMultilineHtml(s: string, cls?: string): string {
 }
 
 /**
- * Sanitize rich-text HTML for embedding inside an HTML attribute value that
- * will later be read via `getAttribute()`/`dataset` and assigned directly to
- * `.innerHTML` in the exported runtime (quiz per-option / true-false
- * feedback). The body HTML is sanitized FIRST (via `sanitizeInlineHtml`),
- * then HTML-attribute-encoded exactly once so the browser's attribute
- * parser decodes it back to the exact sanitized string when read at
- * runtime — safe because that string was already DOMPurify-sanitized
- * before this encoding pass (nested-encoding, not double-escaping: the
- * attribute parse step and the later innerHTML-assignment step each decode
- * exactly one of the two encoding passes).
- */
-function sanitizeForFeedbackAttr(s: string): string {
-  return escapeHtml(sanitizeInlineHtml(s));
-}
-
-/**
  * A parser-blocking <script src> (no async/defer) pauses rendering of
  * everything after it in the page until that request resolves. A stray
  * external script pointed at a slow or dead host (e.g. a browser-injected
@@ -192,20 +176,9 @@ const CALLOUT_ICONS: Record<string, string> = {
 
 // ── Block → HTML ───────────────────────────────────────────────────────────
 
-/**
- * Resolve whether a quiz block behaves as an assessment question. The block's
- * own `assessment` field wins when set; otherwise the module-level default
- * from ExportOptions applies.
- */
-function resolveAssess(blockAssessment: unknown, moduleDefault: boolean): boolean {
-  return typeof blockAssessment === 'boolean' ? blockAssessment : moduleDefault;
-}
-
 function renderBlock(
   block: ExportBlock,
   assetMap: Record<string, string>,
-  /** Module-level assessment default; per-block `assessment` overrides it */
-  assessDefault = false,
 ): string {
   const c = block.content ?? '';
   switch (block.type) {
@@ -256,51 +229,38 @@ function renderBlock(
     }
 
     case 'mcq': {
-      let p: { question?: string; options?: Array<{ id: string; text: string; isCorrect: boolean; feedback?: string }>; multiSelect?: boolean; showFeedback?: boolean; assessment?: boolean } = {};
+      let p: { question?: string; options?: Array<{ id: string; text: string; isCorrect: boolean; feedback?: string }>; multiSelect?: boolean } = {};
       try { p = JSON.parse(c) as typeof p; } catch { /* */ }
-      const assess = resolveAssess(p.assessment, assessDefault);
+      // Feedback / assessment fields on stored block JSON are intentionally
+      // no longer read here — quiz blocks always lock in silently now. The
+      // fields are preserved in storage so authored content round-trips.
       const opts = (p.options ?? []).map((o) => {
-        // Feedback HTML is sanitized at build time and stored in a data
-        // attribute; the exported runtime reads it via getAttribute() and
-        // assigns it to innerHTML only after the learner selects this option
-        // (see buildInteractionJs) — see sanitizeForFeedbackAttr for why the
-        // nested sanitize+escape encoding round-trips safely. Assessment
-        // questions never render feedback markup at all — nothing to leak.
-        const feedbackAttr = o.feedback && !assess ? ` data-feedback="${sanitizeForFeedbackAttr(o.feedback)}"` : '';
-        const feedbackCls = `prism-opt-feedback ${o.isCorrect ? 'prism-opt-feedback--ok' : 'prism-opt-feedback--bad'}`;
         return `<li>
   <button type="button" class="prism-opt" data-id="${escapeHtml(o.id)}" data-correct="${o.isCorrect}">
     <span class="prism-opt-marker"></span>${sanitizeInlineHtml(o.text)}
   </button>
-  ${o.feedback && !assess ? `<p class="${feedbackCls}"${feedbackAttr} style="display:none"></p>` : ''}
 </li>`;
       }).join('');
-      return `<div class="prism-mcq" data-multi="${p.multiSelect ?? false}" data-feedback="${p.showFeedback ?? true}" data-assessment="${assess}">
+      return `<div class="prism-mcq" data-multi="${p.multiSelect ?? false}">
   ${sanitizeMultilineHtml(p.question ?? '', 'prism-q')}
   <ul class="prism-opts">${opts}</ul>
   <div class="prism-actions">
     <button type="button" class="prism-submit" disabled>Submit</button>
-    <span class="prism-result"></span>
-    ${assess ? '' : '<button type="button" class="prism-retry" style="display:none">Try again</button>'}
   </div>
 </div>`;
     }
 
     case 'trueFalse': {
-      let p: { statement?: string; correctAnswer?: boolean; trueFeedback?: string; falseFeedback?: string; assessment?: boolean } = {};
+      let p: { statement?: string; correctAnswer?: boolean } = {};
       try { p = JSON.parse(c) as typeof p; } catch { /* */ }
-      const assess = resolveAssess(p.assessment, assessDefault);
-      // tf/ff feedback is sanitized at build time and stored in data-tf/data-ff;
-      // the exported runtime reads it and assigns it to innerHTML (see
-      // buildInteractionJs + sanitizeForFeedbackAttr for the encoding
-      // rationale). Assessment questions never emit tf/ff data at all.
-      return `<div class="prism-tf" data-correct="${p.correctAnswer ?? true}" data-assessment="${assess}" data-tf="${assess ? '' : sanitizeForFeedbackAttr(p.trueFeedback ?? '')}" data-ff="${assess ? '' : sanitizeForFeedbackAttr(p.falseFeedback ?? '')}">
+      // trueFeedback/falseFeedback/assessment fields on stored block JSON
+      // are intentionally no longer read here — see the mcq case above.
+      return `<div class="prism-tf" data-correct="${p.correctAnswer ?? true}">
   ${sanitizeMultilineHtml(p.statement ?? '', 'prism-q')}
   <div class="prism-tf-btns">
     <button type="button" data-answer="true">True</button>
     <button type="button" data-answer="false">False</button>
   </div>
-  ${assess ? '' : '<div class="prism-result" style="display:none"></div><button type="button" class="prism-retry" style="display:none">Try again</button>'}
 </div>`;
     }
 
@@ -786,15 +746,11 @@ h1{font-family:var(--prism-font-heading);font-size:2.5rem;line-height:1.12;font-
 @keyframes prism-block-reveal{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 @keyframes prism-feedback-enter{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
 @keyframes prism-marker-pop{0%{opacity:0;transform:scale(.65)}100%{opacity:1;transform:scale(1)}}
-@keyframes prism-shake{0%,100%{transform:translateX(0) scale(1)}15%{transform:translateX(-7px) scale(.99)}30%{transform:translateX(6px)}45%{transform:translateX(-4px)}60%{transform:translateX(3px)}75%{transform:translateX(-2px)}}
-@keyframes prism-correct-pop{0%,100%{transform:scale(1)}40%{transform:scale(1.035)}}
 @keyframes prism-ripple-expand{to{transform:scale(4);opacity:0}}
 @keyframes prism-slide-out-next{to{opacity:0;transform:translateX(-32px)}}
 @keyframes prism-slide-out-prev{to{opacity:0;transform:translateX(32px)}}
 @keyframes prism-toast-show{0%{opacity:0;transform:translateX(-50%) translateY(18px)}100%{opacity:1;transform:translateX(-50%) translateY(0)}}
 @keyframes prism-toast-hide{to{opacity:0;transform:translateX(-50%) translateY(12px)}}
-.prism-shake{animation:prism-shake 380ms cubic-bezier(.36,.07,.19,.97) both!important}
-.prism-correct-pop{animation:prism-correct-pop 320ms var(--prism-ease-emphasized) both!important}
 
 /* ── Bottom nav (sticky page footer) ── */
 .prism-nav{position:sticky;bottom:0;z-index:30;display:flex;justify-content:space-between;align-items:center;gap:12px;padding:18px 64px calc(18px + env(safe-area-inset-bottom));border-top:1px solid var(--prism-border-subtle);background:color-mix(in srgb, var(--prism-surface) 92%, transparent);backdrop-filter:saturate(180%) blur(14px)}
@@ -875,16 +831,9 @@ h1{font-family:var(--prism-font-heading);font-size:2.5rem;line-height:1.12;font-
 .prism-opt:active,.prism-submit:active,.prism-tf-btns button:active{transform:scale(.985)}
 .prism-opt:hover{border-color:var(--prism-text-muted)}
 .prism-opt.selected{border-color:var(--prism-primary);background:color-mix(in srgb, var(--prism-primary) 8%, var(--prism-surface))}
-.prism-opt.correct{border-color:#10b981;background:color-mix(in srgb,#10b981 12%,var(--prism-surface));color:#065f46}
-.prism-opt.wrong{border-color:#ef4444;background:color-mix(in srgb,#ef4444 12%,var(--prism-surface));color:#991b1b}
-html[data-theme="dark"] .prism-opt.correct{color:#6ee7b7}
-html[data-theme="dark"] .prism-opt.wrong{color:#fca5a5}
 .prism-opt-marker{width:1.25rem;height:1.25rem;margin-top:.15rem;border-radius:50%;border:2px solid currentColor;display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;flex-shrink:0}
 .prism-opt-marker:not(:empty){animation:prism-marker-pop var(--prism-motion-base) var(--prism-ease-emphasized) both}
 .prism-opt-marker.filled{background:currentColor;animation:prism-marker-pop var(--prism-motion-base) var(--prism-ease-emphasized) both}
-.prism-opt-feedback{margin-top:8px;margin-left:2.5rem;margin-right:.5rem;padding:.5rem .75rem;border-radius:8px;background:color-mix(in srgb, var(--prism-surface) 70%, transparent);font-size:.8rem;line-height:1.4;box-shadow:var(--prism-shadow-soft);animation:prism-feedback-enter var(--prism-motion-base) var(--prism-ease-emphasized) both}
-.prism-opt-feedback--ok{color:var(--prism-correct,#16a34a)}
-.prism-opt-feedback--bad{color:var(--prism-incorrect,#dc2626)}
 .prism-opt:disabled{opacity:.6;cursor:default;pointer-events:none}
 .prism-tf-btns button:disabled{opacity:.6;cursor:default;pointer-events:none}
 .prism-tf-btns button.locked{border-color:var(--prism-primary)}
@@ -892,20 +841,12 @@ html[data-theme="dark"] .prism-opt.wrong{color:#fca5a5}
 .prism-submit{min-height:44px;background:linear-gradient(135deg,var(--prism-primary),var(--prism-accent));color:#fff;border:0;border-radius:12px;padding:.6rem 1.25rem;font:inherit;font-size:.9rem;font-weight:700;cursor:pointer;box-shadow:0 10px 22px -10px var(--prism-primary);transition:transform var(--prism-motion-fast),opacity var(--prism-motion-base),filter var(--prism-motion-fast)}
 .prism-submit:hover:not(:disabled){filter:brightness(1.05)}
 .prism-submit:disabled{opacity:.4;cursor:not-allowed;box-shadow:none}
-.prism-retry{background:none;border:0;color:var(--prism-primary);font-size:.9rem;cursor:pointer;text-decoration:underline;font-weight:600}
-.prism-result{font-size:.9rem;font-weight:700;animation:prism-feedback-enter var(--prism-motion-base) var(--prism-ease-emphasized) both}
-.prism-result.ok{color:#059669}
-.prism-result.bad{color:#dc2626}
 
 /* ── True/False ── */
 .prism-tf{background:var(--prism-surface-2);border:1px solid var(--prism-border);border-radius:20px;padding:22px;margin:1.75rem 0;box-shadow:var(--prism-shadow-soft)}
 .prism-tf-btns{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-top:1rem}
 .prism-tf-btns button{min-height:3rem;padding:.85rem;border-radius:12px;border:1.5px solid var(--prism-border);background:var(--prism-surface);color:var(--prism-text);font:inherit;font-size:.95rem;font-weight:700;cursor:pointer;transition:transform var(--prism-motion-fast),border-color var(--prism-motion-base),background-color var(--prism-motion-base),color var(--prism-motion-base);box-shadow:var(--prism-shadow-soft)}
 .prism-tf-btns button:hover{border-color:var(--prism-text-muted)}
-.prism-tf-btns button.selected-ok{border-color:#10b981;background:color-mix(in srgb,#10b981 12%,var(--prism-surface));color:#065f46}
-.prism-tf-btns button.selected-bad{border-color:#ef4444;background:color-mix(in srgb,#ef4444 12%,var(--prism-surface));color:#991b1b}
-html[data-theme="dark"] .prism-tf-btns button.selected-ok{color:#6ee7b7}
-html[data-theme="dark"] .prism-tf-btns button.selected-bad{color:#fca5a5}
 
 /* ── Accordion ── */
 .prism-acc{border:1px solid var(--prism-border);border-radius:18px;overflow:hidden;margin:1.75rem 0;background:var(--prism-surface);box-shadow:var(--prism-shadow-soft)}
@@ -1139,21 +1080,18 @@ function buildInteractionJs(): string {
 // out cleanly. Swallow storage errors (e.g. private-mode Safari) — scoring
 // then simply doesn't survive navigation, same as before this fix existed.
 function persistScore(){try{sessionStorage.setItem('prism-score-total',String(window.__prismTotal||0));sessionStorage.setItem('prism-score-correct',String(window.__prismCorrect||0));}catch(e){}}
-// MCQ
+// MCQ — answers lock in silently: no correct/wrong reveal, no feedback, no
+// retry. Learner selects option(s), submits, the question is scored, and the
+// options are disabled. Progression is never blocked.
 document.querySelectorAll('.prism-mcq').forEach(function(el){
-  var assess=el.dataset.assessment==='true';
   var multi=el.dataset.multi==='true';
-  var fb=el.dataset.feedback==='true';
   var submit=el.querySelector('.prism-submit');
-  var result=el.querySelector('.prism-result');
-  var retry=el.querySelector('.prism-retry');
   var opts=el.querySelectorAll('.prism-opt');
   var selected=new Set();
   // Whether this question currently contributes to the running score, and
-  // whether that contribution is "correct" — tracked so a teaching-mode
-  // retry adjusts window.__prismCorrect instead of the old behaviour, which
-  // incremented window.__prismTotal on every resubmission and silently
-  // inflated the denominator on each retry.
+  // whether that contribution is "correct" — guarded so a resubmission
+  // can't double-count (submit is hidden after use, but keep this guard in
+  // case the DOM contract changes).
   var counted=false,countedCorrect=false;
   opts.forEach(function(btn){
     btn.addEventListener('click',function(){
@@ -1176,75 +1114,19 @@ document.querySelectorAll('.prism-mcq').forEach(function(el){
       if(isSel&&!correct)allOk=false;
       else if(!isSel&&correct)allOk=false;
     });
-    if(assess){
-      // Lock the answer in silently — no correct/wrong classes, no marker
-      // change beyond the learner's own selection, no feedback, no retry.
-      opts.forEach(function(btn){btn.disabled=true;});
-      submit.style.display='none';
-      if(!counted){window.__prismTotal=(window.__prismTotal||0)+1;counted=true;}
-      if(allOk&&!countedCorrect){window.__prismCorrect=(window.__prismCorrect||0)+1;countedCorrect=true;}
-      persistScore();
-      if(window.__prismAPI){try{window.__prismAPI.LMSCommit('');}catch(e){}}
-      return;
-    }
-    opts.forEach(function(btn){
-      var id=btn.dataset.id;
-      var correct=btn.dataset.correct==='true';
-      var marker=btn.querySelector('.prism-opt-marker');
-      var isSel=selected.has(id);
-      if(isSel){
-        if(marker)marker.classList.remove('filled');
-        if(correct){btn.classList.add('correct');if(marker)marker.textContent='✓';}
-        else{btn.classList.add('wrong');if(marker)marker.textContent='✗';}
-      }
-      // Per-option feedback: only reveal for the option the learner picked,
-      // and only when the author enabled feedback (fb). The feedback HTML
-      // was DOMPurify-sanitized at build time (see sanitizeForFeedbackAttr);
-      // reading it back via getAttribute() and assigning to innerHTML here
-      // is safe because it was never raw/untrusted at this point.
-      var fbEl=btn.parentElement?btn.parentElement.querySelector('.prism-opt-feedback'):null;
-      if(fbEl){
-        if(fb&&isSel){fbEl.innerHTML=fbEl.getAttribute('data-feedback')||'';fbEl.style.display='';}
-        else{fbEl.style.display='none';fbEl.innerHTML='';}
-      }
-    });
-    result.textContent=allOk?'✓ Nailed it!':'✗ Not quite — give it another go!';
-    result.className='prism-result '+(allOk?'ok':'bad');
-    if(allOk){opts.forEach(function(btn){if(btn.classList.contains('correct')){btn.classList.remove('prism-correct-pop');void btn.offsetWidth;btn.classList.add('prism-correct-pop');}});}
-    else{opts.forEach(function(btn){if(btn.classList.contains('wrong')){btn.classList.remove('prism-shake');void btn.offsetWidth;btn.classList.add('prism-shake');}});}
+    // Lock the answer in silently — no correct/wrong classes, no marker
+    // change beyond the learner's own selection, no feedback, no retry.
+    opts.forEach(function(btn){btn.disabled=true;});
     submit.style.display='none';
-    retry.style.display='inline';
     if(!counted){window.__prismTotal=(window.__prismTotal||0)+1;counted=true;}
     if(allOk&&!countedCorrect){window.__prismCorrect=(window.__prismCorrect||0)+1;countedCorrect=true;}
-    else if(!allOk&&countedCorrect){window.__prismCorrect=(window.__prismCorrect||0)-1;countedCorrect=false;}
     persistScore();
-    // SCORM score — only numeric score/status are written to CMI, never
-    // authored question/option/feedback text. If cmi.interactions.* writes
-    // are ever added here, any authored text must be tag-stripped first
-    // (never write raw or sanitized-HTML strings to CMI).
-    if(window.__prismAPI){
-      try{window.__prismAPI.LMSSetValue('cmi.core.score.raw',allOk?'100':'0');window.__prismAPI.LMSSetValue('cmi.core.score.min','0');window.__prismAPI.LMSSetValue('cmi.core.score.max','100');window.__prismAPI.LMSCommit('');}catch(e){}
-    }
-  });
-  if(retry)retry.addEventListener('click',function(){
-    el.dataset.submitted='0';
-    selected.clear();
-    opts.forEach(function(btn){
-      btn.classList.remove('selected','correct','wrong');
-      var m=btn.querySelector('.prism-opt-marker');if(m){m.textContent='';m.classList.remove('filled');}
-      var fbEl=btn.parentElement?btn.parentElement.querySelector('.prism-opt-feedback'):null;
-      if(fbEl){fbEl.style.display='none';fbEl.innerHTML='';}
-    });
-    result.textContent='';submit.style.display='';submit.disabled=true;retry.style.display='none';
+    if(window.__prismAPI){try{window.__prismAPI.LMSCommit('');}catch(e){}}
   });
 });
-// True/False
+// True/False — same silent lock-in behaviour as MCQ.
 document.querySelectorAll('.prism-tf').forEach(function(el){
-  var assess=el.dataset.assessment==='true';
   var correct=el.dataset.correct==='true';
-  var tf=el.dataset.tf||'';var ff=el.dataset.ff||'';
-  var res=el.querySelector('.prism-result');
-  var retry=el.querySelector('.prism-retry');
   var counted=false,countedCorrect=false;
   var btns=el.querySelectorAll('.prism-tf-btns button');
   btns.forEach(function(btn){
@@ -1253,36 +1135,14 @@ document.querySelectorAll('.prism-tf').forEach(function(el){
       el.dataset.answered='1';
       var answer=btn.dataset.answer==='true';
       var ok=answer===correct;
-      if(assess){
-        // Lock both buttons in with no right/wrong indication whatsoever.
-        btn.classList.add('locked');
-        btns.forEach(function(b){b.disabled=true;});
-        if(!counted){window.__prismTotal=(window.__prismTotal||0)+1;counted=true;}
-        if(ok&&!countedCorrect){window.__prismCorrect=(window.__prismCorrect||0)+1;countedCorrect=true;}
-        persistScore();
-        if(window.__prismAPI){try{window.__prismAPI.LMSCommit('');}catch(e){}}
-        return;
-      }
-      btn.className=ok?'selected-ok':'selected-bad';
-      if(ok){btn.classList.remove('prism-correct-pop');void btn.offsetWidth;btn.classList.add('prism-correct-pop');}
-      else{btn.classList.remove('prism-shake');void btn.offsetWidth;btn.classList.add('prism-shake');}
-      // tf/ff were DOMPurify-sanitized at build time (see
-      // sanitizeForFeedbackAttr); the fixed prefix is a literal string, so
-      // this innerHTML assignment carries no unsanitized author content.
-      if(res){res.innerHTML=(ok?'Correct! ':'Not quite. ')+(answer?tf:ff);res.style.display='';}
-      if(retry)retry.style.display='inline';
+      // Lock both buttons in with no right/wrong indication whatsoever.
+      btn.classList.add('locked');
+      btns.forEach(function(b){b.disabled=true;});
       if(!counted){window.__prismTotal=(window.__prismTotal||0)+1;counted=true;}
       if(ok&&!countedCorrect){window.__prismCorrect=(window.__prismCorrect||0)+1;countedCorrect=true;}
-      else if(!ok&&countedCorrect){window.__prismCorrect=(window.__prismCorrect||0)-1;countedCorrect=false;}
       persistScore();
       if(window.__prismAPI){try{window.__prismAPI.LMSCommit('');}catch(e){}}
     });
-  });
-  if(retry)retry.addEventListener('click',function(){
-    el.dataset.answered='0';
-    btns.forEach(function(b){b.className='';});
-    if(res){res.textContent='';res.style.display='none';}
-    retry.style.display='none';
   });
 });
 // Accordion
@@ -1504,7 +1364,7 @@ function buildLessonPage(
   const pct = Math.round(((lessonIdx + 1) / total) * 100);
 
   const blocksHtml = lesson.blocks
-    .map((b, i) => `<div class="prism-block" style="--i:${i}">${renderBlock(b, assetMap, options.assessmentMode ?? false)}</div>`)
+    .map((b, i) => `<div class="prism-block" style="--i:${i}">${renderBlock(b, assetMap)}</div>`)
     .join('\n');
 
   // Lesson dots — clickable chips representing every lesson
