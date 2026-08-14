@@ -850,11 +850,13 @@ export function ModuleEditorPage() {
         className="fixed inset-0 z-50 flex items-center justify-center p-4"
       >
         <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setExportDialogOpen(false)} />
-        <div className="relative w-full max-w-md rounded-2xl border border-[var(--border-primary)] bg-[var(--bg-primary)] p-6 shadow-2xl">
-          <div className="mb-5 flex items-center justify-between">
+        <div className="relative flex max-h-[85vh] w-full max-w-md flex-col rounded-2xl border border-[var(--border-primary)] bg-[var(--bg-primary)] p-6 shadow-2xl">
+          <div className="mb-5 flex shrink-0 items-center justify-between">
             <h2 className="text-lg font-bold text-[var(--text-primary)]">Export SCORM 1.2</h2>
             <button type="button" onClick={() => setExportDialogOpen(false)} className="rounded-lg p-1.5 text-[var(--text-muted)] hover:bg-[var(--card-bg-hover)]"><X className="size-4" /></button>
           </div>
+
+          <div className="min-h-0 flex-1 overflow-y-auto pr-1">
 
           {/* Completion criterion */}
           <div className="mb-5">
@@ -963,7 +965,9 @@ export function ModuleEditorPage() {
             </div>
           </div>
 
-          <div className="flex gap-3 justify-end">
+          </div>
+
+          <div className="flex shrink-0 justify-end gap-3 pt-4">
             <button type="button" onClick={() => setExportDialogOpen(false)} className="rounded-lg border border-[var(--border-primary)] px-4 py-2 text-sm font-semibold text-[var(--text-secondary)] hover:bg-[var(--card-bg-hover)]">Cancel</button>
             <button type="button" onClick={() => void handleSaveAndClose()} className="rounded-lg border border-[var(--border-primary)] px-4 py-2 text-sm font-semibold text-[var(--text-secondary)] hover:bg-[var(--card-bg-hover)]">Save</button>
             <button type="button" onClick={() => void handleSaveAndExport()} className="flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700">
