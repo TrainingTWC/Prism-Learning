@@ -145,6 +145,22 @@ function dividerPaddingStyle(value: unknown, style?: string) {
   return `--prism-divider-padding:${dividerPadding(value, style)}px`;
 }
 
+/**
+ * Count every quiz block (mcq / trueFalse) across all lessons in the module.
+ * This is the denominator for the module-wide score — it deliberately
+ * counts every quiz block regardless of whether the learner answered it, so
+ * skipping questions can no longer inflate the reported score.
+ */
+function countQuizBlocks(mod: ExportModule): number {
+  let total = 0;
+  for (const lesson of mod.lessons) {
+    for (const block of lesson.blocks) {
+      if (block.type === 'mcq' || block.type === 'trueFalse') total += 1;
+    }
+  }
+  return total;
+}
+
 function toEmbedUrl(raw: string): string | null {
   try {
     const u = new URL(raw);
@@ -793,6 +809,7 @@ h1{font-family:var(--prism-font-heading);font-size:2.5rem;line-height:1.12;font-
 @keyframes prism-check-bounce{0%{transform:scale(.4);opacity:0}50%{transform:scale(1.1)}100%{transform:scale(1);opacity:1}}
 .prism-complete h2{font-family:var(--prism-font-heading);font-size:1.5rem;font-weight:800;color:var(--prism-text);margin-bottom:8px;letter-spacing:-.01em}
 .prism-complete p{font-size:14px;color:var(--prism-text-muted);line-height:1.6;margin-bottom:22px}
+.prism-complete-score{font-family:var(--prism-font-heading);font-size:1.05rem;font-weight:800;color:var(--prism-text);font-variant-numeric:tabular-nums;margin:-8px 0 22px}
 .prism-complete-row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
 .prism-complete-row button{appearance:none;border:1px solid var(--prism-border);background:var(--prism-surface);color:var(--prism-text-2);padding:10px 18px;border-radius:10px;font-weight:700;font-size:13px;cursor:pointer;transition:all var(--prism-motion-fast)}
 .prism-complete-row button:hover{border-color:var(--prism-primary)}
@@ -1362,6 +1379,7 @@ function buildLessonPage(
   const total = mod.lessons.length;
   const isLast = lessonIdx === total - 1;
   const pct = Math.round(((lessonIdx + 1) / total) * 100);
+  const quizTotal = countQuizBlocks(mod);
 
   const blocksHtml = lesson.blocks
     .map((b, i) => `<div class="prism-block" style="--i:${i}">${renderBlock(b, assetMap)}</div>`)
@@ -1401,7 +1419,7 @@ function buildLessonPage(
 <script src="assets/lottie.min.js"></script>
 <script>(function(){try{var t=localStorage.getItem('prism-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);else if(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();</script>
 </head>
-<body data-criteria="${options.completionCriteria}" data-passing="${options.passingScore}">
+<body data-criteria="${options.completionCriteria}" data-passing="${options.passingScore}" data-quiz-total="${quizTotal}">
 <div class="prism-shell">
   <div class="prism-stage">
     <div class="prism-toolbar">
@@ -1448,6 +1466,7 @@ function buildLessonPage(
     <div class="prism-complete-check" data-prism-complete-icon>✓</div>
     <h2 data-prism-complete-title data-pass-title="You passed!" data-fail-title="Not quite there yet">You crushed it!</h2>
     <p data-prism-complete-body data-pass-body="You met the required score for ${escapeHtml(mod.title)}. Nice work!" data-fail-body="You didn't reach the required score for ${escapeHtml(mod.title)} this time. Review the material and try again.">That's a wrap on <strong>${escapeHtml(mod.title)}</strong>. Your progress has been saved. Keep it up!</p>
+    <p class="prism-complete-score" data-prism-score style="display:none"></p>
     <div class="prism-complete-row">
       <button type="button" data-prism-restart>Restart</button>
       <button type="button" class="primary" data-prism-close-complete>Done</button>
@@ -1508,7 +1527,11 @@ function buildLessonPage(
     if(!complete)return;
     var crit=document.body.dataset.criteria||'completed';
     var passing=parseInt(document.body.dataset.passing||'80',10);
-    var score=window.__prismTotal>0?Math.round(window.__prismCorrect/window.__prismTotal*100):100;
+    // The denominator is every quiz block in the module (data-quiz-total),
+    // not just the ones the learner submitted — skipping a question can no
+    // longer inflate the score. Unanswered questions count as incorrect.
+    var quizTotal=parseInt(document.body.dataset.quizTotal||'0',10);
+    var score=quizTotal>0?Math.round((window.__prismCorrect||0)/quizTotal*100):100;
     // Score-gated modules that miss the bar report 'incomplete' rather than
     // 'failed' — most LMSs treat 'failed' as a locked, terminal attempt,
     // whereas 'incomplete' generally allows the learner to re-enter and try
@@ -1525,12 +1548,24 @@ function buildLessonPage(
       if(title)title.textContent=title.getAttribute(passed?'data-pass-title':'data-fail-title')||title.textContent;
       if(body)body.textContent=body.getAttribute(passed?'data-pass-body':'data-fail-body')||body.textContent;
     }
+    // Score row — informational for 'completed' modules, the pass/fail basis
+    // for 'passed' modules. Shown for both criteria whenever the module has
+    // quiz blocks.
+    var scoreEl=document.querySelector('[data-prism-score]');
+    if(scoreEl&&quizTotal>0){
+      var correct=window.__prismCorrect||0;
+      var text='You scored '+score+'% — '+correct+' of '+quizTotal+' correct';
+      var answered=window.__prismTotal||0;
+      if(answered<quizTotal)text+=' (unanswered questions counted as incorrect)';
+      scoreEl.textContent=text;
+      scoreEl.style.display='';
+    }
     complete.classList.add('show');complete.setAttribute('aria-hidden','false');
     if(passed)fireConfetti();
     // The numeric score is still written to CMI for the LMS gradebook even
     // though the on-screen modal only shows pass/fail — those are different
     // audiences (admin reporting vs. the learner).
-    var api=window.__prismAPI;if(api){try{if(window.__prismTotal>0){api.LMSSetValue('cmi.core.score.raw',String(score));api.LMSSetValue('cmi.core.score.min','0');api.LMSSetValue('cmi.core.score.max','100');}api.LMSSetValue('cmi.core.lesson_status',status);api.LMSCommit('');api.LMSFinish('');}catch(e){}}
+    var api=window.__prismAPI;if(api){try{if(quizTotal>0){api.LMSSetValue('cmi.core.score.raw',String(score));api.LMSSetValue('cmi.core.score.min','0');api.LMSSetValue('cmi.core.score.max','100');}api.LMSSetValue('cmi.core.lesson_status',status);api.LMSCommit('');api.LMSFinish('');}catch(e){}}
   }
   function fireConfetti(){
     var wrap=document.createElement('div');wrap.className='prism-confetti';document.body.appendChild(wrap);
@@ -1615,11 +1650,13 @@ export function buildPreviewHtml(
   lessonIdx: number,
   assetMap: Record<string, string>,
   theme: ExportTheme,
+  options: ExportOptions = { passingScore: 80, completionCriteria: 'completed' },
 ): string {
   const lesson = mod.lessons[lessonIdx]!;
   const total = mod.lessons.length;
   const isLast = lessonIdx === total - 1;
   const pct = Math.round(((lessonIdx + 1) / total) * 100);
+  const quizTotal = countQuizBlocks(mod);
 
   const blocksHtml = lesson.blocks
     .map((b, i) => `<div class="prism-block" style="--i:${i}">${renderBlock(b, assetMap)}</div>`)
@@ -1656,7 +1693,7 @@ export function buildPreviewHtml(
 <style>${buildCss(theme)}</style>
 <script>${lottieMinJs}</script>
 </head>
-<body>
+<body data-criteria="${options.completionCriteria}" data-passing="${options.passingScore}" data-quiz-total="${quizTotal}">
 <div class="prism-shell">
   <div class="prism-stage">
     <div class="prism-toolbar">
@@ -1703,6 +1740,7 @@ export function buildPreviewHtml(
     <div class="prism-complete-check">✓</div>
     <h2>You crushed it!</h2>
     <p>That's a wrap on <strong>${escapeHtml(mod.title)}</strong>. Preview complete!</p>
+    <p class="prism-complete-score" data-prism-score style="display:none"></p>
     <div class="prism-complete-row">
       <button type="button" data-prism-restart>Restart</button>
       <button type="button" class="primary" data-prism-close-complete>Done</button>
@@ -1710,6 +1748,16 @@ export function buildPreviewHtml(
   </div>
 </div>
 
+<script>(function(){
+  // Quiz score is carried across lesson pages via sessionStorage (see
+  // buildInteractionJs) since each preview page load is a fresh iframe
+  // navigation. lessonIdx 0 is treated as a fresh attempt, same as
+  // buildLessonPage's lesson_0 handling, so a second preview run doesn't
+  // accumulate on top of the first.
+  ${lessonIdx === 0 ? "try{sessionStorage.removeItem('prism-score-total');sessionStorage.removeItem('prism-score-correct');}catch(e){}" : ''}
+  try{window.__prismTotal=parseInt(sessionStorage.getItem('prism-score-total')||'0',10)||0;}catch(e){window.__prismTotal=0;}
+  try{window.__prismCorrect=parseInt(sessionStorage.getItem('prism-score-correct')||'0',10)||0;}catch(e){window.__prismCorrect=0;}
+})();</script>
 <script>${buildInteractionJs()}</script>
 <script>
 (function(){
@@ -1745,8 +1793,23 @@ export function buildPreviewHtml(
   if(nextBtn)nextBtn.addEventListener('click',function(){msg({type:'prism-preview-nav',dir:'next'});});
   if(finishBtn)finishBtn.addEventListener('click',function(){
     var complete=document.querySelector('[data-prism-complete]');
-    if(complete){complete.classList.add('show');complete.setAttribute('aria-hidden','false');}
-    fireConfetti();
+    if(!complete)return;
+    var crit=document.body.dataset.criteria||'completed';
+    var passing=parseInt(document.body.dataset.passing||'80',10);
+    var quizTotal=parseInt(document.body.dataset.quizTotal||'0',10);
+    var score=quizTotal>0?Math.round((window.__prismCorrect||0)/quizTotal*100):100;
+    var passed=crit!=='passed'||score>=passing;
+    var scoreEl=document.querySelector('[data-prism-score]');
+    if(scoreEl&&quizTotal>0){
+      var correct=window.__prismCorrect||0;
+      var text='You scored '+score+'% — '+correct+' of '+quizTotal+' correct';
+      var answered=window.__prismTotal||0;
+      if(answered<quizTotal)text+=' (unanswered questions counted as incorrect)';
+      scoreEl.textContent=text;
+      scoreEl.style.display='';
+    }
+    complete.classList.add('show');complete.setAttribute('aria-hidden','false');
+    if(passed)fireConfetti();
   });
 
   // Completion overlay
