@@ -167,6 +167,71 @@ function countQuizBlocks(mod: ExportModule): number {
   return total;
 }
 
+/**
+ * Shared completion-card markup for both `buildLessonPage` (export) and
+ * `buildPreviewHtml` (preview) so the two can never drift apart again.
+ * Authored copy is optional and falls back to the stock hardcoded strings
+ * when blank/whitespace/absent. Every authored value is HTML-escaped before
+ * landing in an attribute or the default text slot — never raw markup.
+ */
+function buildCompleteCardHtml(
+  mod: ExportModule,
+  copy: CompletionCopy | undefined,
+  variant: 'export' | 'preview',
+): string {
+  const title = escapeHtml(mod.title);
+  const stockDefaultBody = variant === 'export'
+    ? `That's a wrap on <strong>${title}</strong>. Your progress has been saved. Keep it up!`
+    : `That's a wrap on <strong>${title}</strong>. Preview complete!`;
+  const stockPassBody = `You met the required score for ${title}. Nice work!`;
+  const stockFailBody = `You didn't reach the required score for ${title} this time. Review the material and try again.`;
+
+  const clean = (s: string | undefined) => {
+    const trimmed = s?.trim();
+    return trimmed ? escapeHtml(trimmed) : undefined;
+  };
+
+  const defaultTitle = clean(copy?.defaultTitle) ?? 'You crushed it!';
+  const defaultBody = clean(copy?.defaultBody) ?? stockDefaultBody;
+  const passTitle = clean(copy?.passTitle) ?? 'You passed!';
+  const passBody = clean(copy?.passBody) ?? stockPassBody;
+  const failTitle = clean(copy?.failTitle) ?? 'Not quite there yet';
+  const failBody = clean(copy?.failBody) ?? stockFailBody;
+
+  return `<div class="prism-complete" data-prism-complete aria-hidden="true">
+  <div class="prism-complete-card" role="dialog" aria-label="Module complete">
+    <div class="prism-complete-check" data-prism-complete-icon>✓</div>
+    <h2 data-prism-complete-title data-pass-title="${passTitle}" data-fail-title="${failTitle}">${defaultTitle}</h2>
+    <p data-prism-complete-body data-pass-body="${passBody}" data-fail-body="${failBody}">${defaultBody}</p>
+    <p class="prism-complete-score" data-prism-score style="display:none"></p>
+    <div class="prism-complete-row">
+      <button type="button" data-prism-restart>Restart</button>
+      <button type="button" class="primary" data-prism-close-complete>Done</button>
+    </div>
+  </div>
+</div>`;
+}
+
+/**
+ * Shared runtime JS for the pass/fail copy swap, used by both `showComplete()`
+ * (export) and the preview finish handler. Assumes `quizTotal`, `score`, and
+ * `passing` are already declared in the calling scope; declares `copyState`
+ * for the caller to key confetti/status off of. The swap now runs whenever
+ * the module has quiz blocks, for BOTH completion criteria — no longer gated
+ * behind `crit==='passed'`.
+ */
+function buildCopySwapJs(): string {
+  return `var copyState=quizTotal>0?(score>=passing?'pass':'fail'):'default';
+    if(copyState!=='default'){
+      var icon=document.querySelector('[data-prism-complete-icon]');
+      var title=document.querySelector('[data-prism-complete-title]');
+      var body=document.querySelector('[data-prism-complete-body]');
+      if(icon){icon.textContent=copyState==='fail'?'!':'✓';icon.classList.toggle('fail',copyState==='fail');}
+      if(title)title.textContent=title.getAttribute(copyState==='pass'?'data-pass-title':'data-fail-title')||title.textContent;
+      if(body)body.textContent=body.getAttribute(copyState==='pass'?'data-pass-body':'data-fail-body')||body.textContent;
+    }`;
+}
+
 function toEmbedUrl(raw: string): string | null {
   try {
     const u = new URL(raw);
@@ -1467,18 +1532,7 @@ function buildLessonPage(
   </div>
 </aside>
 
-<div class="prism-complete" data-prism-complete aria-hidden="true">
-  <div class="prism-complete-card" role="dialog" aria-label="Module complete">
-    <div class="prism-complete-check" data-prism-complete-icon>✓</div>
-    <h2 data-prism-complete-title data-pass-title="You passed!" data-fail-title="Not quite there yet">You crushed it!</h2>
-    <p data-prism-complete-body data-pass-body="You met the required score for ${escapeHtml(mod.title)}. Nice work!" data-fail-body="You didn't reach the required score for ${escapeHtml(mod.title)} this time. Review the material and try again.">That's a wrap on <strong>${escapeHtml(mod.title)}</strong>. Your progress has been saved. Keep it up!</p>
-    <p class="prism-complete-score" data-prism-score style="display:none"></p>
-    <div class="prism-complete-row">
-      <button type="button" data-prism-restart>Restart</button>
-      <button type="button" class="primary" data-prism-close-complete>Done</button>
-    </div>
-  </div>
-</div>
+${buildCompleteCardHtml(mod, options.completionCopy, 'export')}
 
 <script src="assets/scorm12.min.js"></script>
 <script>
@@ -1541,19 +1595,17 @@ function buildLessonPage(
     // Score-gated modules that miss the bar report 'incomplete' rather than
     // 'failed' — most LMSs treat 'failed' as a locked, terminal attempt,
     // whereas 'incomplete' generally allows the learner to re-enter and try
-    // again, which is the behaviour this product wants.
-    var passed=crit!=='passed'||score>=passing;
-    var status=crit==='completed'?'completed':(passed?'passed':'incomplete');
-    // Pass/fail wording is shown for score-gated modules only; modules using
-    // the plain 'completed' criteria keep the original celebratory copy.
-    if(crit==='passed'){
-      var icon=document.querySelector('[data-prism-complete-icon]');
-      var title=document.querySelector('[data-prism-complete-title]');
-      var body=document.querySelector('[data-prism-complete-body]');
-      if(icon){icon.textContent=passed?'✓':'!';icon.classList.toggle('fail',!passed);}
-      if(title)title.textContent=title.getAttribute(passed?'data-pass-title':'data-fail-title')||title.textContent;
-      if(body)body.textContent=body.getAttribute(passed?'data-pass-body':'data-fail-body')||body.textContent;
-    }
+    // again, which is the behaviour this product wants. statusPassed drives
+    // ONLY the SCORM lesson_status write and is intentionally distinct from
+    // copyState (declared by buildCopySwapJs below), which drives the
+    // on-screen title/body/icon/confetti and is keyed on score alone —
+    // otherwise a 'completed'-criteria module scoring 0% would report
+    // lesson_status correctly but still show celebratory copy.
+    var statusPassed=crit!=='passed'||score>=passing;
+    var status=crit==='completed'?'completed':(statusPassed?'passed':'incomplete');
+    // Pass/fail wording + icon are shown whenever the module has quiz blocks,
+    // for BOTH completion criteria (no longer gated behind the criteria check).
+    ${buildCopySwapJs()}
     // Score row — informational for 'completed' modules, the pass/fail basis
     // for 'passed' modules. Shown for both criteria whenever the module has
     // quiz blocks.
@@ -1567,7 +1619,7 @@ function buildLessonPage(
       scoreEl.style.display='';
     }
     complete.classList.add('show');complete.setAttribute('aria-hidden','false');
-    if(passed)fireConfetti();
+    if(copyState!=='fail')fireConfetti();
     // The numeric score is still written to CMI for the LMS gradebook even
     // though the on-screen modal only shows pass/fail — those are different
     // audiences (admin reporting vs. the learner).
@@ -1741,18 +1793,7 @@ export function buildPreviewHtml(
   </div>
 </aside>
 
-<div class="prism-complete" data-prism-complete aria-hidden="true">
-  <div class="prism-complete-card" role="dialog" aria-label="Module complete">
-    <div class="prism-complete-check">✓</div>
-    <h2>You crushed it!</h2>
-    <p>That's a wrap on <strong>${escapeHtml(mod.title)}</strong>. Preview complete!</p>
-    <p class="prism-complete-score" data-prism-score style="display:none"></p>
-    <div class="prism-complete-row">
-      <button type="button" data-prism-restart>Restart</button>
-      <button type="button" class="primary" data-prism-close-complete>Done</button>
-    </div>
-  </div>
-</div>
+${buildCompleteCardHtml(mod, options.completionCopy, 'preview')}
 
 <script>(function(){
   // Quiz score is carried across lesson pages via sessionStorage (see
@@ -1800,11 +1841,13 @@ export function buildPreviewHtml(
   if(finishBtn)finishBtn.addEventListener('click',function(){
     var complete=document.querySelector('[data-prism-complete]');
     if(!complete)return;
-    var crit=document.body.dataset.criteria||'completed';
     var passing=parseInt(document.body.dataset.passing||'80',10);
     var quizTotal=parseInt(document.body.dataset.quizTotal||'0',10);
     var score=quizTotal>0?Math.round((window.__prismCorrect||0)/quizTotal*100):100;
-    var passed=crit!=='passed'||score>=passing;
+    // Pass/fail wording + icon are shown whenever the module has quiz blocks,
+    // for BOTH completion criteria — mirrors showComplete() in the exported
+    // package so preview and export can never drift apart again.
+    ${buildCopySwapJs()}
     var scoreEl=document.querySelector('[data-prism-score]');
     if(scoreEl&&quizTotal>0){
       var correct=window.__prismCorrect||0;
@@ -1815,7 +1858,7 @@ export function buildPreviewHtml(
       scoreEl.style.display='';
     }
     complete.classList.add('show');complete.setAttribute('aria-hidden','false');
-    if(passed)fireConfetti();
+    if(copyState!=='fail')fireConfetti();
   });
 
   // Completion overlay

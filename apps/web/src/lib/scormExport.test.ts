@@ -98,7 +98,11 @@ describe('scormExport quiz rendering (no-reveal runtime)', () => {
     const mod = makeSingleLessonModule();
     const html = buildPreviewHtml(mod, 0, {}, theme);
     expect(html).not.toContain('Nailed it');
-    expect(html).not.toContain('Not quite');
+    // Per-question reveal copy removed in quick-260814-g4m — distinct from
+    // the module-level completion-card fail title ("Not quite there yet"),
+    // which is intentional stock copy wired into preview by quick-260814-ht4.
+    expect(html).not.toContain('Not quite — give it another go!');
+    expect(html).not.toContain('Not quite. ');
     expect(html).not.toContain('data-assessment');
   });
 
