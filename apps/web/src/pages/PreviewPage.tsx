@@ -5,7 +5,7 @@ import type { Id } from '~convex/_generated/dataModel';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { buildPreviewHtml } from '../lib/scormExport';
-import type { ExportBlock, ExportLesson, ExportModule, ExportTheme } from '../lib/scormExport';
+import type { ExportBlock, ExportLesson, ExportModule, ExportOptions, ExportTheme } from '../lib/scormExport';
 import {
   ChevronLeft,
   Eye,
@@ -180,10 +180,30 @@ export function PreviewPage() {
     return map;
   }, [storageIdKey, assetCache]);
 
+  // Real per-module completion settings — was previously omitted entirely,
+  // silently falling back to buildPreviewHtml's default of
+  // { passingScore: 80, completionCriteria: 'completed' } regardless of what
+  // the author actually configured (and with zero authored copy).
+  const exportOptions = useMemo<ExportOptions>(() => {
+    const cs = content?.module.completionSettings;
+    return {
+      passingScore: cs?.passingScore ?? 80,
+      completionCriteria: cs?.completionCriteria ?? 'completed',
+      completionCopy: {
+        defaultTitle: cs?.defaultTitle,
+        defaultBody: cs?.defaultBody,
+        passTitle: cs?.passTitle,
+        passBody: cs?.passBody,
+        failTitle: cs?.failTitle,
+        failBody: cs?.failBody,
+      },
+    };
+  }, [content]);
+
   const iframeHtml = useMemo(() => {
     if (!exportMod || !currentLesson) return '';
-    return buildPreviewHtml(exportMod, lessonIdx, assetMap, exportTheme);
-  }, [exportMod, lessonIdx, assetMap, exportTheme, currentLesson]);
+    return buildPreviewHtml(exportMod, lessonIdx, assetMap, exportTheme, exportOptions);
+  }, [exportMod, lessonIdx, assetMap, exportTheme, currentLesson, exportOptions]);
 
   // ── postMessage handler ────────────────────────────────────────────────
 

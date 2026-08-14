@@ -88,6 +88,21 @@ export default defineSchema({
     deletedAt: v.optional(v.number()),
     /** Convex storage id of the per-module AI image style reference, if set */
     styleReferenceStorageId: v.optional(v.string()),
+    /**
+     * Persisted completion-screen settings (pass score, criteria, and
+     * author-editable title/body copy for default/pass/fail states).
+     * All sub-fields optional so every existing module document stays valid.
+     */
+    completionSettings: v.optional(v.object({
+      passingScore: v.optional(v.number()),
+      completionCriteria: v.optional(v.union(v.literal('completed'), v.literal('passed'))),
+      defaultTitle: v.optional(v.string()),
+      defaultBody: v.optional(v.string()),
+      passTitle: v.optional(v.string()),
+      passBody: v.optional(v.string()),
+      failTitle: v.optional(v.string()),
+      failBody: v.optional(v.string()),
+    })),
     createdAt: v.number(),
     updatedAt: v.number(),
     lastEditedBy: v.id('users'),

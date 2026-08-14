@@ -200,6 +200,7 @@ export function ModuleEditorPage() {
   const renameLesson = useMutation(api.lessons.rename);
   const reorderLessons = useMutation(api.lessons.reorder);
   const renameModule = useMutation(api.modules.rename);
+  const setCompletionSettings = useMutation(api.modules.setCompletionSettings);
 
   const addBlock = useMutation(api.blocks.add);
   const updateContent = useMutation(api.blocks.updateContent);
@@ -267,6 +268,53 @@ export function ModuleEditorPage() {
       setExporting(false);
     }
   }, [content, workspace, modId, convex]);
+
+  // Hydrate exportOptions from the persisted module doc at the moment the
+  // dialog opens — NOT in a render-time effect, which would clobber the
+  // author mid-typing on any module subscription tick.
+  const openExportDialog = useCallback(() => {
+    const cs = content?.module.completionSettings;
+    setExportOptions({
+      passingScore: cs?.passingScore ?? 80,
+      completionCriteria: cs?.completionCriteria ?? 'completed',
+      completionCopy: {
+        defaultTitle: cs?.defaultTitle,
+        defaultBody: cs?.defaultBody,
+        passTitle: cs?.passTitle,
+        passBody: cs?.passBody,
+        failTitle: cs?.failTitle,
+        failBody: cs?.failBody,
+      },
+    });
+    setExportDialogOpen(true);
+  }, [content]);
+
+  const persistCompletionSettings = useCallback(async (opts: ExportOptions) => {
+    await setCompletionSettings({
+      moduleId: modId,
+      passingScore: opts.passingScore,
+      completionCriteria: opts.completionCriteria,
+      defaultTitle: opts.completionCopy?.defaultTitle,
+      defaultBody: opts.completionCopy?.defaultBody,
+      passTitle: opts.completionCopy?.passTitle,
+      passBody: opts.completionCopy?.passBody,
+      failTitle: opts.completionCopy?.failTitle,
+      failBody: opts.completionCopy?.failBody,
+    });
+  }, [setCompletionSettings, modId]);
+
+  // "Save" persists and closes without exporting.
+  const handleSaveAndClose = useCallback(async () => {
+    await persistCompletionSettings(exportOptions);
+    setExportDialogOpen(false);
+  }, [persistCompletionSettings, exportOptions]);
+
+  // "Export" persists first, then exports — keeps a just-exported module and
+  // its Learner Preview in agreement.
+  const handleSaveAndExport = useCallback(async () => {
+    await persistCompletionSettings(exportOptions);
+    await handleExportScorm(exportOptions);
+  }, [persistCompletionSettings, exportOptions, handleExportScorm]);
 
   // Ping presence every 10s
   const pingRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -466,7 +514,7 @@ export function ModuleEditorPage() {
           </button>
           <button
             type="button"
-            onClick={() => setExportDialogOpen(true)}
+            onClick={openExportDialog}
             disabled={exporting}
             className="flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-60"
           >
@@ -850,9 +898,75 @@ export function ModuleEditorPage() {
             </p>
           </div>
 
+          {/* Completion screen text */}
+          <div className="mb-6">
+            <p className="mb-1 text-sm font-semibold text-[var(--text-secondary)]">Completion screen text</p>
+            <p className="mb-3 text-xs text-[var(--text-muted)]">
+              Default shows when the module has no quiz questions; Pass/Fail show based on the
+              learner's score. Leave a field blank to keep the default copy shown as its placeholder.
+            </p>
+
+            <div className="space-y-4">
+              <div className="rounded-xl border border-[var(--border-primary)] bg-[var(--bg-primary)] p-3">
+                <p className="mb-2 text-xs font-bold uppercase tracking-wider text-[var(--text-tertiary)]">Default</p>
+                <input
+                  type="text"
+                  value={exportOptions.completionCopy?.defaultTitle ?? ''}
+                  onChange={(e) => setExportOptions((o) => ({ ...o, completionCopy: { ...o.completionCopy, defaultTitle: e.target.value } }))}
+                  placeholder="You crushed it!"
+                  className="mb-2 w-full rounded-lg border border-[var(--border-primary)] bg-[var(--bg-secondary)] px-3 py-1.5 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
+                />
+                <textarea
+                  rows={2}
+                  value={exportOptions.completionCopy?.defaultBody ?? ''}
+                  onChange={(e) => setExportOptions((o) => ({ ...o, completionCopy: { ...o.completionCopy, defaultBody: e.target.value } }))}
+                  placeholder={`That's a wrap on ${content?.module.title ?? 'this module'}. Your progress has been saved. Keep it up!`}
+                  className="w-full resize-none rounded-lg border border-[var(--border-primary)] bg-[var(--bg-secondary)] px-3 py-1.5 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
+                />
+              </div>
+
+              <div className="rounded-xl border border-[var(--border-primary)] bg-[var(--bg-primary)] p-3">
+                <p className="mb-2 text-xs font-bold uppercase tracking-wider text-[var(--text-tertiary)]">Pass</p>
+                <input
+                  type="text"
+                  value={exportOptions.completionCopy?.passTitle ?? ''}
+                  onChange={(e) => setExportOptions((o) => ({ ...o, completionCopy: { ...o.completionCopy, passTitle: e.target.value } }))}
+                  placeholder="You passed!"
+                  className="mb-2 w-full rounded-lg border border-[var(--border-primary)] bg-[var(--bg-secondary)] px-3 py-1.5 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
+                />
+                <textarea
+                  rows={2}
+                  value={exportOptions.completionCopy?.passBody ?? ''}
+                  onChange={(e) => setExportOptions((o) => ({ ...o, completionCopy: { ...o.completionCopy, passBody: e.target.value } }))}
+                  placeholder={`You met the required score for ${content?.module.title ?? 'this module'}. Nice work!`}
+                  className="w-full resize-none rounded-lg border border-[var(--border-primary)] bg-[var(--bg-secondary)] px-3 py-1.5 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
+                />
+              </div>
+
+              <div className="rounded-xl border border-[var(--border-primary)] bg-[var(--bg-primary)] p-3">
+                <p className="mb-2 text-xs font-bold uppercase tracking-wider text-[var(--text-tertiary)]">Fail</p>
+                <input
+                  type="text"
+                  value={exportOptions.completionCopy?.failTitle ?? ''}
+                  onChange={(e) => setExportOptions((o) => ({ ...o, completionCopy: { ...o.completionCopy, failTitle: e.target.value } }))}
+                  placeholder="Not quite there yet"
+                  className="mb-2 w-full rounded-lg border border-[var(--border-primary)] bg-[var(--bg-secondary)] px-3 py-1.5 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
+                />
+                <textarea
+                  rows={2}
+                  value={exportOptions.completionCopy?.failBody ?? ''}
+                  onChange={(e) => setExportOptions((o) => ({ ...o, completionCopy: { ...o.completionCopy, failBody: e.target.value } }))}
+                  placeholder={`You didn't reach the required score for ${content?.module.title ?? 'this module'} this time. Review the material and try again.`}
+                  className="w-full resize-none rounded-lg border border-[var(--border-primary)] bg-[var(--bg-secondary)] px-3 py-1.5 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
+                />
+              </div>
+            </div>
+          </div>
+
           <div className="flex gap-3 justify-end">
             <button type="button" onClick={() => setExportDialogOpen(false)} className="rounded-lg border border-[var(--border-primary)] px-4 py-2 text-sm font-semibold text-[var(--text-secondary)] hover:bg-[var(--card-bg-hover)]">Cancel</button>
-            <button type="button" onClick={() => void handleExportScorm(exportOptions)} className="flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700">
+            <button type="button" onClick={() => void handleSaveAndClose()} className="rounded-lg border border-[var(--border-primary)] px-4 py-2 text-sm font-semibold text-[var(--text-secondary)] hover:bg-[var(--card-bg-hover)]">Save</button>
+            <button type="button" onClick={() => void handleSaveAndExport()} className="flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700">
               <Download className="size-4" /> Export
             </button>
           </div>
