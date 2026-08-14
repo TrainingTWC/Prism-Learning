@@ -62,26 +62,7 @@ export function TrueFalseBlockEditor({
         <span className="text-xs font-semibold uppercase tracking-wide text-violet-600">
           True / False
         </span>
-        <select
-          value={payload.assessment === undefined ? 'inherit' : payload.assessment ? 'on' : 'off'}
-          onChange={(e) => {
-            const v = e.target.value;
-            commit({ ...payload, assessment: v === 'inherit' ? undefined : v === 'on' });
-          }}
-          title="Whether this question hides the correct answer/feedback and just records a right/wrong result — overrides the module's export-time setting"
-          className="ml-auto rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-medium text-slate-600"
-        >
-          <option value="inherit">Assessment: module default</option>
-          <option value="on">Assessment: always on</option>
-          <option value="off">Assessment: always off</option>
-        </select>
       </div>
-      {payload.assessment === true && (
-        <p className="border-b border-amber-100 bg-amber-50/60 px-4 py-1.5 text-[11px] text-amber-700">
-          This question always hides the correct answer and feedback, regardless of the module's
-          export setting.
-        </p>
-      )}
 
       <div className="p-4 space-y-4">
         {/* Statement */}
@@ -122,34 +103,10 @@ export function TrueFalseBlockEditor({
           </div>
         </div>
 
-        {/* Feedback */}
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-[11px] font-semibold uppercase tracking-wide text-slate-400 mb-1">
-              "True" feedback
-            </label>
-            <InlineRichText
-              value={payload.trueFeedback}
-              onChange={(html) => commit({ ...payload, trueFeedback: html })}
-              placeholder={`Shown when learner picks True…`}
-            />
-          </div>
-          <div>
-            <label className="block text-[11px] font-semibold uppercase tracking-wide text-slate-400 mb-1">
-              "False" feedback
-            </label>
-            <InlineRichText
-              value={payload.falseFeedback}
-              onChange={(html) => commit({ ...payload, falseFeedback: html })}
-              placeholder={`Shown when learner picks False…`}
-            />
-          </div>
-        </div>
-
         {/* Preview pill */}
         <div className="rounded-lg bg-slate-50 border border-slate-100 px-3 py-2 text-xs text-slate-500">
           Learner sees two buttons — <strong className="text-slate-700">True</strong> and{' '}
-          <strong className="text-slate-700">False</strong> — then receives the matching feedback.
+          <strong className="text-slate-700">False</strong> — and the answer locks in silently.
           Correct answer:{' '}
           <strong className={payload.correctAnswer ? 'text-emerald-600' : 'text-red-600'}>
             {payload.correctAnswer ? 'True' : 'False'}

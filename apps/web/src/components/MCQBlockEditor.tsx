@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import type { Id } from '~convex/_generated/dataModel';
-import { Plus, Trash2, CheckCircle2, Circle, GripVertical, ChevronDown, ChevronUp } from 'lucide-react';
+import { Plus, Trash2, CheckCircle2, Circle, GripVertical } from 'lucide-react';
 import { InlineRichText } from './InlineRichText';
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -61,7 +61,6 @@ export function MCQBlockEditor({
   onSave: (content: string) => void;
 }) {
   const [payload, setPayload] = useState<MCQPayload>(() => parse(initialContent));
-  const [expandedFeedback, setExpandedFeedback] = useState<string | null>(null);
 
   const commit = useCallback(
     (next: MCQPayload) => {
@@ -88,10 +87,6 @@ export function MCQBlockEditor({
 
   function setOptionText(id: string, text: string) {
     commit({ ...payload, options: payload.options.map((o) => (o.id === id ? { ...o, text } : o)) });
-  }
-
-  function setOptionFeedback(id: string, feedback: string) {
-    commit({ ...payload, options: payload.options.map((o) => (o.id === id ? { ...o, feedback } : o)) });
   }
 
   function toggleCorrect(id: string) {
@@ -143,46 +138,8 @@ export function MCQBlockEditor({
             </span>
             <span className="text-sm font-medium text-slate-700">Multi-select</span>
           </label>
-          {/* Toggle switch – Show feedback */}
-          <label className="flex items-center gap-2 cursor-pointer select-none">
-            <span
-              role="switch"
-              aria-checked={payload.showFeedback}
-              onClick={() => commit({ ...payload, showFeedback: !payload.showFeedback })}
-              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none ${
-                payload.showFeedback ? 'bg-indigo-500' : 'bg-slate-300'
-              }`}
-            >
-              <span
-                className={`inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition-transform duration-200 ${
-                  payload.showFeedback ? 'translate-x-5' : 'translate-x-0'
-                }`}
-              />
-            </span>
-            <span className="text-sm font-medium text-slate-700">Show feedback</span>
-          </label>
-          {/* Per-question assessment override */}
-          <select
-            value={payload.assessment === undefined ? 'inherit' : payload.assessment ? 'on' : 'off'}
-            onChange={(e) => {
-              const v = e.target.value;
-              commit({ ...payload, assessment: v === 'inherit' ? undefined : v === 'on' });
-            }}
-            title="Whether this question hides answers/feedback and just records a right/wrong result — overrides the module's export-time setting"
-            className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-medium text-slate-600"
-          >
-            <option value="inherit">Assessment: module default</option>
-            <option value="on">Assessment: always on</option>
-            <option value="off">Assessment: always off</option>
-          </select>
         </div>
       </div>
-      {payload.assessment === true && (
-        <p className="border-b border-amber-100 bg-amber-50/60 px-4 py-1.5 text-[11px] text-amber-700">
-          This question always hides the correct answer and feedback, regardless of the module's
-          export setting.
-        </p>
-      )}
 
       <div className="p-4 space-y-4">
         {/* Question */}
@@ -246,28 +203,6 @@ export function MCQBlockEditor({
                     />
                   </div>
 
-                  {/* Feedback toggle */}
-                  {payload.showFeedback && (
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setExpandedFeedback(expandedFeedback === opt.id ? null : opt.id)
-                      }
-                      className={`shrink-0 rounded-lg px-2 py-1 text-xs font-medium transition-colors ${
-                        expandedFeedback === opt.id
-                          ? 'bg-indigo-100 text-indigo-600'
-                          : 'text-slate-400 hover:bg-slate-100 hover:text-slate-600'
-                      }`}
-                      title="Edit feedback"
-                    >
-                      {expandedFeedback === opt.id ? (
-                        <span className="flex items-center gap-1"><ChevronUp className="size-4" />Feedback</span>
-                      ) : (
-                        <span className="flex items-center gap-1"><ChevronDown className="size-4" />Feedback</span>
-                      )}
-                    </button>
-                  )}
-
                   <button
                     type="button"
                     onClick={() => removeOption(opt.id)}
@@ -278,17 +213,6 @@ export function MCQBlockEditor({
                     <Trash2 className="size-5" />
                   </button>
                 </div>
-
-                {/* Feedback row */}
-                {payload.showFeedback && expandedFeedback === opt.id && (
-                  <div className="mt-1.5 ml-12 mr-2">
-                    <InlineRichText
-                      value={opt.feedback}
-                      onChange={(html) => setOptionFeedback(opt.id, html)}
-                      placeholder="Feedback shown after selection…"
-                    />
-                  </div>
-                )}
               </div>
             ))}
           </div>

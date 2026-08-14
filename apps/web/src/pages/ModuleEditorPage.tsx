@@ -843,26 +843,11 @@ export function ModuleEditorPage() {
               className="w-full accent-indigo-500"
             />
             <div className="mt-1 flex justify-between text-[11px] text-[var(--text-muted)]"><span>0%</span><span>50%</span><span>100%</span></div>
-          </div>
-
-          {/* Assessment mode */}
-          <div className="mb-6">
-            <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-[var(--border-primary)] px-4 py-3 transition-colors hover:border-indigo-500 has-[:checked]:border-indigo-500 has-[:checked]:bg-indigo-500/10">
-              <input
-                type="checkbox"
-                checked={exportOptions.assessmentMode ?? false}
-                onChange={(e) => setExportOptions((o) => ({ ...o, assessmentMode: e.target.checked }))}
-                className="mt-0.5 accent-indigo-500"
-              />
-              <span>
-                <span className="block text-sm font-semibold text-[var(--text-primary)]">Assessment mode</span>
-                <span className="block text-xs text-[var(--text-muted)]">
-                  Quiz questions record an answer without revealing right/wrong or feedback. Pair
-                  with "achieves the pass score" above so the course reports passed or incomplete.
-                  Individual questions can override this in their own block editor.
-                </span>
-              </span>
-            </label>
+            <p className="mt-2 text-xs text-[var(--text-muted)]">
+              This is the learner's end-of-module quiz result — correct answers ÷ total quiz
+              questions. Quiz questions never reveal right/wrong to the learner; only the final
+              score does.
+            </p>
           </div>
 
           <div className="flex gap-3 justify-end">
