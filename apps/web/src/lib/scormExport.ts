@@ -43,13 +43,6 @@ export interface ExportOptions {
   passingScore: number;
   /** 'completed': finish last lesson; 'passed': score ≥ passingScore */
   completionCriteria: 'completed' | 'passed';
-  /**
-   * Assessment mode: quiz blocks accept an answer and lock it in without
-   * revealing correctness or feedback, and the module reports passed /
-   * incomplete against `passingScore`. Individual blocks can opt out via
-   * their own `assessment` field. Defaults to false (teaching behaviour).
-   */
-  assessmentMode?: boolean;
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────
