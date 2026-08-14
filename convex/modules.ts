@@ -144,6 +144,52 @@ export const setStyleReference = mutation({
   },
 });
 
+/** Set (or update) the per-module completion-screen settings. */
+export const setCompletionSettings = mutation({
+  args: {
+    moduleId: v.id('modules'),
+    passingScore: v.optional(v.number()),
+    completionCriteria: v.optional(v.union(v.literal('completed'), v.literal('passed'))),
+    defaultTitle: v.optional(v.string()),
+    defaultBody: v.optional(v.string()),
+    passTitle: v.optional(v.string()),
+    passBody: v.optional(v.string()),
+    failTitle: v.optional(v.string()),
+    failBody: v.optional(v.string()),
+  },
+  handler: async (ctx, { moduleId, passingScore, completionCriteria, ...copy }) => {
+    const mod = await ctx.db.get(moduleId);
+    if (!mod || mod.deletedAt) throw new Error('Not found');
+    const userId = await requireMember(ctx, mod.workspaceId);
+
+    const clean = (s: string | undefined, max: number) => {
+      if (s === undefined) return undefined;
+      const trimmed = s.trim();
+      return trimmed.length > 0 ? trimmed.slice(0, max) : undefined;
+    };
+
+    const clampedScore =
+      passingScore === undefined
+        ? undefined
+        : Math.min(100, Math.max(0, passingScore));
+
+    await ctx.db.patch(moduleId, {
+      completionSettings: {
+        passingScore: clampedScore,
+        completionCriteria,
+        defaultTitle: clean(copy.defaultTitle, 200),
+        defaultBody: clean(copy.defaultBody, 600),
+        passTitle: clean(copy.passTitle, 200),
+        passBody: clean(copy.passBody, 600),
+        failTitle: clean(copy.failTitle, 200),
+        failBody: clean(copy.failBody, 600),
+      },
+      updatedAt: Date.now(),
+      lastEditedBy: userId,
+    });
+  },
+});
+
 /** Duplicate a module (deep copy lessons + blocks). */
 export const duplicate = mutation({
   args: { moduleId: v.id('modules') },

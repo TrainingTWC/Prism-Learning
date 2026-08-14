@@ -38,11 +38,24 @@ export interface ExportModule {
   lessons: ExportLesson[];
 }
 
+/** Author-editable completion-screen title/body copy. Blank/undefined falls
+ *  back to the hardcoded default for that field. */
+export interface CompletionCopy {
+  defaultTitle?: string;
+  defaultBody?: string;
+  passTitle?: string;
+  passBody?: string;
+  failTitle?: string;
+  failBody?: string;
+}
+
 export interface ExportOptions {
   /** 0–100; quiz score needed to report "passed" (default 80) */
   passingScore: number;
   /** 'completed': finish last lesson; 'passed': score ≥ passingScore */
   completionCriteria: 'completed' | 'passed';
+  /** Author-editable completion screen copy. Optional — omitted means all stock copy. */
+  completionCopy?: CompletionCopy;
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────
