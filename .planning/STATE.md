@@ -103,7 +103,8 @@
 ## Session Continuity
 
 **Last session ended:** 2026-05-27 — roadmap created and committed.
-**Last activity:** 2026-08-14 - Completed quick task 260814-ht4: fixed completion-screen pass/fail copy bug (preview never showed fail state; 'completed'-criteria modules never showed it either) and made completion title/body authorable per module, persisted via new `completionSettings` Convex field (pending human verification + prod deploy).
+**Last activity:** 2026-10-22 - Completed quick task 261022-l8f: per-module tab titles, Preview menu (from beginning / from current lesson), editor lesson kept in URL so returning from preview lands on the edited lesson (manual browser check pending).
+**Previous activity:** 2026-08-14 - Completed quick task 260814-ht4: fixed completion-screen pass/fail copy bug (preview never showed fail state; 'completed'-criteria modules never showed it either) and made completion title/body authorable per module, persisted via new `completionSettings` Convex field (pending human verification + prod deploy).
 **Resume with:** `/gsd-plan-phase 1` (or `/gsd-ui-phase 1` for the sign-in UI design first).
 
 **Files just created/updated:**
