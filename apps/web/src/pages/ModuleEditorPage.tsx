@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useQuery, useMutation, useConvex } from 'convex/react';
-import { Link, useParams } from '@tanstack/react-router';
+import { Link, useNavigate, useParams, useSearch } from '@tanstack/react-router';
+import { formatTabTitle, resolveLessonId } from '../lib/editorNav';
+import { useDocumentTitle } from '../lib/useDocumentTitle';
 import { api } from '~convex/_generated/api';
 import type { Id } from '~convex/_generated/dataModel';
 import { buildScormPackage, downloadBlob } from '../lib/scormExport';
@@ -24,6 +26,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import {
   Plus,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Loader2,
@@ -179,6 +182,8 @@ export function ModuleEditorPage() {
   const { workspaceId, moduleId } = useParams({
     from: '/protected/w/$workspaceId/m/$moduleId',
   });
+  const search = useSearch({ from: '/protected/w/$workspaceId/m/$moduleId' });
+  const navigate = useNavigate();
   const wsId = workspaceId as Id<'workspaces'>;
   const modId = moduleId as Id<'modules'>;
 
@@ -330,9 +335,47 @@ export function ModuleEditorPage() {
   // Auto-select first lesson when data loads
   useEffect(() => {
     if (content && content.lessons.length > 0 && !activeLessonId) {
-      setActiveLessonId(content.lessons[0]!._id);
+      setActiveLessonId(resolveLessonId(content.lessons, search.lesson));
     }
+    // search.lesson only seeds the initial selection (see state->URL sync below)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [content, activeLessonId]);
+
+  // State -> URL sync so reload / browser Back restore the active lesson.
+  useEffect(() => {
+    if (activeLessonId && activeLessonId !== search.lesson) {
+      void navigate({
+        to: '/w/$workspaceId/m/$moduleId',
+        params: { workspaceId, moduleId },
+        search: { lesson: activeLessonId },
+        replace: true,
+      });
+    }
+  }, [activeLessonId, search.lesson, navigate, workspaceId, moduleId]);
+
+  // Tab title: module name
+  useDocumentTitle(content ? formatTabTitle([content.module.title]) : null);
+
+  // Preview options menu
+  const [previewMenuOpen, setPreviewMenuOpen] = useState(false);
+  const previewMenuRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!previewMenuOpen) return;
+    const onDown = (e: MouseEvent) => {
+      if (previewMenuRef.current && !previewMenuRef.current.contains(e.target as Node)) {
+        setPreviewMenuOpen(false);
+      }
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setPreviewMenuOpen(false);
+    };
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [previewMenuOpen]);
 
   const lessons = (content?.lessons ?? []) as Lesson[];
   const activeLesson = lessons.find((l) => l._id === activeLessonId) ?? null;
@@ -495,14 +538,59 @@ export function ModuleEditorPage() {
           >
             {mod.status}
           </span>
-          <Link
-            to="/w/$workspaceId/m/$moduleId/preview"
-            params={{ workspaceId, moduleId }}
-            className="flex items-center gap-2 rounded-lg border border-[var(--border-primary)] px-4 py-2 text-sm font-medium text-[var(--text-secondary)] hover:bg-[var(--card-bg-hover)] hover:text-[var(--text-primary)]"
-          >
-            <Eye className="size-4" />
-            Preview
-          </Link>
+          <div className="relative" ref={previewMenuRef}>
+            <button
+              type="button"
+              aria-haspopup="menu"
+              aria-expanded={previewMenuOpen}
+              onClick={() => setPreviewMenuOpen((o) => !o)}
+              className="flex items-center gap-2 rounded-lg border border-[var(--border-primary)] px-4 py-2 text-sm font-medium text-[var(--text-secondary)] hover:bg-[var(--card-bg-hover)] hover:text-[var(--text-primary)]"
+            >
+              <Eye className="size-4" />
+              Preview
+              <ChevronDown className="size-3.5" />
+            </button>
+            {previewMenuOpen && (
+              <div
+                role="menu"
+                className="absolute right-0 top-full z-50 mt-2 w-64 rounded-xl border border-[var(--border-primary)] bg-[var(--bg-secondary)] p-1 shadow-xl"
+              >
+                <Link
+                  role="menuitem"
+                  to="/w/$workspaceId/m/$moduleId/preview"
+                  params={{ workspaceId, moduleId }}
+                  search={{ returnTo: activeLessonId ?? undefined }}
+                  onClick={() => setPreviewMenuOpen(false)}
+                  className="flex w-full flex-col rounded-lg px-3 py-2 text-left text-sm hover:bg-[var(--card-bg-hover)]"
+                >
+                  <span className="font-medium text-[var(--text-primary)]">From the beginning</span>
+                  <span className="text-xs text-[var(--text-muted)]">Start at lesson 1</span>
+                </Link>
+                {activeLessonId ? (
+                  <Link
+                    role="menuitem"
+                    to="/w/$workspaceId/m/$moduleId/preview"
+                    params={{ workspaceId, moduleId }}
+                    search={{ lesson: activeLessonId, returnTo: activeLessonId }}
+                    onClick={() => setPreviewMenuOpen(false)}
+                    className="flex w-full flex-col rounded-lg px-3 py-2 text-left text-sm hover:bg-[var(--card-bg-hover)]"
+                  >
+                    <span className="font-medium text-[var(--text-primary)]">From this lesson</span>
+                    <span className="truncate text-xs text-[var(--text-muted)]">
+                      {activeLesson?.title}
+                    </span>
+                  </Link>
+                ) : (
+                  <div
+                    aria-disabled="true"
+                    className="flex w-full flex-col rounded-lg px-3 py-2 text-left text-sm opacity-50"
+                  >
+                    <span className="font-medium text-[var(--text-primary)]">From this lesson</span>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
           {/* Theme toggle */}
           <button
             type="button"
