@@ -17,6 +17,7 @@ import { ModuleListPage } from './pages/ModuleListPage';
 import { ModuleEditorPage } from './pages/ModuleEditorPage';
 import { ThemeEditorPage } from './pages/ThemeEditorPage';
 import { PreviewPage } from './pages/PreviewPage';
+import { parseEditorSearch, parsePreviewSearch } from './lib/editorNav';
 import { BuildWithAIPage } from './pages/BuildWithAIPage';
 import { AnalyticsPage } from './pages/AnalyticsPage';
 
@@ -89,6 +90,7 @@ const moduleEditorRoute = createRoute({
   getParentRoute: () => protectedRoute,
   path: '/w/$workspaceId/m/$moduleId',
   component: ModuleEditorPage,
+  validateSearch: parseEditorSearch,
 });
 
 // Theme editor
@@ -120,6 +122,7 @@ const previewRoute = createRoute({
   getParentRoute: () => protectedRoute,
   path: '/w/$workspaceId/m/$moduleId/preview',
   component: PreviewPage,
+  validateSearch: parsePreviewSearch,
 });
 
 // Public dev-only renderer demo (Phase 2 purity proof)

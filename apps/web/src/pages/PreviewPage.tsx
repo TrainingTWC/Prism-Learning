@@ -1,5 +1,7 @@
 import { useQuery, useConvex } from 'convex/react';
-import { Link, useNavigate, useParams } from '@tanstack/react-router';
+import { Link, useNavigate, useParams, useSearch } from '@tanstack/react-router';
+import { formatTabTitle, resolveLessonIndex } from '../lib/editorNav';
+import { useDocumentTitle } from '../lib/useDocumentTitle';
 import { api } from '~convex/_generated/api';
 import type { Id } from '~convex/_generated/dataModel';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -97,6 +99,9 @@ const DEFAULT_THEME: ExportTheme = {
 
 export function PreviewPage() {
   const { workspaceId, moduleId } = useParams({
+    from: '/protected/w/$workspaceId/m/$moduleId/preview',
+  });
+  const { lesson: startLessonId, returnTo } = useSearch({
     from: '/protected/w/$workspaceId/m/$moduleId/preview',
   });
   const wsId = workspaceId as Id<'workspaces'>;
@@ -221,12 +226,29 @@ export function PreviewPage() {
       } else if (type === 'prism-preview-restart') {
         setLessonIdx(0);
       } else if (type === 'prism-preview-exit') {
-        void navigate({ to: '/w/$workspaceId/m/$moduleId', params: { workspaceId, moduleId } });
+        void navigate({
+          to: '/w/$workspaceId/m/$moduleId',
+          params: { workspaceId, moduleId },
+          search: { lesson: returnTo },
+        });
       }
     }
     window.addEventListener('message', onMessage);
     return () => window.removeEventListener('message', onMessage);
-  }, [lessonCount, navigate, workspaceId, moduleId]);
+  }, [lessonCount, navigate, workspaceId, moduleId, returnTo]);
+
+  // Start lesson: seed once from ?lesson= so live Convex updates never reset it.
+  const seededRef = useRef(false);
+  useEffect(() => {
+    if (seededRef.current || lessons.length === 0) return;
+    seededRef.current = true;
+    setLessonIdx(resolveLessonIndex(lessons, startLessonId));
+  }, [lessons, startLessonId]);
+
+  // Return to the lesson that was being edited (not the one viewed in preview).
+  const editorSearch = { lesson: returnTo };
+
+  useDocumentTitle(content ? formatTabTitle(['Preview', content.module.title]) : null);
 
   // ── Loading + error states ─────────────────────────────────────────────
 
@@ -256,6 +278,7 @@ export function PreviewPage() {
           <Link
             to="/w/$workspaceId/m/$moduleId"
             params={{ workspaceId, moduleId }}
+            search={editorSearch}
             className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
           >
             <ChevronLeft className="size-4" />
