@@ -137,6 +137,96 @@ function deferExternalScripts(html: string): string {
   );
 }
 
+const CUSTOM_HTML_SCOPE = '.prism-custom-html';
+
+/** Split on commas that are not inside (), [] or quotes. */
+function splitSelectors(sel: string): string[] {
+  const out: string[] = [];
+  let depth = 0;
+  let quote = '';
+  let cur = '';
+  for (const ch of sel) {
+    if (quote) { if (ch === quote) quote = ''; }
+    else if (ch === '"' || ch === "'") quote = ch;
+    else if (ch === '(' || ch === '[') depth++;
+    else if (ch === ')' || ch === ']') depth--;
+    else if (ch === ',' && depth === 0) { out.push(cur); cur = ''; continue; }
+    cur += ch;
+  }
+  out.push(cur);
+  return out;
+}
+
+function scopeSelector(sel: string): string {
+  const s = sel.trim();
+  if (!s) return s;
+  // Document-level selectors collapse onto the block wrapper itself.
+  const rooted = s.replace(/^(?:html|body|:root)\b/i, '').trim();
+  if (rooted !== s) return rooted ? `${CUSTOM_HTML_SCOPE} ${rooted}` : CUSTOM_HTML_SCOPE;
+  return `${CUSTOM_HTML_SCOPE} ${s}`;
+}
+
+/**
+ * Prefix every style rule with .prism-custom-html so a pasted stylesheet
+ * (e.g. `h1{font-family:...}`) can't restyle the lesson title or other page
+ * chrome. Block mounting stays in the light DOM (scripts need document.*), so
+ * this is the style-isolation half of that trade-off. @media/@supports are
+ * recursed into; @keyframes, @font-face, @import etc. pass through unchanged.
+ */
+function scopeCss(css: string): string {
+  const src = css.replace(/\/\*[\s\S]*?\*\//g, '');
+  let i = 0;
+  const parse = (): string => {
+    let out = '';
+    while (i < src.length) {
+      if (src[i] === '}') return out;
+      const start = i;
+      let quote = '';
+      while (i < src.length && (quote || (src[i] !== '{' && src[i] !== ';' && src[i] !== '}'))) {
+        if (quote) { if (src[i] === quote) quote = ''; }
+        else if (src[i] === '"' || src[i] === "'") quote = src[i] as string;
+        i++;
+      }
+      const prelude = src.slice(start, i);
+      if (i >= src.length || src[i] !== '{') {
+        out += prelude + (src[i] === ';' ? ';' : '');
+        if (src[i] === ';') i++;
+        continue;
+      }
+      i++; // {
+      if (/^\s*@(?:media|supports|container|layer)\b/i.test(prelude)) {
+        const inner = parse();
+        i++; // }
+        out += `${prelude}{${inner}}`;
+      } else if (/^\s*@/.test(prelude)) {
+        let depth = 1;
+        const bodyStart = i;
+        while (i < src.length && depth > 0) {
+          if (src[i] === '{') depth++;
+          else if (src[i] === '}') depth--;
+          i++;
+        }
+        out += `${prelude}{${src.slice(bodyStart, i - 1)}}`;
+      } else {
+        const bodyStart = i;
+        while (i < src.length && src[i] !== '}') i++;
+        const body = src.slice(bodyStart, i);
+        i++; // }
+        out += `${splitSelectors(prelude).map(scopeSelector).join(',')}{${body}}`;
+      }
+    }
+    return out;
+  };
+  return parse();
+}
+
+function scopeCustomHtmlStyles(html: string): string {
+  return html.replace(
+    /(<style\b[^>]*>)([\s\S]*?)(<\/style>)/gi,
+    (_m, open: string, css: string, close: string) => `${open}${scopeCss(css)}${close}`,
+  );
+}
+
 function defaultDividerPadding(style?: string) {
   return style === 'space' ? 32 : 48;
 }
@@ -514,10 +604,11 @@ function renderBlock(
       // handlers resolve against global scope), so shadow-mounting silently
       // broke every scripted widget — only its static markup rendered.
       // Script compatibility was chosen over style isolation; the known
-      // trade-off is that a pasted <style> is a global stylesheet again.
+      // trade-off is that a pasted <style> is a global stylesheet again —
+      // mitigated by scopeCustomHtmlStyles, which prefixes its rules.
       let p: { html?: string } = {};
       try { p = JSON.parse(c) as typeof p; } catch { /* */ }
-      return `<div class="prism-custom-html">${deferExternalScripts(p.html ?? '')}</div>`;
+      return `<div class="prism-custom-html">${deferExternalScripts(scopeCustomHtmlStyles(p.html ?? ''))}</div>`;
     }
 
     case 'hotspots': {
