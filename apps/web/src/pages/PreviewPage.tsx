@@ -1,36 +1,35 @@
-import { useQuery, useConvex } from 'convex/react';
+import { useQuery } from 'convex/react';
 import { Link, useNavigate, useParams, useSearch } from '@tanstack/react-router';
 import { formatTabTitle, resolveLessonIndex } from '../lib/editorNav';
 import { useDocumentTitle } from '../lib/useDocumentTitle';
 import { api } from '~convex/_generated/api';
 import type { Id } from '~convex/_generated/dataModel';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { buildPreviewHtml } from '../lib/scormExport';
-import type { ExportBlock, ExportLesson, ExportModule, ExportOptions, ExportTheme } from '../lib/scormExport';
-import {
-  ChevronLeft,
-  Eye,
-  Loader2,
-  Monitor,
-  Smartphone,
-  Tablet,
-} from 'lucide-react';
+import type { ExportModule, ExportOptions, ExportTheme } from '../lib/scormExport';
+import { collectStorageIds } from '../lib/rendererBlocks';
+import { toExportTheme } from '../lib/workspaceTheme';
+import { buildExportModule, completionOptionsFromModule } from '../lib/exportData';
+import { useAssetUrls } from '../lib/useAssetUrls';
+import { ArrowLeft, Loader2, Monitor, RotateCcw, Smartphone, Tablet } from 'lucide-react';
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
 type ViewMode = 'phone' | 'tablet' | 'desktop';
 
 const VIEW_MODES: Array<{ id: ViewMode; label: string; icon: typeof Smartphone }> = [
-  { id: 'phone', label: 'Phone', icon: Smartphone },
-  { id: 'tablet', label: 'Tablet', icon: Tablet },
   { id: 'desktop', label: 'Desktop', icon: Monitor },
+  { id: 'tablet', label: 'Tablet', icon: Tablet },
+  { id: 'phone', label: 'Phone', icon: Smartphone },
 ];
 
-function viewportClass(mode: ViewMode): string {
-  if (mode === 'phone') return 'max-w-[390px] rounded-[2rem] border-[10px] border-slate-900 shadow-2xl';
-  if (mode === 'tablet') return 'max-w-[760px] rounded-[1.75rem] border-[10px] border-slate-900 shadow-2xl';
-  return 'max-w-5xl rounded-3xl border border-slate-200 shadow-xl';
+const FRAME_WIDTH: Record<ViewMode, number> = { desktop: 1180, tablet: 820, phone: 390 };
+
+function frameClass(mode: ViewMode): string {
+  return mode === 'phone'
+    ? 'rounded-[28px] border-8 border-[#0E0E12]'
+    : 'rounded-[14px]';
 }
 
 // Phone/tablet emulate a real device's logical viewport height (capped so a short
@@ -39,61 +38,6 @@ const frameScreenStyle = (mode: ViewMode): CSSProperties => ({
   height: mode === 'desktop' ? 'calc(100vh - 8.5rem)' : 'min(844px, calc(100vh - 8.5rem))',
   minHeight: '680px',
 });
-
-/** Parse block JSON content and collect all storageId references */
-function extractStorageIds(blocks: Array<{ type: string; content?: string }>): string[] {
-  const ids: string[] = [];
-  for (const block of blocks) {
-    if (!block.content) continue;
-    try {
-      const p = JSON.parse(block.content) as Record<string, unknown>;
-      if (typeof p.storageId === 'string') ids.push(p.storageId);
-      if (block.type === 'video' && p.srcType === 'storage' && typeof p.src === 'string') ids.push(p.src);
-      if (typeof p.beforeStorageId === 'string') ids.push(p.beforeStorageId);
-      if (typeof p.afterStorageId === 'string') ids.push(p.afterStorageId);
-      if (Array.isArray(p.items)) {
-        for (const item of p.items as Array<{ storageId?: string }>) {
-          if (typeof item.storageId === 'string') ids.push(item.storageId);
-        }
-      }
-      if (Array.isArray(p.cards)) {
-        for (const card of p.cards as Array<{
-          frontImageStorageId?: string; frontAudioStorageId?: string;
-          backImageStorageId?: string; backAudioStorageId?: string;
-          imageStorageId?: string; audioStorageId?: string;
-        }>) {
-          if (typeof card.frontImageStorageId === 'string') ids.push(card.frontImageStorageId);
-          if (typeof card.frontAudioStorageId === 'string') ids.push(card.frontAudioStorageId);
-          if (typeof card.backImageStorageId === 'string') ids.push(card.backImageStorageId);
-          if (typeof card.backAudioStorageId === 'string') ids.push(card.backAudioStorageId);
-          // legacy: shared image/audio authored before front/back became independent
-          if (typeof card.imageStorageId === 'string') ids.push(card.imageStorageId);
-          if (typeof card.audioStorageId === 'string') ids.push(card.audioStorageId);
-        }
-      }
-      if (Array.isArray(p.tabs)) {
-        for (const tab of p.tabs as Array<{ imageStorageId?: string; audioStorageId?: string }>) {
-          if (typeof tab.imageStorageId === 'string') ids.push(tab.imageStorageId);
-          if (typeof tab.audioStorageId === 'string') ids.push(tab.audioStorageId);
-        }
-      }
-      if (Array.isArray(p.sections)) {
-        for (const section of p.sections as Array<{ imageStorageId?: string; audioStorageId?: string }>) {
-          if (typeof section.imageStorageId === 'string') ids.push(section.imageStorageId);
-          if (typeof section.audioStorageId === 'string') ids.push(section.audioStorageId);
-        }
-      }
-    } catch { /* not JSON */ }
-  }
-  return [...new Set(ids)];
-}
-
-const DEFAULT_THEME: ExportTheme = {
-  primary: '#4f46e5',
-  accent: '#aa75dd',
-  headingFont: 'Inter',
-  bodyFont: 'Inter',
-};
 
 // ── Component ───────────────────────────────────────────────────────────────
 
@@ -107,15 +51,13 @@ export function PreviewPage() {
   const wsId = workspaceId as Id<'workspaces'>;
   const modId = moduleId as Id<'modules'>;
   const navigate = useNavigate();
-  const convex = useConvex();
 
   const content = useQuery(api.modules.getWithContent, { moduleId: modId });
   const workspace = useQuery(api.workspaces.getById, { workspaceId: wsId });
   const allBlocksRaw = useQuery(api.blocks.listByModule, { moduleId: modId });
 
   const [lessonIdx, setLessonIdx] = useState(0);
-  const [viewMode, setViewMode] = useState<ViewMode>('phone');
-  const [assetCache, setAssetCache] = useState<Record<string, string>>({});
+  const [viewMode, setViewMode] = useState<ViewMode>('desktop');
 
   // ── Build export-compatible data structures ────────────────────────────
 
@@ -124,86 +66,26 @@ export function PreviewPage() {
 
   const exportMod = useMemo<ExportModule | null>(() => {
     if (!content) return null;
-    const exportLessons: ExportLesson[] = lessons.map((l) => ({
-      id: l._id,
-      title: l.title,
-      blocks: allBlocks
-        .filter((b) => b.lessonId === l._id)
-        .map((b): ExportBlock => ({ id: b._id, type: b.type, content: b.content ?? '' })),
-    }));
-    return { id: content.module._id, title: content.module.title, lessons: exportLessons };
+    return buildExportModule(content.module, lessons, allBlocks, content.coverUrl ?? undefined);
   }, [content, lessons, allBlocks]);
 
-  const exportTheme = useMemo<ExportTheme>(() => {
-    const t = workspace?.theme;
-    if (!t) return DEFAULT_THEME;
-    return {
-      primary: t.primary ?? DEFAULT_THEME.primary,
-      accent: t.accent ?? DEFAULT_THEME.accent,
-      headingFont: t.headingFont ?? DEFAULT_THEME.headingFont,
-      bodyFont: t.bodyFont ?? DEFAULT_THEME.bodyFont,
-    };
-  }, [workspace]);
+  const exportTheme = useMemo<ExportTheme>(() => toExportTheme(workspace?.theme), [workspace]);
 
   // ── Asset resolution ───────────────────────────────────────────────────
 
   const currentLesson = exportMod?.lessons[lessonIdx];
-  const storageIdKey = useMemo(
-    () => extractStorageIds(currentLesson?.blocks ?? []).join(','),
+  const storageIds = useMemo(
+    () => collectStorageIds(currentLesson?.blocks ?? []),
     [currentLesson],
   );
+  const assetMap = useAssetUrls(storageIds);
 
-  const resolveAssets = useCallback(
-    (key: string) => {
-      const ids = key ? key.split(',') : [];
-      for (const id of ids) {
-        if (!assetCache[id]) {
-          void convex.query(api.files.getFileUrl, { storageId: id }).then((url) => {
-            if (url) setAssetCache((prev) => ({ ...prev, [id]: url }));
-          });
-        }
-      }
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [convex],
+  // Real per-module completion settings, so the preview matches what the
+  // author configured on the publish page.
+  const exportOptions = useMemo<ExportOptions>(
+    () => completionOptionsFromModule(content?.module),
+    [content],
   );
-
-  const prevStorageIdKey = useRef('');
-  useEffect(() => {
-    if (storageIdKey !== prevStorageIdKey.current) {
-      prevStorageIdKey.current = storageIdKey;
-      resolveAssets(storageIdKey);
-    }
-  }, [storageIdKey, resolveAssets]);
-
-  const assetMap = useMemo<Record<string, string>>(() => {
-    const ids = storageIdKey ? storageIdKey.split(',') : [];
-    const map: Record<string, string> = {};
-    for (const id of ids) {
-      if (assetCache[id]) map[id] = assetCache[id];
-    }
-    return map;
-  }, [storageIdKey, assetCache]);
-
-  // Real per-module completion settings — was previously omitted entirely,
-  // silently falling back to buildPreviewHtml's default of
-  // { passingScore: 80, completionCriteria: 'completed' } regardless of what
-  // the author actually configured (and with zero authored copy).
-  const exportOptions = useMemo<ExportOptions>(() => {
-    const cs = content?.module.completionSettings;
-    return {
-      passingScore: cs?.passingScore ?? 80,
-      completionCriteria: cs?.completionCriteria ?? 'completed',
-      completionCopy: {
-        defaultTitle: cs?.defaultTitle,
-        defaultBody: cs?.defaultBody,
-        passTitle: cs?.passTitle,
-        passBody: cs?.passBody,
-        failTitle: cs?.failTitle,
-        failBody: cs?.failBody,
-      },
-    };
-  }, [content]);
 
   const iframeHtml = useMemo(() => {
     if (!exportMod || !currentLesson) return '';
@@ -254,15 +136,15 @@ export function PreviewPage() {
 
   if (content === undefined || workspace === undefined) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50">
-        <Loader2 className="size-6 animate-spin text-indigo-400" />
+      <div className="flex min-h-screen items-center justify-center bg-[#26262E]">
+        <Loader2 className="size-6 animate-spin text-brand" />
       </div>
     );
   }
 
   if (!content) {
     return (
-      <div className="flex min-h-screen items-center justify-center text-slate-500">
+      <div className="flex min-h-screen items-center justify-center bg-[#26262E] text-[#BDBDC7]">
         Module not found
       </div>
     );
@@ -271,52 +153,62 @@ export function PreviewPage() {
   // ── Render ─────────────────────────────────────────────────────────────
 
   return (
-    <div className="flex min-h-screen flex-col bg-slate-100">
-      {/* Authoring chrome — minimal, stays outside the preview iframe */}
-      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 py-3">
-        <div className="flex items-center gap-3">
-          <Link
-            to="/w/$workspaceId/m/$moduleId"
-            params={{ workspaceId, moduleId }}
-            search={editorSearch}
-            className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
-          >
-            <ChevronLeft className="size-4" />
-            Back to editor
-          </Link>
-          <div className="h-4 w-px bg-slate-200" />
-          <div className="flex items-center gap-1.5 text-sm font-medium text-slate-700">
-            <Eye className="size-4 text-indigo-400" />
-            Learner Preview
-          </div>
-        </div>
+    <div className="flex min-h-screen flex-col bg-[#26262E]">
+      {/* Authoring chrome — stays outside the preview iframe */}
+      <header className="flex flex-wrap items-center gap-3 px-4 py-2.5 text-white">
+        <Link
+          to="/w/$workspaceId/m/$moduleId"
+          params={{ workspaceId, moduleId }}
+          search={editorSearch}
+          className="flex h-[34px] items-center gap-1.5 rounded-[10px] bg-[#34343E] px-3 text-sm text-white transition hover:bg-[#3E3E49] hover:text-white"
+        >
+          <ArrowLeft className="size-4" />
+          Back to editor
+        </Link>
+        <span className="text-[13px] text-[#BDBDC7]">Previewing as a learner &middot; progress isn&apos;t saved</span>
 
-        <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 p-1">
+        <div className="flex-1" />
+
+        <div role="tablist" aria-label="Device" className="flex gap-1 rounded-[10px] bg-[#34343E] p-[3px]">
           {VIEW_MODES.map((mode) => {
             const Icon = mode.icon;
+            const on = viewMode === mode.id;
             return (
               <button
                 key={mode.id}
                 type="button"
+                role="tab"
+                aria-selected={on}
+                aria-label={mode.label}
                 onClick={() => setViewMode(mode.id)}
-                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition ${
-                  viewMode === mode.id
-                    ? 'bg-white text-indigo-700 shadow-sm'
-                    : 'text-slate-500 hover:text-slate-700'
+                className={`flex h-[30px] items-center gap-1.5 rounded-lg px-3 text-[13px] transition ${
+                  on ? 'bg-white font-semibold text-ink' : 'text-[#D4D4DC] hover:text-white'
                 }`}
               >
-                <Icon className="size-3.5" />
+                <Icon className="size-4" />
                 {mode.label}
               </button>
             );
           })}
         </div>
+
+        <button
+          type="button"
+          onClick={() => setLessonIdx(0)}
+          className="flex h-[34px] items-center gap-1.5 rounded-[10px] bg-[#34343E] px-3 text-[13px] text-white transition hover:bg-[#3E3E49]"
+        >
+          <RotateCcw className="size-3.5" />
+          Reset progress
+        </button>
       </header>
 
-      <main className="flex flex-1 justify-center overflow-auto px-3 py-6 sm:px-6">
+      <main className="flex flex-1 justify-center overflow-auto px-4 pb-10 pt-2">
         {/* self-start: without it, main's flex row stretches this section to the
-            row's full height, leaving dead space inside the bezel below the iframe. */}
-        <section className={`w-full self-start overflow-hidden ${viewportClass(viewMode)}`}>
+            row's full height, leaving dead space inside the frame below the iframe. */}
+        <section
+          className={`w-full self-start overflow-hidden bg-white shadow-[0_20px_50px_rgba(0,0,0,0.35)] ${frameClass(viewMode)}`}
+          style={{ maxWidth: FRAME_WIDTH[viewMode] }}
+        >
           {iframeHtml ? (
             <iframe
               srcDoc={iframeHtml}
@@ -330,7 +222,7 @@ export function PreviewPage() {
               className="flex items-center justify-center bg-white"
               style={frameScreenStyle(viewMode)}
             >
-              <Loader2 className="size-5 animate-spin text-indigo-300" />
+              <Loader2 className="size-5 animate-spin text-brand" />
             </div>
           )}
         </section>
@@ -338,5 +230,3 @@ export function PreviewPage() {
     </div>
   );
 }
-
-

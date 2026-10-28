@@ -133,18 +133,20 @@ export function PrismWorkspaceShell({
   return (
     <div className="prism-brand-screen prism-app-shell" data-collapsed={collapsed}>
       <aside className="prism-sidebar">
-        <div className="border-b border-[var(--sidebar-border)] px-5 py-5">
-          <Link to="/" className="prism-brand-link mb-5 flex items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)] transition hover:opacity-80">
+        <div className="border-b border-line px-4 py-4">
+          <Link to="/" className="prism-brand-link mb-4 flex items-center gap-2.5 text-[13px] font-semibold text-ink-3 transition hover:opacity-80">
             <img src="/prism-logo.png" className="size-8 shrink-0" alt="Prism Authoring" />
             <span className="prism-brand-wordmark">Prism Authoring</span>
           </Link>
-          <p className="prism-sidebar-label truncate text-lg font-bold tracking-tight text-[var(--text-primary)]">{resolvedWorkspaceName}</p>
-          {workspaceRole && (
-            <span className="badge-pill prism-sidebar-label mt-3 bg-[rgba(140,67,208,0.1)] text-[var(--ember-400)]">
-              <span className="size-1.5 rounded-full bg-[var(--ember-400)]" />
-              {workspaceRole}
+          <div className="flex items-center gap-2.5 rounded-xl p-1">
+            <span className="flex size-[34px] shrink-0 items-center justify-center rounded-[10px] bg-[#7B35C1] text-sm font-bold text-white">
+              {resolvedWorkspaceName.slice(0, 1).toUpperCase()}
             </span>
-          )}
+            <div className="prism-sidebar-label min-w-0">
+              <p className="truncate text-sm font-semibold text-ink">{resolvedWorkspaceName}</p>
+              {workspaceRole && <p className="text-xs capitalize text-ink-3">{workspaceRole}</p>}
+            </div>
+          </div>
         </div>
 
         <div className="prism-sidebar-label px-4 py-4">
@@ -155,7 +157,6 @@ export function PrismWorkspaceShell({
         </div>
 
         <nav className="flex-1 space-y-1 px-3">
-          <p className="prism-sidebar-label px-3 pb-2 pt-1 text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--text-muted)]">Authoring</p>
           <Link to="/" data-active={active === 'home'} className="prism-nav-item" title="Home">
             <BookOpen className="size-4" />
             <span className="prism-sidebar-label">Home</span>
@@ -184,18 +185,15 @@ export function PrismWorkspaceShell({
           })}
         </nav>
 
-        <div className="border-t border-[var(--sidebar-border)] p-4">
-          <div className="prism-sidebar-label rounded-2xl border border-[var(--border-subtle)] bg-[var(--card-bg)] p-4">
-            <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--text-muted)]">SCORM readiness</p>
-            <div className="mt-3 flex items-end justify-between">
-              <span className="font-mono-value text-2xl font-bold text-[var(--obsidian-50)]">1.2</span>
-              <span className="badge-pill bg-[rgba(170,117,221,0.12)] text-[var(--ember-400)]">Ready</span>
-            </div>
+        <div className="border-t border-line p-4">
+          <div className="prism-sidebar-label rounded-[14px] bg-ground p-3.5 text-[13px] leading-normal">
+            <p className="mb-1 font-semibold text-ink">SCORM 1.2</p>
+            <p className="text-ink-2">Exports run in any LMS.</p>
           </div>
           <button
             type="button"
             onClick={() => setCollapsed((value) => !value)}
-            className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border border-[var(--border-subtle)] px-3 py-2 text-xs font-bold uppercase tracking-[0.12em] text-[var(--text-tertiary)] transition hover:bg-[var(--card-bg-hover)] hover:text-[var(--text-primary)]"
+            className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border border-line px-3 py-2 text-xs font-medium text-ink-2 transition hover:bg-hover hover:text-ink"
             aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
             {collapsed ? <ChevronsRight className="size-4" /> : <ChevronsLeft className="size-4" />}
