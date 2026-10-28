@@ -741,7 +741,7 @@ export function ModuleEditorPage() {
               </div>
             </div>
           ) : (
-            <div className="mx-auto max-w-3xl px-8 py-8 space-y-4">
+            <div className="w-full px-8 py-8 space-y-4">
               <div className="flex items-center gap-3 pb-2 border-b border-[var(--border-primary)]">
                 {renamingLessonId === activeLesson._id ? (
                   <input
