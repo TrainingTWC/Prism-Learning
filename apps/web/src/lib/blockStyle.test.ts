@@ -1,130 +1,88 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import {
+  BLOCK_STYLE_BASE_CSS,
+  blockStyleAttrString,
+  blockStyleAttrs,
   blockStyleToCss,
   blockStyleToCssString,
   hasBlockStyle,
-  type BlockStyle,
 } from '@prism/renderer/block-style';
 
-const LIGHT_ON_DARK = {
-  color: '#ffffff',
-  '--prism-heading-color': '#ffffff',
-  '--prism-body-color': 'rgba(255,255,255,0.88)',
-  '--prism-text': '#ffffff',
-  '--prism-text-2': 'rgba(255,255,255,0.88)',
-  '--prism-text-muted': 'rgba(255,255,255,0.72)',
-};
+const BLEED = 'calc(var(--prism-block-bleed, 0px) * -1)';
 
-describe('blockStyle defaults', () => {
-  const defaults: Array<BlockStyle | undefined> = [
-    undefined,
-    {},
-    { width: 'standard', background: 'none', spacing: 'none' },
-  ];
-
-  it.each(defaults)('produces nothing for %j', (style) => {
-    expect(blockStyleToCss(style)).toEqual({});
-    expect(blockStyleToCssString(style)).toBe('');
-    expect(hasBlockStyle(style)).toBe(false);
+describe('blockStyle', () => {
+  it('treats undefined, {} and defaults as unstyled', () => {
+    for (const s of [undefined, {}, { width: 'standard', background: 'none' }] as const) {
+      expect(blockStyleToCssString(s)).toBe('');
+      expect(hasBlockStyle(s)).toBe(false);
+      expect(blockStyleAttrString(s)).toBe('');
+      expect(blockStyleAttrs(s)).toEqual({});
+    }
   });
-});
 
-describe('blockStyle width', () => {
-  it('narrow', () => {
+  it('narrow centres at 30rem with only the style marker', () => {
+    const s = { width: 'narrow' } as const;
+    expect(blockStyleToCssString(s)).toBe('max-width:30rem;margin-left:auto;margin-right:auto;');
+    expect(blockStyleAttrString(s)).toBe(' data-prism-style');
+    expect(blockStyleAttrs(s)).toEqual({ 'data-prism-style': '' });
+  });
+
+  it('wide bleeds fully on both sides without resetting radius', () => {
+    const css = blockStyleToCssString({ width: 'wide' });
+    expect(css).toBe(`margin-left:${BLEED};margin-right:${BLEED};`);
+    expect(css).not.toContain('border-radius');
+  });
+
+  it('full bleeds and squares corners', () => {
+    expect(blockStyleToCssString({ width: 'full' })).toBe(
+      `margin-left:${BLEED};margin-right:${BLEED};border-radius:0;`,
+    );
+  });
+
+  it('full with background pads horizontally by the bleed', () => {
+    const css = blockStyleToCssString({ width: 'full', background: 'primary' });
+    expect(css).toContain('padding-left:var(--prism-block-bleed, 0px);');
+    expect(css).toContain('padding-right:var(--prism-block-bleed, 0px);');
+    expect(css).toContain('border-radius:0;');
+    expect(css).toContain('--prism-heading-color:#ffffff;');
+  });
+
+  it('explicit spacing none is a real style', () => {
+    const s = { spacing: 'none' } as const;
+    expect(blockStyleToCssString(s)).toBe('padding-top:0;padding-bottom:0;');
+    expect(blockStyleAttrString(s)).toBe(' data-prism-style data-prism-spacing');
+  });
+
+  it('spacing s/m/l map to 16/32/64px', () => {
+    expect(blockStyleToCssString({ spacing: 's' })).toBe('padding-top:16px;padding-bottom:16px;');
+    expect(blockStyleToCssString({ spacing: 'm' })).toBe('padding-top:32px;padding-bottom:32px;');
+    expect(blockStyleToCssString({ spacing: 'l' })).toBe('padding-top:64px;padding-bottom:64px;');
+  });
+
+  it('background alone defaults to m spacing and the spacing marker', () => {
+    const s = { background: 'tint' } as const;
+    const css = blockStyleToCssString(s);
+    expect(css).toContain('padding-top:32px;padding-bottom:32px;');
+    expect(css).toContain('padding-left:1.5rem;padding-right:1.5rem;');
+    expect(css).toContain('border-radius:var(--prism-radius, 0.5rem);');
+    expect(blockStyleAttrs(s)).toEqual({ 'data-prism-style': '', 'data-prism-spacing': '' });
+  });
+
+  it('blockStyleToCss camelizes properties and keeps custom props', () => {
     expect(blockStyleToCss({ width: 'narrow' })).toEqual({
-      maxWidth: '36rem',
+      maxWidth: '30rem',
       marginLeft: 'auto',
       marginRight: 'auto',
     });
-    expect(blockStyleToCssString({ width: 'narrow' })).toBe(
-      'max-width:36rem;margin-left:auto;margin-right:auto;',
+    expect(blockStyleToCss({ background: 'dark' })).toMatchObject({
+      color: '#ffffff',
+      '--prism-text': '#ffffff',
+    });
+  });
+
+  it('base css zeroes child vertical margins for spacing blocks', () => {
+    expect(BLOCK_STYLE_BASE_CSS).toContain(
+      '[data-prism-spacing]>*{margin-top:0!important;margin-bottom:0!important}',
     );
-    expect(hasBlockStyle({ width: 'narrow' })).toBe(true);
-  });
-
-  it('wide', () => {
-    expect(blockStyleToCss({ width: 'wide' })).toEqual({
-      marginLeft: 'calc(var(--prism-block-bleed, 0px) * -0.5)',
-      marginRight: 'calc(var(--prism-block-bleed, 0px) * -0.5)',
-    });
-  });
-
-  it('full', () => {
-    expect(blockStyleToCss({ width: 'full' })).toEqual({
-      marginLeft: 'calc(var(--prism-block-bleed, 0px) * -1)',
-      marginRight: 'calc(var(--prism-block-bleed, 0px) * -1)',
-    });
-  });
-});
-
-describe('blockStyle spacing', () => {
-  it.each([
-    ['s', '0.75rem'],
-    ['m', '1.5rem'],
-    ['l', '3rem'],
-  ] as const)('%s -> vertical padding %s only', (spacing, value) => {
-    expect(blockStyleToCss({ spacing })).toEqual({ paddingTop: value, paddingBottom: value });
-    expect(blockStyleToCssString({ spacing })).toBe(`padding-top:${value};padding-bottom:${value};`);
-  });
-});
-
-describe('blockStyle background', () => {
-  it('tint', () => {
-    expect(blockStyleToCss({ background: 'tint' })).toEqual({
-      background: 'color-mix(in srgb, var(--prism-primary) 8%, #ffffff)',
-      paddingTop: '1.5rem',
-      paddingBottom: '1.5rem',
-      paddingLeft: '1.5rem',
-      paddingRight: '1.5rem',
-      borderRadius: 'var(--prism-radius, 0.5rem)',
-    });
-  });
-
-  it('accent', () => {
-    expect(blockStyleToCss({ background: 'accent' }).background).toBe(
-      'color-mix(in srgb, var(--prism-accent) 16%, #ffffff)',
-    );
-  });
-
-  it('primary and dark switch text to light', () => {
-    const primary = blockStyleToCss({ background: 'primary' });
-    expect(primary.background).toBe('var(--prism-primary)');
-    expect(primary).toMatchObject(LIGHT_ON_DARK);
-    const dark = blockStyleToCss({ background: 'dark' });
-    expect(dark.background).toBe('#17171C');
-    expect(dark).toMatchObject(LIGHT_ON_DARK);
-  });
-
-  it('tint and accent do not change text colours', () => {
-    expect(blockStyleToCss({ background: 'tint' })).not.toHaveProperty('color');
-    expect(blockStyleToCss({ background: 'accent' })).not.toHaveProperty('color');
-  });
-
-  it('spacing overrides vertical padding when a background is set', () => {
-    expect(blockStyleToCss({ background: 'tint', spacing: 'l' })).toMatchObject({
-      paddingTop: '3rem',
-      paddingBottom: '3rem',
-      paddingLeft: '1.5rem',
-      paddingRight: '1.5rem',
-    });
-  });
-
-  it('string output matches the object output, in a deterministic order', () => {
-    const style: BlockStyle = { width: 'narrow', background: 'dark', spacing: 's' };
-    const css = blockStyleToCssString(style);
-    expect(css).toBe(
-      'max-width:36rem;margin-left:auto;margin-right:auto;' +
-        'background:#17171C;padding-top:0.75rem;padding-bottom:0.75rem;padding-left:1.5rem;padding-right:1.5rem;' +
-        'border-radius:var(--prism-radius, 0.5rem);color:#ffffff;' +
-        '--prism-heading-color:#ffffff;--prism-body-color:rgba(255,255,255,0.88);' +
-        '--prism-text:#ffffff;--prism-text-2:rgba(255,255,255,0.88);--prism-text-muted:rgba(255,255,255,0.72);',
-    );
-    expect(Object.keys(blockStyleToCss(style))).toHaveLength(css.split(';').filter(Boolean).length);
-  });
-
-  it('combined tint+narrow includes width then background pairs', () => {
-    expect(blockStyleToCssString({ background: 'tint', width: 'narrow' }).startsWith(
-      'max-width:36rem;margin-left:auto;margin-right:auto;background:color-mix(',
-    )).toBe(true);
   });
 });

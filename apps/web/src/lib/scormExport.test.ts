@@ -377,9 +377,9 @@ describe('block style export', () => {
   }
 
   const wrapper =
-    '<div class="prism-block" style="--i:0;max-width:36rem;margin-left:auto;margin-right:auto;' +
-    'background:color-mix(in srgb, var(--prism-primary) 8%, #ffffff);padding-top:1.5rem;padding-bottom:1.5rem;' +
-    'padding-left:1.5rem;padding-right:1.5rem;border-radius:var(--prism-radius, 0.5rem);" data-prism-style>';
+    '<div class="prism-block" style="--i:0;max-width:30rem;margin-left:auto;margin-right:auto;' +
+    'background:color-mix(in srgb, var(--prism-primary) 8%, #ffffff);padding-top:32px;padding-bottom:32px;' +
+    'padding-left:1.5rem;padding-right:1.5rem;border-radius:var(--prism-radius, 0.5rem);" data-prism-style data-prism-spacing>';
 
   it('emits the styled wrapper and CSS in preview', () => {
     const html = buildPreviewHtml(styledFixture(), 0, {}, theme, opts);
@@ -405,10 +405,21 @@ describe('block style export', () => {
 
   it('default-valued styles count as unstyled', () => {
     const mod = makeParityFixture();
-    mod.lessons[0]!.blocks[0]!.style = { width: 'standard', background: 'none', spacing: 'none' };
+    mod.lessons[0]!.blocks[0]!.style = { width: 'standard', background: 'none' };
     expect(buildPreviewHtml(mod, 0, {}, theme, opts)).toBe(
       buildPreviewHtml(makeParityFixture(), 0, {}, theme, opts),
     );
+  });
+
+  it('explicit spacing none is a real style that zeroes the gap', async () => {
+    const mod = makeParityFixture();
+    mod.lessons[0]!.blocks[0]!.style = { spacing: 'none' };
+    const html = buildPreviewHtml(mod, 0, {}, theme, opts);
+    expect(html).toContain('data-prism-spacing');
+    expect(html).toContain('padding-top:0;padding-bottom:0;');
+    const result = await buildScormPackage(mod, theme, opts, async () => '');
+    const zip = await JSZip.loadAsync(result.blob);
+    expect(await zip.file('styles.css')!.async('string')).toContain('[data-prism-spacing]>*');
   });
 
   it('renders the cover in the lessons drawer only when coverUrl is set, escaped', () => {
