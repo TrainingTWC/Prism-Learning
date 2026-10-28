@@ -17,6 +17,8 @@ import { ModuleListPage } from './pages/ModuleListPage';
 import { ModuleEditorPage } from './pages/ModuleEditorPage';
 import { ThemeEditorPage } from './pages/ThemeEditorPage';
 import { PreviewPage } from './pages/PreviewPage';
+import { ModuleOutlinePage } from './pages/ModuleOutlinePage';
+import { PublishPage } from './pages/PublishPage';
 import { parseEditorSearch, parsePreviewSearch } from './lib/editorNav';
 import { BuildWithAIPage } from './pages/BuildWithAIPage';
 import { AnalyticsPage } from './pages/AnalyticsPage';
@@ -93,6 +95,20 @@ const moduleEditorRoute = createRoute({
   validateSearch: parseEditorSearch,
 });
 
+// Module outline
+const moduleOutlineRoute = createRoute({
+  getParentRoute: () => protectedRoute,
+  path: '/w/$workspaceId/m/$moduleId/outline',
+  component: ModuleOutlinePage,
+});
+
+// Publish (preflight, completion rules, SCORM download)
+const publishRoute = createRoute({
+  getParentRoute: () => protectedRoute,
+  path: '/w/$workspaceId/m/$moduleId/publish',
+  component: PublishPage,
+});
+
 // Theme editor
 const themeEditorRoute = createRoute({
   getParentRoute: () => protectedRoute,
@@ -136,7 +152,7 @@ const routeTree = rootRoute.addChildren([
   signInRoute,
   ssoCallbackRoute,
   rendererDemoRoute,
-  protectedRoute.addChildren([dashboardRoute, intelligenceRoute, workspaceRoute, membersRoute, moduleListRoute, moduleEditorRoute, themeEditorRoute, buildWithAIRoute, analyticsRoute, previewRoute]),
+  protectedRoute.addChildren([dashboardRoute, intelligenceRoute, workspaceRoute, membersRoute, moduleListRoute, moduleEditorRoute, moduleOutlineRoute, publishRoute, themeEditorRoute, buildWithAIRoute, analyticsRoute, previewRoute]),
 ]);
 
 export const router = createRouter({ routeTree });
