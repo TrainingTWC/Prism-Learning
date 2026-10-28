@@ -70,6 +70,7 @@
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 261022-l8f | Tab titles, preview start options, return to edited lesson | 2026-10-22 | 229a6da | [261022-l8f-prism-authoring-small-ux-fixes-tab-title](./quick/261022-l8f-prism-authoring-small-ux-fixes-tab-title/) |
+| 261028-h2k | Authoring UI redesign (purple light theme, WYSIWYG editor, block library, outline + publish pages, device preview, per-block style) + module cover image | 2026-10-28 | b55dd30 | [261028-h2k-prism-authoring-ui-redesign-module-cover](./quick/261028-h2k-prism-authoring-ui-redesign-module-cover/) |
 | 260707-gtl | Rich-text captions (image/gallery) + per-character font size in all Tiptap surfaces, preview + SCORM render | 2026-07-07 | 5ef77c0 | [260707-gtl-rich-text-captions-with-per-character-fo](./quick/260707-gtl-rich-text-captions-with-per-character-fo/) |
 | 260707-hbg | Rich text + font size for accordion/callout/quote/flashcard/process bodies and MCQ/TrueFalse quiz text, preview + SCORM render | 2026-07-07 | c07dc82 | [260707-hbg-convert-remaining-text-surfaces-to-rich-](./quick/260707-hbg-convert-remaining-text-surfaces-to-rich-/) |
 | 260710-eyl | Rename app "Prism Learning" → "Prism Authoring" (UI, emails, package.json, docs) | 2026-07-10 | TBD | [260710-eyl-rename-prism-authoring](./quick/260710-eyl-rename-prism-authoring/) |
@@ -104,7 +105,7 @@
 ## Session Continuity
 
 **Last session ended:** 2026-05-27 — roadmap created and committed.
-**Last activity:** 2026-10-22 - Completed quick task 261022-l8f: per-module tab titles, Preview menu (from beginning / from current lesson), editor lesson kept in URL so returning from preview lands on the edited lesson (manual browser check pending).
+**Last activity:** 2026-10-28 - Completed quick task 261028-h2k: authoring UI redesign + module cover image (typecheck, 104 tests, build pass; manual browser check pending).
 **Previous activity:** 2026-08-14 - Completed quick task 260814-ht4: fixed completion-screen pass/fail copy bug (preview never showed fail state; 'completed'-criteria modules never showed it either) and made completion title/body authorable per module, persisted via new `completionSettings` Convex field (pending human verification + prod deploy).
 **Resume with:** `/gsd-plan-phase 1` (or `/gsd-ui-phase 1` for the sign-in UI design first).
 
