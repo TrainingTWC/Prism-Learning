@@ -19,12 +19,9 @@ export function ModuleTopBar({ workspaceId, breadcrumb, tabs, right }: ModuleTop
         to="/w/$workspaceId/modules"
         params={{ workspaceId }}
         aria-label="Back to modules"
-        className="flex size-[30px] shrink-0 items-center justify-center rounded-[9px] bg-brand"
+        className="flex size-[34px] shrink-0 items-center justify-center rounded-[9px] transition hover:bg-hover"
       >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinejoin="round" aria-hidden="true">
-          <path d="M12 3 21 19H3z" />
-          <path d="M12 3v16" />
-        </svg>
+        <img src="/prism-logo.png" alt="" className="size-7" />
       </Link>
       <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-1.5 text-sm">
         {breadcrumb}
