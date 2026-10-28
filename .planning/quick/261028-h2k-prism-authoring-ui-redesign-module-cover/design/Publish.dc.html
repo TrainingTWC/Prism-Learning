@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Publish to LMS</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap">
+<style>
+body{margin:0;background:#F6F6F8}
+button{font:inherit;cursor:pointer}
+a{color:#7A36BD;text-decoration:none}a:hover{color:#6D2BAB}
+</style>
+</helmet>
+<div style="font-family: Geist, system-ui, sans-serif; color: #17171C; background: #F6F6F8; min-height: 1000px; display: flex; flex-direction: column">
+
+  <header style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 10px 16px; background: #FFFFFF; border-bottom: 1px solid #E6E6EB">
+    <a href="Main.dc.html" style="height: 36px; padding: 0 12px; border-radius: 10px; display: flex; align-items: center; gap: 6px; color: #4B4B57; font-size: 14px">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"></path></svg>Back to editing
+    </a>
+    <span style="font-weight: 600; font-size: 15px">Publish “Customer Data Privacy Essentials”</span>
+    <div style="flex: 1 1 0"></div>
+    <span style="font-size: 13px; color: #4B4B57">Version 4 · 7 blocks changed since v3</span>
+  </header>
+
+  <div style="display: flex; flex-wrap: wrap; gap: 28px; padding: 32px 40px 64px; max-width: 1280px; width: 100%; margin: 0 auto; box-sizing: border-box">
+
+    <main style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column; gap: 20px">
+
+      <!-- 1 Checks -->
+      <section style="background: #FFFFFF; border: 1px solid #E6E6EB; border-radius: 18px; padding: 24px">
+        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px">
+          <span style="width: 28px; height: 28px; border-radius: 50%; background: #17171C; color: #FFFFFF; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center">1</span>
+          <h2 style="margin: 0; font-size: 17px; font-weight: 600">Pre-flight checks</h2>
+          <span style="margin-left: auto; font-size: 12px; font-weight: 600; color: #9A4A0B; background: #FDF1E4; padding: 4px 10px; border-radius: 999px">2 warnings · 0 blockers</span>
+        </div>
+        <div style="display: flex; flex-direction: column">
+          <sc-for list="{{checks}}" as="c" hint-placeholder-count="6">
+            <div style="display: flex; align-items: center; gap: 12px; padding: 11px 0; border-top: 1px solid #F0F0F3; font-size: 14px">
+              <span style="{{c.icon}}">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="{{c.d}}"></path></svg>
+              </span>
+              <span style="flex: 1 1 auto">{{c.text}}</span>
+              <sc-if value="{{c.fix}}" hint-placeholder-val="{{false}}">
+                <a href="Main.dc.html" style="font-size: 13px; font-weight: 600">Fix</a>
+              </sc-if>
+            </div>
+          </sc-for>
+        </div>
+      </section>
+
+      <!-- 2 Completion -->
+      <section style="background: #FFFFFF; border: 1px solid #E6E6EB; border-radius: 18px; padding: 24px; display: flex; flex-direction: column; gap: 18px">
+        <div style="display: flex; align-items: center; gap: 12px">
+          <span style="width: 28px; height: 28px; border-radius: 50%; background: #17171C; color: #FFFFFF; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center">2</span>
+          <h2 style="margin: 0; font-size: 17px; font-weight: 600">Completion &amp; scoring</h2>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px">
+          <button type="button" onClick="{{pickEnd}}" style="{{endStyle}}">
+            <span style="font-weight: 600; font-size: 14px">Learner reaches the end</span>
+            <span style="font-size: 13px; color: #4B4B57; line-height: 1.45">Reports “completed” when the last lesson is opened.</span>
+          </button>
+          <button type="button" onClick="{{pickPass}}" style="{{passStyle}}">
+            <span style="font-weight: 600; font-size: 14px">Learner passes the quiz</span>
+            <span style="font-size: 13px; color: #4B4B57; line-height: 1.45">Reports “passed” or “failed” using all 8 scored questions.</span>
+          </button>
+        </div>
+        <sc-if value="{{isPass}}" hint-placeholder-val="{{true}}">
+          <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: center">
+            <label style="flex: 1 1 280px; display: flex; flex-direction: column; gap: 8px; font-size: 13px; font-weight: 600; color: #4B4B57">
+              <span style="display: flex; justify-content: space-between">Pass mark <span style="color: #17171C">80% · 7 of 8 correct</span></span>
+              <input type="range" min="0" max="100" step="5" value="80" style="accent-color: #8C43D0">
+            </label>
+            <div style="flex: 1 1 220px; display: flex; flex-direction: column; gap: 8px; font-size: 13px; font-weight: 600; color: #4B4B57">Navigation
+              <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; background: #F3F3F6; padding: 3px; border-radius: 10px">
+                <button type="button" style="height: 32px; border: 0; border-radius: 8px; background: #FFFFFF; font-size: 13px; font-weight: 600; box-shadow: 0 1px 2px rgba(0,0,0,0.08)">Free</button>
+                <button type="button" style="height: 32px; border: 0; border-radius: 8px; background: transparent; font-size: 13px; color: #4B4B57">Sequential</button>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+      </section>
+
+      <!-- 3 Completion screen -->
+      <section style="background: #FFFFFF; border: 1px solid #E6E6EB; border-radius: 18px; padding: 24px; display: flex; flex-direction: column; gap: 16px">
+        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px">
+          <span style="width: 28px; height: 28px; border-radius: 50%; background: #17171C; color: #FFFFFF; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center">3</span>
+          <h2 style="margin: 0; font-size: 17px; font-weight: 600">Completion screen</h2>
+          <div role="tablist" style="margin-left: auto; display: flex; gap: 4px; background: #F3F3F6; padding: 3px; border-radius: 10px">
+            <sc-for list="{{screens}}" as="s" hint-placeholder-count="3">
+              <button type="button" role="tab" onClick="{{s.pick}}" style="{{s.style}}">{{s.label}}</button>
+            </sc-for>
+          </div>
+        </div>
+        <label style="display: flex; flex-direction: column; gap: 6px; font-size: 12px; font-weight: 600; color: #4B4B57">Title
+          <input type="text" value="{{copy.title}}" style="height: 40px; border: 1px solid #E6E6EB; border-radius: 10px; padding: 0 12px; font: inherit; font-size: 14px; font-weight: 400; color: #17171C">
+        </label>
+        <label style="display: flex; flex-direction: column; gap: 6px; font-size: 12px; font-weight: 600; color: #4B4B57">Message
+          <textarea rows="2" style="border: 1px solid #E6E6EB; border-radius: 10px; padding: 10px 12px; font: inherit; font-size: 14px; font-weight: 400; color: #17171C; resize: none">{{copy.body}}</textarea>
+        </label>
+      </section>
+    </main>
+
+    <!-- Right: live preview + download -->
+    <aside style="flex: 1 1 340px; max-width: 420px; display: flex; flex-direction: column; gap: 16px">
+      <div style="font-size: 12px; font-weight: 600; color: #4B4B57; letter-spacing: 0.04em; text-transform: uppercase">Learner sees</div>
+      <div style="background: #FFFFFF; border: 1px solid #E6E6EB; border-radius: 18px; overflow: hidden; font-family: 'Plus Jakarta Sans', sans-serif">
+        <div style="{{previewTop}}">
+          <span style="width: 64px; height: 64px; border-radius: 50%; background: rgba(255,255,255,0.18); display: flex; align-items: center; justify-content: center">
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.5" aria-hidden="true"><path d="{{copy.icon}}"></path></svg>
+          </span>
+          <span style="font-size: 24px; font-weight: 800">{{copy.title}}</span>
+          <sc-if value="{{copy.score}}" hint-placeholder-val="{{true}}">
+            <span style="font-size: 14px; opacity: 0.9">Your score: {{copy.score}}</span>
+          </sc-if>
+        </div>
+        <div style="padding: 20px 24px 24px; display: flex; flex-direction: column; gap: 16px">
+          <p style="margin: 0; font-size: 15px; line-height: 1.6; color: #4A3F58">{{copy.body}}</p>
+          <span style="height: 44px; border-radius: 10px; background: #7B35C1; color: #FFFFFF; font-weight: 600; font-size: 14px; display: flex; align-items: center; justify-content: center">{{copy.cta}}</span>
+        </div>
+      </div>
+
+      <section style="background: #FFFFFF; border: 1px solid #E6E6EB; border-radius: 18px; padding: 20px; display: flex; flex-direction: column; gap: 14px">
+        <div style="display: flex; justify-content: space-between; align-items: center">
+          <span style="font-weight: 600">Package</span>
+          <span style="font-size: 12px; color: #4B4B57">≈ 3.8 MB</span>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; background: #F3F3F6; padding: 3px; border-radius: 10px">
+          <button type="button" style="height: 32px; border: 0; border-radius: 8px; background: #FFFFFF; font-size: 13px; font-weight: 600; box-shadow: 0 1px 2px rgba(0,0,0,0.08)">SCORM 1.2</button>
+          <button type="button" disabled style="height: 32px; border: 0; border-radius: 8px; background: transparent; font-size: 13px; color: #6E6E7A; cursor: not-allowed">SCORM 2004 · later</button>
+        </div>
+        <div style="font-size: 13px; color: #4B4B57">customer_data_privacy_essentials_v4.zip</div>
+        <a href="Learner.dc.html" style="height: 46px; border-radius: 12px; background: #8C43D0; color: #FFFFFF; font-weight: 600; font-size: 15px; display: flex; align-items: center; justify-content: center; gap: 8px">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"></path></svg>
+          Download SCORM package
+        </a>
+        <span style="font-size: 12px; color: #6E6E7A; line-height: 1.5">Saves these settings with the module, so the next export and the learner preview match.</span>
+      </section>
+    </aside>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1000}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { rule: 'pass', screen: 'pass' }; }
+  renderVals() {
+    const ok = 'M20 6 9 17l-5-5', warn = 'M12 8v5M12 17h.01';
+    const icon = (good) => 'flex: 0 0 auto; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center;' + (good ? ' background: #EAF6EF; color: #1A7F4B;' : ' background: #FDF1E4; color: #9A4A0B;');
+    const checks = [
+      ['All 6 lessons have content', true], ['8 scored questions, each with a correct answer', false, 'Lesson 6, question 3 has no correct answer'],
+      ['Images have alt text', false, '1 image in Lesson 4 is missing alt text'], ['Videos and embeds load over HTTPS', true],
+      ['Theme fonts bundled for offline LMS use', true], ['imsmanifest.xml validates against SCORM 1.2', true]
+    ].map(([t, good, issue]) => ({ text: good ? t : issue, d: good ? ok : warn, icon: icon(good), fix: !good }));
+    const card = (on) => 'display: flex; flex-direction: column; gap: 6px; align-items: flex-start; text-align: left; padding: 16px; border-radius: 14px; background: ' + (on ? '#F8F2FD' : '#FFFFFF') + '; color: #17171C;' + (on ? ' border: 2px solid #8C43D0;' : ' border: 1px solid #E6E6EB;');
+    const rule = this.state.rule;
+    const copies = {
+      pass: { title: 'You passed!', body: 'You met the required score for Customer Data Privacy Essentials. Nice work!', score: '88%', cta: 'Finish', icon: ok, bg: '#7B35C1' },
+      fail: { title: 'Not quite there yet', body: 'You didn’t reach the required score this time. Review the material and try again.', score: '62%', cta: 'Review and retry', icon: 'M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5', bg: '#26143D' },
+      def: { title: 'You crushed it!', body: 'That’s a wrap on Customer Data Privacy Essentials. Your progress has been saved.', score: '', cta: 'Finish', icon: ok, bg: '#7B35C1' }
+    };
+    const scr = this.state.screen;
+    const copy = copies[scr];
+    const sBase = 'height: 30px; padding: 0 12px; border: 0; border-radius: 8px; font-size: 13px;';
+    const screens = [['pass', 'Pass'], ['fail', 'Fail'], ['def', 'No quiz']].map(([id, label]) => ({
+      label, pick: () => this.setState({ screen: id }),
+      style: sBase + (scr === id ? ' background: #FFFFFF; font-weight: 600; box-shadow: 0 1px 2px rgba(0,0,0,0.08);' : ' background: transparent; color: #4B4B57;')
+    }));
+    return {
+      checks, screens, copy,
+      isPass: rule === 'pass',
+      endStyle: card(rule === 'end'), passStyle: card(rule === 'pass'),
+      pickEnd: () => this.setState({ rule: 'end', screen: 'def' }),
+      pickPass: () => this.setState({ rule: 'pass', screen: 'pass' }),
+      previewTop: 'background: ' + copy.bg + '; color: #FFFFFF; padding: 32px 24px; display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center;'
+    };
+  }
+}
+</script>
+</body>
+</html>

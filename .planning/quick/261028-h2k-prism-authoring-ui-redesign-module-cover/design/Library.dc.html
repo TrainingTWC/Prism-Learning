@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Module library</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;background:#F6F6F8}
+button{font:inherit;cursor:pointer}
+a{color:#7A36BD;text-decoration:none}a:hover{color:#6D2BAB}
+.hov:hover{background:#EFEFF3}
+.card:hover{box-shadow:0 2px 4px rgba(23,23,28,0.06),0 12px 28px rgba(23,23,28,0.08)}
+</style>
+</helmet>
+<div style="font-family: Geist, system-ui, sans-serif; color: #17171C; background: #F6F6F8; min-height: 1040px; display: flex; flex-wrap: wrap">
+
+  <!-- Workspace sidebar -->
+  <aside aria-label="Workspace navigation" style="flex: 0 0 248px; background: #FFFFFF; border-right: 1px solid #E6E6EB; padding: 16px 12px; box-sizing: border-box; display: flex; flex-direction: column; gap: 4px">
+    <button type="button" class="hov" style="display: flex; align-items: center; gap: 10px; padding: 8px; border: 0; background: transparent; border-radius: 12px; text-align: left; margin-bottom: 12px">
+      <span style="width: 34px; height: 34px; border-radius: 10px; background: #7B35C1; color: #FFFFFF; font-weight: 700; display: flex; align-items: center; justify-content: center">N</span>
+      <span style="display: flex; flex-direction: column; flex: 1 1 auto">
+        <span style="font-weight: 600; font-size: 14px">Northwind L&amp;D</span>
+        <span style="font-size: 12px; color: #6E6E7A">5 members</span>
+      </span>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6E6E7A" stroke-width="2" aria-hidden="true"><path d="m7 15 5 5 5-5M7 9l5-5 5 5"></path></svg>
+    </button>
+    <sc-for list="{{nav}}" as="n" hint-placeholder-count="6">
+      <a href="{{n.href}}" style="{{n.style}}">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{n.d}}"></path></svg>
+        {{n.label}}
+      </a>
+    </sc-for>
+    <div style="flex: 1 1 auto"></div>
+    <div style="padding: 14px; border-radius: 14px; background: #F6F6F8; font-size: 13px; line-height: 1.5">
+      <div style="font-weight: 600; margin-bottom: 4px">Brand theme</div>
+      <div style="color: #4B4B57; margin-bottom: 10px">Every module uses Prism Purple.</div>
+      <div style="display: flex; gap: 6px">
+        <span style="width: 22px; height: 22px; border-radius: 6px; background: #7B35C1"></span>
+        <span style="width: 22px; height: 22px; border-radius: 6px; background: #E8A33D"></span>
+        <span style="width: 22px; height: 22px; border-radius: 6px; background: #26143D"></span>
+        <span style="width: 22px; height: 22px; border-radius: 6px; background: #F8F3FC; border: 1px solid #E6E6EB"></span>
+      </div>
+    </div>
+  </aside>
+
+  <main style="flex: 999 1 560px; min-width: 0; padding: 32px 40px 64px; box-sizing: border-box">
+    <div style="max-width: 1120px; margin: 0 auto; display: flex; flex-direction: column; gap: 28px">
+
+      <div style="display: flex; flex-wrap: wrap; align-items: flex-end; gap: 16px">
+        <div style="flex: 1 1 320px">
+          <h1 style="margin: 0; font-size: 30px; font-weight: 700; letter-spacing: -0.02em">Modules</h1>
+          <p style="margin: 6px 0 0; color: #4B4B57; font-size: 15px">12 modules · 3 being edited right now</p>
+        </div>
+        <a href="Inserter.dc.html" style="height: 40px; padding: 0 14px; border: 1px solid #E6E6EB; background: #FFFFFF; border-radius: 10px; display: flex; align-items: center; gap: 8px; color: #17171C; font-size: 14px; font-weight: 500">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8C43D0" stroke-width="2" aria-hidden="true"><path d="M12 3l1.9 5.8L20 11l-6.1 2.2L12 19l-1.9-5.8L4 11l6.1-2.2z"></path></svg>Build with AI
+        </a>
+        <a href="Outline.dc.html" style="height: 40px; padding: 0 16px; background: #8C43D0; border-radius: 10px; display: flex; align-items: center; gap: 8px; color: #FFFFFF; font-size: 14px; font-weight: 600">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>New module
+        </a>
+      </div>
+
+      <!-- Continue -->
+      <a href="Main.dc.html" class="card" style="display: flex; flex-wrap: wrap; gap: 24px; align-items: center; padding: 20px; background: #FFFFFF; border: 1px solid #E6E6EB; border-radius: 18px; color: #17171C">
+        <div style="flex: 0 0 200px; height: 112px; border-radius: 12px; background: #7B35C1; padding: 14px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: flex-end; color: #FFFFFF">
+          <span style="font-size: 11px; opacity: 0.8; letter-spacing: 0.06em; text-transform: uppercase">Lesson 3</span>
+          <span style="font-weight: 700; font-size: 15px">Handling customer requests</span>
+        </div>
+        <div style="flex: 1 1 280px; display: flex; flex-direction: column; gap: 6px">
+          <span style="font-size: 12px; font-weight: 600; color: #8C43D0; letter-spacing: 0.04em; text-transform: uppercase">Pick up where you left off</span>
+          <span style="font-size: 20px; font-weight: 700">Customer Data Privacy Essentials</span>
+          <span style="font-size: 14px; color: #4B4B57">You edited “The 30-day rule” 12 minutes ago · Priya is in this module now</span>
+        </div>
+        <span style="height: 40px; padding: 0 16px; border-radius: 10px; background: #F3EAFB; color: #6D2BAB; font-weight: 600; font-size: 14px; display: flex; align-items: center; gap: 8px">Continue editing
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
+        </span>
+      </a>
+
+      <!-- Filters -->
+      <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center">
+        <div style="display: flex; gap: 4px; background: #EDEDF1; padding: 3px; border-radius: 10px">
+          <sc-for list="{{filters}}" as="f" hint-placeholder-count="4">
+            <button type="button" onClick="{{f.pick}}" style="{{f.style}}">{{f.label}} <span style="color: #6E6E7A; font-weight: 400">{{f.count}}</span></button>
+          </sc-for>
+        </div>
+        <div style="flex: 1 1 0"></div>
+        <label style="display: flex; align-items: center; gap: 8px; height: 38px; padding: 0 12px; border: 1px solid #E6E6EB; background: #FFFFFF; border-radius: 10px; min-width: 240px; color: #6E6E7A">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
+          <span style="position: absolute; width: 1px; height: 1px; overflow: hidden">Search modules</span>
+          <input type="search" placeholder="Search modules" style="border: 0; outline: 0; font: inherit; font-size: 14px; flex: 1 1 auto; background: transparent">
+        </label>
+        <button type="button" class="hov" style="height: 38px; padding: 0 12px; border: 1px solid #E6E6EB; background: #FFFFFF; border-radius: 10px; font-size: 13px; color: #4B4B57; display: flex; align-items: center; gap: 6px">
+          Last edited
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg>
+        </button>
+      </div>
+
+      <!-- Grid -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px">
+        <a href="Outline.dc.html" style="min-height: 268px; border: 1.5px dashed #D4D4DC; border-radius: 18px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; color: #4B4B57; font-size: 14px; background: transparent">
+          <span style="width: 44px; height: 44px; border-radius: 12px; background: #FFFFFF; border: 1px solid #E6E6EB; display: flex; align-items: center; justify-content: center; color: #8C43D0">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
+          </span>
+          <span style="font-weight: 600; color: #17171C">Blank module</span>
+          <span style="font-size: 13px">or start from a template</span>
+        </a>
+        <sc-for list="{{shown}}" as="m" hint-placeholder-count="7">
+          <a href="Outline.dc.html" class="card" style="display: flex; flex-direction: column; background: #FFFFFF; border: 1px solid #E6E6EB; border-radius: 18px; overflow: hidden; color: #17171C">
+            <div style="{{m.cover}}">
+              <span style="{{m.statusStyle}}">{{m.status}}</span>
+              <span style="font-size: 12px; font-weight: 600; opacity: 0.9">{{m.lessons}} lessons · {{m.mins}} min</span>
+            </div>
+            <div style="padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 10px; flex: 1 1 auto">
+              <span style="font-size: 15px; font-weight: 600; line-height: 1.35">{{m.title}}</span>
+              <div style="display: flex; align-items: center; gap: 8px; margin-top: auto">
+                <span style="{{m.avatar}}">{{m.initials}}</span>
+                <span style="font-size: 12px; color: #6E6E7A; flex: 1 1 auto">{{m.when}}</span>
+                <sc-if value="{{m.live}}" hint-placeholder-val="{{false}}">
+                  <span style="font-size: 11px; font-weight: 600; color: #C2410C; display: flex; align-items: center; gap: 4px"><span style="width: 6px; height: 6px; border-radius: 50%; background: #C2410C"></span>Live</span>
+                </sc-if>
+              </div>
+            </div>
+          </a>
+        </sc-for>
+      </div>
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1040}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { filter: 'all' }; }
+  renderVals() {
+    const navBase = 'display: flex; align-items: center; gap: 12px; padding: 9px 10px; border-radius: 10px; font-size: 14px;';
+    const nav = [
+      { label: 'Home', href: 'Library.dc.html', d: 'M3 10.5 12 3l9 7.5V21H3z', on: false },
+      { label: 'Modules', href: 'Library.dc.html', d: 'm12 2 10 5-10 5L2 7zM2 17l10 5 10-5M2 12l10 5 10-5', on: true },
+      { label: 'AI Builder', href: 'Inserter.dc.html', d: 'M12 3l1.9 5.8L20 11l-6.1 2.2L12 19l-1.9-5.8L4 11l6.1-2.2z', on: false },
+      { label: 'Brand theme', href: 'System.dc.html', d: 'M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5S12.5 5.5 12 3c-.5 2.5-2 4.9-4 6.5S5 13 5 15a7 7 0 0 0 7 7z', on: false },
+      { label: 'Members', href: 'Library.dc.html', d: 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8', on: false },
+      { label: 'Analytics', href: 'Library.dc.html', d: 'M3 3v18h18M7 15l4-4 3 3 6-6', on: false }
+    ].map((n) => ({ ...n, style: navBase + (n.on ? ' background: #F3EAFB; color: #6D2BAB; font-weight: 600;' : ' color: #4B4B57;') }));
+    const covers = ['#7B35C1', '#4B2A7A', '#9A4FD6', '#5E2A6E', '#6D2BAB', '#3A1F5C', '#8C43D0'];
+    const people = [['AM', '#8C43D0'], ['PR', '#C2410C'], ['JO', '#1D5FD1']];
+    const raw = [
+      ['Customer Data Privacy Essentials', 'Draft', 6, 24, '12 min ago', 0, true],
+      ['New Manager Onboarding', 'Published', 9, 41, 'Yesterday', 1, false],
+      ['Safe Lifting in the Warehouse', 'Published', 4, 15, '3 days ago', 2, false],
+      ['Handling Difficult Conversations', 'In review', 5, 22, '1 hour ago', 1, true],
+      ['Expense Policy 2027', 'Draft', 3, 10, '4 days ago', 0, false],
+      ['Anti-Bribery Fundamentals', 'Published', 6, 28, 'Last week', 2, false],
+      ['Product Basics: Ledger Pro', 'Draft', 7, 33, '2 weeks ago', 0, false]
+    ];
+    const statusColors = { Draft: ['#FFFFFF', '#4B4B57'], Published: ['#EAF6EF', '#1A7F4B'], 'In review': ['#FDF1E4', '#9A4A0B'] };
+    const all = raw.map((r, i) => ({
+      title: r[0], status: r[1], lessons: r[2], mins: r[3], when: r[4], live: r[6],
+      initials: people[r[5]][0],
+      avatar: 'width: 24px; height: 24px; border-radius: 50%; background: ' + people[r[5]][1] + '; color: #FFFFFF; font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center;',
+      cover: 'height: 132px; background: ' + covers[i] + '; padding: 12px 14px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; align-items: flex-start; color: #FFFFFF;',
+      statusStyle: 'font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 999px; background: ' + statusColors[r[1]][0] + '; color: ' + statusColors[r[1]][1] + ';'
+    }));
+    const f = this.state.filter;
+    const shown = all.filter((m) => f === 'all' || (f === 'draft' && m.status === 'Draft') || (f === 'review' && m.status === 'In review') || (f === 'published' && m.status === 'Published'));
+    const fBase = 'height: 32px; padding: 0 12px; border: 0; border-radius: 8px; font-size: 13px;';
+    const filters = [['all', 'All', 7], ['draft', 'Drafts', 3], ['review', 'In review', 1], ['published', 'Published', 3]].map(([id, label, count]) => ({
+      label, count, pick: () => this.setState({ filter: id }),
+      style: fBase + (f === id ? ' background: #FFFFFF; font-weight: 600; color: #17171C; box-shadow: 0 1px 2px rgba(0,0,0,0.08);' : ' background: transparent; color: #4B4B57;')
+    }));
+    return { nav, filters, shown };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,368 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Lesson editor</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap">
+<style>
+body{margin:0;background:#F6F6F8}
+button{font:inherit;cursor:pointer}
+a{color:#7A36BD;text-decoration:none}a:hover{color:#6D2BAB}
+.hov:hover{background:#EFEFF3}
+</style>
+</helmet>
+<div style="font-family: Geist, system-ui, sans-serif; color: #17171C; background: #F6F6F8; min-height: 1180px; display: flex; flex-direction: column">
+
+  <!-- Top bar -->
+  <header style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 10px 16px; background: #FFFFFF; border-bottom: 1px solid #E6E6EB; min-height: 36px">
+    <a href="Library.dc.html" aria-label="Back to modules" style="display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 10px; background: #8C43D0">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 21 19H3z"></path><path d="M12 3v16"></path></svg>
+    </a>
+    <nav aria-label="Breadcrumb" style="display: flex; align-items: center; gap: 6px; font-size: 14px; min-width: 0">
+      <a href="Library.dc.html" style="color: #6E6E7A">Modules</a>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#A0A0AB" stroke-width="2" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg>
+      <a href="Outline.dc.html" style="color: #6E6E7A">Customer Data Privacy Essentials</a>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#A0A0AB" stroke-width="2" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg>
+      <span style="font-weight: 600">Handling customer requests</span>
+    </nav>
+    <span style="display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: #1A7F4B; background: #EAF6EF; padding: 4px 10px; border-radius: 999px">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg>Saved
+    </span>
+    <div style="flex: 1 1 0"></div>
+    <div style="display: flex; align-items: center" aria-label="3 people editing">
+      <span title="You" style="width: 30px; height: 30px; border-radius: 50%; background: #8C43D0; color: #FFFFFF; font-size: 12px; font-weight: 600; display: flex; align-items: center; justify-content: center; border: 2px solid #FFFFFF">AM</span>
+      <span title="Priya — editing Knowledge check" style="width: 30px; height: 30px; border-radius: 50%; background: #C2410C; color: #FFFFFF; font-size: 12px; font-weight: 600; display: flex; align-items: center; justify-content: center; border: 2px solid #FFFFFF; margin-left: -8px">PR</span>
+      <span title="Jonas — viewing Lesson 5" style="width: 30px; height: 30px; border-radius: 50%; background: #1D5FD1; color: #FFFFFF; font-size: 12px; font-weight: 600; display: flex; align-items: center; justify-content: center; border: 2px solid #FFFFFF; margin-left: -8px">JO</span>
+    </div>
+    <div style="width: 1px; height: 24px; background: #E6E6EB"></div>
+    <button type="button" aria-label="Undo" class="hov" style="width: 36px; height: 36px; border: 0; background: transparent; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #4B4B57">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 14 4 9l5-5"></path><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"></path></svg>
+    </button>
+    <button type="button" aria-label="Redo" class="hov" style="width: 36px; height: 36px; border: 0; background: transparent; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #4B4B57">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m15 14 5-5-5-5"></path><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"></path></svg>
+    </button>
+    <button type="button" class="hov" style="height: 36px; padding: 0 12px; border: 1px solid #E6E6EB; background: #FFFFFF; border-radius: 10px; display: flex; align-items: center; gap: 8px; color: #4B4B57; font-size: 13px">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
+      Search or jump <span style="font-size: 11px; color: #6E6E7A; border: 1px solid #E6E6EB; border-radius: 6px; padding: 1px 6px">Ctrl K</span>
+    </button>
+    <a href="Learner.dc.html" style="height: 36px; padding: 0 14px; border: 1px solid #E6E6EB; background: #FFFFFF; border-radius: 10px; display: flex; align-items: center; gap: 8px; color: #17171C; font-size: 14px; font-weight: 500">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polygon points="7 4 20 12 7 20 7 4"></polygon></svg>Preview
+    </a>
+    <a href="Publish.dc.html" style="height: 36px; padding: 0 16px; background: {{accent}}; border-radius: 10px; display: flex; align-items: center; gap: 8px; color: #FFFFFF; font-size: 14px; font-weight: 600">
+      Publish
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg>
+    </a>
+  </header>
+
+  <div style="display: flex; flex-wrap: wrap; flex: 1 1 auto; align-items: stretch">
+
+    <!-- Outline rail -->
+    <aside aria-label="Lesson outline" style="flex: 0 0 264px; background: #FFFFFF; border-right: 1px solid #E6E6EB; padding: 16px 12px; box-sizing: border-box; display: flex; flex-direction: column; gap: 4px">
+      <div style="display: flex; align-items: center; justify-content: space-between; padding: 0 8px 8px">
+        <span style="font-size: 12px; font-weight: 600; color: #6E6E7A; letter-spacing: 0.04em; text-transform: uppercase">Outline</span>
+        <a href="Outline.dc.html" style="font-size: 12px; font-weight: 500">Full view</a>
+      </div>
+      <sc-for list="{{sections}}" as="sec" hint-placeholder-count="3">
+        <div style="padding: 12px 8px 4px; font-size: 12px; font-weight: 600; color: #6E6E7A">{{sec.name}}</div>
+        <sc-for list="{{sec.lessons}}" as="l" hint-placeholder-count="2">
+          <a href="Main.dc.html" style="{{l.rowStyle}}">
+            <span style="{{l.numStyle}}">{{l.num}}</span>
+            <span style="flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{l.title}}</span>
+            <sc-if value="{{l.who}}" hint-placeholder-val="{{false}}">
+              <span title="Someone is here" style="{{l.whoStyle}}">{{l.who}}</span>
+            </sc-if>
+          </a>
+        </sc-for>
+      </sc-for>
+      <button type="button" class="hov" style="margin-top: 8px; height: 40px; border: 1px dashed #D4D4DC; background: transparent; border-radius: 10px; color: #4B4B57; font-size: 13px; display: flex; align-items: center; justify-content: center; gap: 6px">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>Add lesson
+      </button>
+      <div style="flex: 1 1 auto"></div>
+      <a href="System.dc.html" style="display: flex; align-items: center; gap: 10px; padding: 10px; border: 1px solid #E6E6EB; border-radius: 12px; color: #17171C">
+        <span style="display: flex">
+          <span style="width: 16px; height: 16px; border-radius: 50%; background: #7B35C1"></span>
+          <span style="width: 16px; height: 16px; border-radius: 50%; background: #E8A33D; margin-left: -5px"></span>
+        </span>
+        <span style="display: flex; flex-direction: column; font-size: 12px">
+          <span style="font-weight: 600">Prism Purple</span>
+          <span style="color: #6E6E7A">Workspace theme</span>
+        </span>
+      </a>
+    </aside>
+
+    <!-- Canvas -->
+    <main style="flex: 999 1 560px; min-width: 0; padding: 32px 24px 64px; box-sizing: border-box; display: flex; flex-direction: column; align-items: center">
+      <div style="width: 100%; max-width: 860px; display: flex; flex-direction: column; gap: 0">
+
+        <!-- Lesson header (themed) -->
+        <section style="background: #7B35C1; border-radius: 18px 18px 0 0; padding: 48px 56px 40px; color: #FFFFFF; font-family: 'Plus Jakarta Sans', sans-serif; position: relative">
+          <div style="font-size: 13px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; opacity: 0.85">Lesson 3 of 6 · In practice</div>
+          <h1 style="margin: 10px 0 12px; font-size: 40px; line-height: 1.15; font-weight: 800">Handling customer requests</h1>
+          <p style="margin: 0; font-size: 17px; line-height: 1.6; max-width: 560px; opacity: 0.92">Learn how to respond to access, correction and deletion requests within the legal window.</p>
+          <button type="button" style="position: absolute; top: 16px; right: 16px; height: 32px; padding: 0 12px; border: 0; border-radius: 8px; background: rgba(255,255,255,0.16); color: #FFFFFF; font-size: 12px; display: flex; align-items: center; gap: 6px">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="9" cy="9" r="2"></circle><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"></path></svg>Header style
+          </button>
+        </section>
+
+        <div style="background: #FFFFFF; border-radius: 0 0 18px 18px; box-shadow: 0 1px 2px rgba(23,23,28,0.06), 0 8px 24px rgba(23,23,28,0.05); padding: 24px 0 40px; font-family: 'Plus Jakarta Sans', sans-serif">
+
+          <!-- Text block — selected -->
+          <div style="position: relative; margin: 8px 24px; padding: 24px 32px; border-radius: 12px; outline: 2px solid {{accent}}; outline-offset: 0">
+            <span style="position: absolute; top: -12px; left: 16px; background: {{accent}}; color: #FFFFFF; font-family: Geist, sans-serif; font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 6px">Text · Heading + paragraph</span>
+            <div style="position: absolute; top: -18px; right: 16px; display: flex; gap: 2px; background: #FFFFFF; border: 1px solid #E6E6EB; border-radius: 10px; padding: 3px; box-shadow: 0 4px 12px rgba(23,23,28,0.08); font-family: Geist, sans-serif">
+              <button type="button" aria-label="Drag to reorder" style="width: 30px; height: 30px; border: 0; background: transparent; border-radius: 7px; color: #4B4B57; cursor: grab; display: flex; align-items: center; justify-content: center">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="9" cy="6" r="1.6"></circle><circle cx="15" cy="6" r="1.6"></circle><circle cx="9" cy="12" r="1.6"></circle><circle cx="15" cy="12" r="1.6"></circle><circle cx="9" cy="18" r="1.6"></circle><circle cx="15" cy="18" r="1.6"></circle></svg>
+              </button>
+              <button type="button" aria-label="Comment" class="hov" style="width: 30px; height: 30px; border: 0; background: transparent; border-radius: 7px; color: #4B4B57; display: flex; align-items: center; justify-content: center">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+              </button>
+              <button type="button" aria-label="Duplicate" class="hov" style="width: 30px; height: 30px; border: 0; background: transparent; border-radius: 7px; color: #4B4B57; display: flex; align-items: center; justify-content: center">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="8" y="8" width="13" height="13" rx="2"></rect><path d="M4 16V5a2 2 0 0 1 2-2h11"></path></svg>
+              </button>
+              <button type="button" aria-label="More actions" class="hov" style="width: 30px; height: 30px; border: 0; background: transparent; border-radius: 7px; color: #4B4B57; display: flex; align-items: center; justify-content: center">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8"></circle><circle cx="12" cy="12" r="1.8"></circle><circle cx="19" cy="12" r="1.8"></circle></svg>
+              </button>
+            </div>
+            <h2 style="margin: 0 0 12px; font-size: 26px; font-weight: 700; color: #26143D">The 30-day rule</h2>
+            <p style="margin: 0; font-size: 17px; line-height: 1.7; color: #4A3F58; position: relative">Every request must receive a complete response within <span style="background: #EEE2FA; border-radius: 3px">30 calendar days</span> of receipt. The clock starts the moment the request reaches <em>any</em> employee — not when it lands with the privacy team.
+              <span style="position: absolute; left: 230px; top: -52px; display: flex; gap: 2px; background: #17171C; border-radius: 10px; padding: 4px; font-family: Geist, sans-serif; box-shadow: 0 8px 20px rgba(23,23,28,0.25)">
+                <button type="button" style="width: 30px; height: 30px; border: 0; border-radius: 7px; background: #33333D; color: #FFFFFF; font-weight: 700; font-size: 14px">B</button>
+                <button type="button" style="width: 30px; height: 30px; border: 0; border-radius: 7px; background: transparent; color: #FFFFFF; font-style: italic; font-size: 14px">I</button>
+                <button type="button" style="width: 30px; height: 30px; border: 0; border-radius: 7px; background: transparent; color: #FFFFFF; text-decoration: underline; font-size: 14px">U</button>
+                <button type="button" aria-label="Link" style="width: 30px; height: 30px; border: 0; border-radius: 7px; background: transparent; color: #FFFFFF; display: flex; align-items: center; justify-content: center">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"></path><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"></path></svg>
+                </button>
+                <span style="width: 1px; background: #44444E; margin: 4px 2px"></span>
+                <button type="button" aria-label="Highlight colour" style="width: 30px; height: 30px; border: 0; border-radius: 7px; background: transparent; display: flex; align-items: center; justify-content: center">
+                  <span style="width: 14px; height: 14px; border-radius: 50%; background: #7B35C1; border: 2px solid #FFFFFF"></span>
+                </button>
+                <button type="button" style="height: 30px; padding: 0 8px; border: 0; border-radius: 7px; background: transparent; color: #FFFFFF; font-size: 12px; display: flex; align-items: center; gap: 4px">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3l1.9 5.8L20 11l-6.1 2.2L12 19l-1.9-5.8L4 11l6.1-2.2z"></path></svg>Rewrite
+                </button>
+              </span>
+            </p>
+          </div>
+
+          <!-- Inserter (hover state) -->
+          <div style="display: flex; align-items: center; gap: 10px; margin: 6px 24px; font-family: Geist, sans-serif">
+            <span style="flex: 1 1 0; height: 2px; background: #DEC9F1"></span>
+            <div style="display: flex; align-items: center; gap: 4px; background: #FFFFFF; border: 1px solid #DEC9F1; border-radius: 999px; padding: 4px; box-shadow: 0 4px 14px rgba(140,67,208,0.14)">
+              <span style="width: 28px; height: 28px; border-radius: 50%; background: {{accent}}; color: #FFFFFF; display: flex; align-items: center; justify-content: center">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
+              </span>
+              <sc-for list="{{quick}}" as="q" hint-placeholder-count="4">
+                <button type="button" class="hov" style="height: 28px; padding: 0 10px; border: 0; background: transparent; border-radius: 999px; font-size: 13px; color: #17171C">{{q}}</button>
+              </sc-for>
+              <a href="Inserter.dc.html" style="height: 28px; padding: 0 10px; border-radius: 999px; font-size: 13px; display: flex; align-items: center; gap: 6px; background: #F3EAFB">All blocks <span style="font-size: 11px; color: #7A36BD">/</span></a>
+            </div>
+            <span style="flex: 1 1 0; height: 2px; background: #DEC9F1"></span>
+          </div>
+
+          <!-- Image + text block -->
+          <div style="margin: 8px 24px; padding: 24px 32px; display: flex; flex-wrap: wrap; gap: 32px; align-items: center">
+            <div role="img" aria-label="Image placeholder: support agent on a call" style="flex: 1 1 260px; aspect-ratio: 4 / 3; border-radius: 14px; background: #F1E8FA; display: flex; align-items: center; justify-content: center; color: #7B35C1; font-family: Geist, sans-serif; font-size: 13px; flex-direction: column; gap: 8px">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="9" cy="9" r="2"></circle><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"></path></svg>
+              [Photo: agent taking a request]
+            </div>
+            <div style="flex: 1 1 280px">
+              <h3 style="margin: 0 0 10px; font-size: 21px; font-weight: 700; color: #26143D">Verify, then log</h3>
+              <p style="margin: 0; font-size: 16px; line-height: 1.7; color: #4A3F58">Confirm the requester's identity using two data points you already hold. Then open a ticket tagged <strong>DSAR</strong> so the deadline is tracked automatically.</p>
+            </div>
+          </div>
+
+          <!-- Callout -->
+          <div style="margin: 8px 56px; padding: 20px 24px; border-radius: 14px; background: #FDF4E6; display: flex; gap: 16px">
+            <span style="flex: 0 0 auto; width: 36px; height: 36px; border-radius: 10px; background: #E8A33D; color: #FFFFFF; display: flex; align-items: center; justify-content: center">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z"></path></svg>
+            </span>
+            <div>
+              <div style="font-weight: 700; color: #6B4310; font-size: 15px; margin-bottom: 4px">Tip</div>
+              <div style="font-size: 15px; line-height: 1.65; color: #4A3A22">Never ask for more ID than you need. Over-collecting during verification is itself a privacy risk.</div>
+            </div>
+          </div>
+
+          <!-- MCQ — being edited by Priya -->
+          <div style="position: relative; margin: 32px 24px 8px; padding: 32px; border-radius: 12px; outline: 2px solid #C2410C">
+            <span style="position: absolute; top: -12px; left: 16px; background: #C2410C; color: #FFFFFF; font-family: Geist, sans-serif; font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 6px">Priya is editing</span>
+            <div style="background: #F8F3FC; border-radius: 16px; padding: 28px 32px">
+              <div style="font-size: 12px; font-weight: 700; letter-spacing: 0.08em; color: #7B35C1; text-transform: uppercase; margin-bottom: 8px">Knowledge check</div>
+              <h3 style="margin: 0 0 20px; font-size: 20px; font-weight: 700; color: #26143D; line-height: 1.4">A customer emails sales asking for a copy of their data. When does the 30-day clock start?</h3>
+              <div style="display: flex; flex-direction: column; gap: 10px">
+                <sc-for list="{{options}}" as="o" hint-placeholder-count="4">
+                  <div style="{{o.style}}">
+                    <span style="{{o.dot}}"></span>
+                    <span style="flex: 1 1 auto">{{o.text}}</span>
+                    <sc-if value="{{o.correct}}" hint-placeholder-val="{{false}}">
+                      <span style="font-family: Geist, sans-serif; font-size: 11px; font-weight: 600; color: #1A7F4B; background: #EAF6EF; padding: 3px 8px; border-radius: 999px">Correct answer</span>
+                    </sc-if>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="margin-top: 20px; height: 44px; width: 120px; border-radius: 10px; background: #7B35C1; color: #FFFFFF; font-weight: 600; font-size: 15px; display: flex; align-items: center; justify-content: center">Submit</div>
+            </div>
+          </div>
+
+          <!-- Continue gate -->
+          <div style="margin: 32px 24px 0; display: flex; align-items: center; gap: 16px; font-family: Geist, sans-serif">
+            <span style="flex: 1 1 0; height: 1px; background: #E6E6EB"></span>
+            <span style="font-size: 12px; color: #6E6E7A; display: flex; align-items: center; gap: 6px">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V7a4 4 0 0 1 8 0v4"></path></svg>
+              Continue gate · unlocks after the knowledge check
+            </span>
+            <span style="flex: 1 1 0; height: 1px; background: #E6E6EB"></span>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Inspector -->
+    <aside aria-label="Block inspector" style="flex: 0 1 320px; min-width: 280px; background: #FFFFFF; border-left: 1px solid #E6E6EB; box-sizing: border-box; display: flex; flex-direction: column">
+      <div style="padding: 16px 20px; border-bottom: 1px solid #E6E6EB; display: flex; align-items: center; gap: 10px">
+        <span style="width: 32px; height: 32px; border-radius: 9px; background: #F3EAFB; color: #7A36BD; display: flex; align-items: center; justify-content: center">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 7V4h16v3M9 20h6M12 4v16"></path></svg>
+        </span>
+        <div style="display: flex; flex-direction: column">
+          <span style="font-weight: 600; font-size: 14px">Text</span>
+          <span style="font-size: 12px; color: #6E6E7A">Heading + paragraph</span>
+        </div>
+      </div>
+      <div role="tablist" style="display: flex; gap: 4px; padding: 12px 20px 0">
+        <button type="button" role="tab" onClick="{{showContent}}" style="{{tabContent}}">Layout</button>
+        <button type="button" role="tab" onClick="{{showStyle}}" style="{{tabStyle}}">Style</button>
+        <button type="button" role="tab" onClick="{{showNotes}}" style="{{tabNotes}}">Comments <span style="font-size: 11px; background: #F3EAFB; color: #7A36BD; padding: 1px 6px; border-radius: 999px; margin-left: 2px">2</span></button>
+      </div>
+
+      <sc-if value="{{isStyle}}" hint-placeholder-val="{{true}}">
+        <div style="padding: 20px; display: flex; flex-direction: column; gap: 24px">
+          <div>
+            <div style="font-size: 12px; font-weight: 600; color: #4B4B57; margin-bottom: 8px">Content width</div>
+            <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; background: #F3F3F6; padding: 3px; border-radius: 10px">
+              <button type="button" style="height: 32px; border: 0; border-radius: 8px; background: transparent; font-size: 12px; color: #4B4B57">Narrow</button>
+              <button type="button" style="height: 32px; border: 0; border-radius: 8px; background: #FFFFFF; font-size: 12px; font-weight: 600; box-shadow: 0 1px 2px rgba(0,0,0,0.08)">Standard</button>
+              <button type="button" style="height: 32px; border: 0; border-radius: 8px; background: transparent; font-size: 12px; color: #4B4B57">Wide</button>
+              <button type="button" style="height: 32px; border: 0; border-radius: 8px; background: transparent; font-size: 12px; color: #4B4B57">Full</button>
+            </div>
+          </div>
+          <div>
+            <div style="font-size: 12px; font-weight: 600; color: #4B4B57; margin-bottom: 8px">Background</div>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap">
+              <button type="button" aria-label="No background" style="width: 40px; height: 40px; border-radius: 10px; border: 2px solid {{accent}}; background: #FFFFFF; position: relative"><span style="position: absolute; left: 8px; right: 8px; top: 18px; height: 1.5px; background: #C9C9D1; transform: rotate(-45deg)"></span></button>
+              <button type="button" aria-label="Tint" style="width: 40px; height: 40px; border-radius: 10px; border: 1px solid #E6E6EB; background: #F8F3FC"></button>
+              <button type="button" aria-label="Primary" style="width: 40px; height: 40px; border-radius: 10px; border: 1px solid #E6E6EB; background: #7B35C1"></button>
+              <button type="button" aria-label="Accent" style="width: 40px; height: 40px; border-radius: 10px; border: 1px solid #E6E6EB; background: #FDF4E6"></button>
+              <button type="button" aria-label="Dark" style="width: 40px; height: 40px; border-radius: 10px; border: 1px solid #E6E6EB; background: #26143D"></button>
+              <button type="button" aria-label="Image background" style="width: 40px; height: 40px; border-radius: 10px; border: 1px dashed #C9C9D1; background: #FFFFFF; color: #6E6E7A; display: flex; align-items: center; justify-content: center">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="9" cy="9" r="2"></circle><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"></path></svg>
+              </button>
+            </div>
+          </div>
+          <div>
+            <div style="font-size: 12px; font-weight: 600; color: #4B4B57; margin-bottom: 8px">Spacing</div>
+            <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; background: #F3F3F6; padding: 3px; border-radius: 10px">
+              <button type="button" style="height: 32px; border: 0; border-radius: 8px; background: transparent; font-size: 12px; color: #4B4B57">None</button>
+              <button type="button" style="height: 32px; border: 0; border-radius: 8px; background: transparent; font-size: 12px; color: #4B4B57">S</button>
+              <button type="button" style="height: 32px; border: 0; border-radius: 8px; background: #FFFFFF; font-size: 12px; font-weight: 600; box-shadow: 0 1px 2px rgba(0,0,0,0.08)">M</button>
+              <button type="button" style="height: 32px; border: 0; border-radius: 8px; background: transparent; font-size: 12px; color: #4B4B57">L</button>
+            </div>
+          </div>
+          <div>
+            <div style="font-size: 12px; font-weight: 600; color: #4B4B57; margin-bottom: 8px">Entrance</div>
+            <label style="display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border: 1px solid #E6E6EB; border-radius: 10px; font-size: 13px">
+              Fade up on scroll
+              <input type="checkbox" checked style="width: 18px; height: 18px; accent-color: #8C43D0">
+            </label>
+          </div>
+          <div style="padding: 12px; border-radius: 12px; background: #F6F6F8; font-size: 12px; color: #4B4B57; line-height: 1.5">
+            Styles come from <strong>Prism Purple</strong>. Changing the theme restyles every block — authors only pick from on-brand options.
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{isContent}}" hint-placeholder-val="{{false}}">
+        <div style="padding: 20px; display: flex; flex-direction: column; gap: 12px">
+          <div style="font-size: 12px; font-weight: 600; color: #4B4B57">Switch layout — your text is kept</div>
+          <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+            <sc-for list="{{variants}}" as="v" hint-placeholder-count="6">
+              <button type="button" style="{{v.style}}">
+                <span style="display: flex; flex-direction: column; gap: 4px; width: 100%">
+                  <span style="{{v.bar1}}"></span>
+                  <span style="height: 4px; border-radius: 2px; background: #DADAE1; width: 100%"></span>
+                  <span style="height: 4px; border-radius: 2px; background: #DADAE1; width: 80%"></span>
+                </span>
+                <span style="font-size: 12px; color: #17171C">{{v.name}}</span>
+              </button>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{isNotes}}" hint-placeholder-val="{{false}}">
+        <div style="padding: 20px; display: flex; flex-direction: column; gap: 16px">
+          <div style="display: flex; gap: 10px">
+            <span style="flex: 0 0 auto; width: 28px; height: 28px; border-radius: 50%; background: #1D5FD1; color: #FFFFFF; font-size: 11px; font-weight: 600; display: flex; align-items: center; justify-content: center">JO</span>
+            <div style="font-size: 13px; line-height: 1.5"><strong>Jonas</strong> <span style="color: #6E6E7A">· 1h</span><br>Legal says "calendar days" — can we bold it?</div>
+          </div>
+          <div style="display: flex; gap: 10px">
+            <span style="flex: 0 0 auto; width: 28px; height: 28px; border-radius: 50%; background: #8C43D0; color: #FFFFFF; font-size: 11px; font-weight: 600; display: flex; align-items: center; justify-content: center">AM</span>
+            <div style="font-size: 13px; line-height: 1.5"><strong>You</strong> <span style="color: #6E6E7A">· 12m</span><br>Done — highlighted instead.</div>
+          </div>
+          <label style="display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: #4B4B57">Reply
+            <input type="text" placeholder="Write a comment…" style="height: 38px; border: 1px solid #E6E6EB; border-radius: 10px; padding: 0 12px; font: inherit; font-size: 13px">
+          </label>
+        </div>
+      </sc-if>
+
+      <div style="flex: 1 1 auto"></div>
+      <div style="padding: 14px 20px; border-top: 1px solid #E6E6EB; font-size: 12px; color: #6E6E7A">Edited by you · 2 min ago</div>
+    </aside>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#8C43D0","options":["#8C43D0","#1D5FD1","#17171C"]},"$preview":{"width":1440,"height":1180}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { tab: 'style' }; }
+  renderVals() {
+    const accent = this.props.accent ?? '#8C43D0';
+    const tab = this.state.tab;
+    const tabBase = 'height: 34px; padding: 0 12px; border: 0; border-radius: 8px; font-size: 13px; display: flex; align-items: center;';
+    const on = tabBase + ' background: #F3EAFB; color: #6D2BAB; font-weight: 600;';
+    const off = tabBase + ' background: transparent; color: #4B4B57;';
+    const row = (active) => 'display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 10px; font-size: 13px; color: #17171C;' + (active ? ' background: #F3EAFB; font-weight: 600;' : '');
+    const num = (active, done) => 'flex: 0 0 auto; width: 22px; height: 22px; border-radius: 7px; font-size: 11px; font-weight: 600; display: flex; align-items: center; justify-content: center;' + (active ? ' background: ' + accent + '; color: #FFFFFF;' : done ? ' background: #EAF6EF; color: #1A7F4B;' : ' background: #F3F3F6; color: #4B4B57;');
+    const who = (c) => 'flex: 0 0 auto; width: 20px; height: 20px; border-radius: 50%; background: ' + c + '; color: #FFFFFF; font-size: 9px; font-weight: 700; display: flex; align-items: center; justify-content: center;';
+    const L = (n, title, active, w, wc) => ({ num: n, title, rowStyle: row(active), numStyle: num(active, false), who: w || '', whoStyle: who(wc || '#000') });
+    const optBase = 'display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: 12px; background: #FFFFFF; font-size: 15px; color: #26143D;';
+    const opt = (text, correct) => ({ text, correct, style: optBase + (correct ? ' border: 2px solid #7B35C1;' : ' border: 1px solid #E7DCF3;'), dot: 'flex: 0 0 auto; width: 18px; height: 18px; border-radius: 50%; border: 2px solid ' + (correct ? '#7B35C1' : '#C3B1DA') + ';' + (correct ? ' box-shadow: inset 0 0 0 3px #FFFFFF; background: #7B35C1;' : '') });
+    const vStyle = (active) => 'display: flex; flex-direction: column; gap: 10px; align-items: flex-start; padding: 12px; border-radius: 12px; background: #FFFFFF; text-align: left;' + (active ? ' border: 2px solid ' + accent + ';' : ' border: 1px solid #E6E6EB;');
+    const V = (name, active, heading) => ({ name, style: vStyle(active), bar1: 'height: ' + (heading ? '8' : '4') + 'px; border-radius: 2px; background: ' + (heading ? '#17171C' : '#DADAE1') + '; width: ' + (heading ? '60%' : '100%') + ';' });
+    return {
+      accent,
+      isStyle: tab === 'style', isContent: tab === 'content', isNotes: tab === 'notes',
+      tabStyle: tab === 'style' ? on : off, tabContent: tab === 'content' ? on : off, tabNotes: tab === 'notes' ? on : off,
+      showStyle: () => this.setState({ tab: 'style' }),
+      showContent: () => this.setState({ tab: 'content' }),
+      showNotes: () => this.setState({ tab: 'notes' }),
+      quick: ['Text', 'Image', 'Callout', 'Question'],
+      sections: [
+        { name: 'Foundations', lessons: [L('1', 'Why privacy matters', false), L('2', 'What counts as personal data', false)] },
+        { name: 'In practice', lessons: [L('3', 'Handling customer requests', true, 'PR', '#C2410C'), L('4', 'Spotting a data breach', false), L('5', 'Working with vendors', false, 'JO', '#1D5FD1')] },
+        { name: 'Wrap-up', lessons: [L('6', 'Final assessment', false)] }
+      ],
+      options: [
+        opt('When the privacy team opens the ticket', false),
+        opt('When sales receives the email', true),
+        opt('When the customer’s identity is verified', false),
+        opt('On the first business day after receipt', false)
+      ],
+      variants: [V('Paragraph', false, false), V('Heading + paragraph', true, true), V('Subheading', false, true), V('Two columns', false, false), V('Table', false, false), V('Statement', false, true)]
+    };
+  }
+}
+</script>
+</body>
+</html>

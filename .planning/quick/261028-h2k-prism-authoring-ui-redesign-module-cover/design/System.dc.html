@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Studio design language</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap">
+<style>
+body{margin:0;background:#F6F6F8}
+button{font:inherit}
+a{color:#7A36BD}
+</style>
+</helmet>
+<div style="font-family: Geist, system-ui, sans-serif; color: #17171C; background: #F6F6F8; min-height: 1500px; padding: 48px 40px 80px; box-sizing: border-box">
+  <div style="max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; gap: 28px">
+
+    <header style="display: flex; flex-direction: column; gap: 8px; max-width: 820px">
+      <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #8C43D0">Design language</span>
+      <h1 style="margin: 0; font-size: 34px; letter-spacing: -0.02em">Two layers: a quiet studio, a branded lesson</h1>
+      <p style="margin: 0; font-size: 16px; line-height: 1.6; color: #4B4B57">The authoring chrome is neutral and recedes. All colour and personality belong to the lesson, which is drawn in the workspace theme — so what authors see is what learners get, and the SCORM export uses the same renderer.</p>
+    </header>
+
+    <!-- Principles -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px">
+      <div style="background: #FFFFFF; border: 1px solid #E6E6EB; border-radius: 16px; padding: 20px; display: flex; flex-direction: column; gap: 6px"><span style="font-weight: 600">Edit the real thing</span><span style="font-size: 14px; color: #4B4B57; line-height: 1.55">Blocks render as learners see them. No form-per-block; click text to type.</span></div>
+      <div style="background: #FFFFFF; border: 1px solid #E6E6EB; border-radius: 16px; padding: 20px; display: flex; flex-direction: column; gap: 6px"><span style="font-weight: 600">One place for settings</span><span style="font-size: 14px; color: #4B4B57; line-height: 1.55">Everything that isn’t content lives in the inspector: layout, style, comments.</span></div>
+      <div style="background: #FFFFFF; border: 1px solid #E6E6EB; border-radius: 16px; padding: 20px; display: flex; flex-direction: column; gap: 6px"><span style="font-weight: 600">On-brand by default</span><span style="font-size: 14px; color: #4B4B57; line-height: 1.55">Authors pick from theme tokens, never raw colours. Change the theme, every module follows.</span></div>
+      <div style="background: #FFFFFF; border: 1px solid #E6E6EB; border-radius: 16px; padding: 20px; display: flex; flex-direction: column; gap: 6px"><span style="font-weight: 600">Always know who’s here</span><span style="font-size: 14px; color: #4B4B57; line-height: 1.55">Each collaborator has a colour; it marks their lesson, their block and their comments.</span></div>
+    </div>
+
+    <div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: stretch">
+
+      <!-- Studio layer -->
+      <section style="flex: 1 1 520px; min-width: 0; background: #FFFFFF; border: 1px solid #E6E6EB; border-radius: 18px; padding: 28px; display: flex; flex-direction: column; gap: 22px">
+        <div style="display: flex; align-items: baseline; gap: 10px"><h2 style="margin: 0; font-size: 20px">Studio layer</h2><span style="font-size: 13px; color: #4B4B57">Prism chrome · fixed</span></div>
+
+        <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px">
+          <sc-for list="{{chrome}}" as="c" hint-placeholder-count="8">
+            <div style="display: flex; flex-direction: column; gap: 6px">
+              <span style="{{c.sw}}"></span>
+              <span style="font-size: 12px; font-weight: 600">{{c.name}}</span>
+              <span style="font-size: 11px; color: #6E6E7A">{{c.hex}}</span>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 6px; border-top: 1px solid #F0F0F3; padding-top: 18px">
+          <span style="font-size: 12px; color: #6E6E7A">Geist — replaces JetBrains Mono for all UI</span>
+          <span style="font-size: 30px; font-weight: 700; letter-spacing: -0.02em">Page title 30/700</span>
+          <span style="font-size: 17px; font-weight: 600">Section 17/600</span>
+          <span style="font-size: 14px; color: #4B4B57">Body and controls 14/400 · labels 12/600</span>
+        </div>
+
+        <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center; border-top: 1px solid #F0F0F3; padding-top: 18px">
+          <span style="height: 38px; padding: 0 16px; border-radius: 10px; background: #8C43D0; color: #FFFFFF; font-weight: 600; font-size: 14px; display: flex; align-items: center">Primary</span>
+          <span style="height: 38px; padding: 0 14px; border-radius: 10px; background: #FFFFFF; border: 1px solid #E6E6EB; font-weight: 500; font-size: 14px; display: flex; align-items: center">Secondary</span>
+          <span style="height: 38px; padding: 0 14px; border-radius: 10px; background: #F3EAFB; color: #6D2BAB; font-weight: 600; font-size: 14px; display: flex; align-items: center">Soft</span>
+          <span style="display: flex; gap: 4px; background: #F3F3F6; padding: 3px; border-radius: 10px">
+            <span style="height: 32px; padding: 0 12px; border-radius: 8px; background: #FFFFFF; font-size: 13px; font-weight: 600; display: flex; align-items: center; box-shadow: 0 1px 2px rgba(0,0,0,0.08)">Segment</span>
+            <span style="height: 32px; padding: 0 12px; border-radius: 8px; font-size: 13px; color: #4B4B57; display: flex; align-items: center">Option</span>
+          </span>
+        </div>
+
+        <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center">
+          <span style="font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 999px; background: #F3F3F6; color: #4B4B57">Draft</span>
+          <span style="font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 999px; background: #FDF1E4; color: #9A4A0B">In review</span>
+          <span style="font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 999px; background: #EAF6EF; color: #1A7F4B">Published</span>
+          <span style="width: 1px; height: 20px; background: #E6E6EB"></span>
+          <span style="width: 28px; height: 28px; border-radius: 50%; background: #8C43D0; color: #FFFFFF; font-size: 11px; font-weight: 600; display: flex; align-items: center; justify-content: center">AM</span>
+          <span style="width: 28px; height: 28px; border-radius: 50%; background: #C2410C; color: #FFFFFF; font-size: 11px; font-weight: 600; display: flex; align-items: center; justify-content: center">PR</span>
+          <span style="width: 28px; height: 28px; border-radius: 50%; background: #1D5FD1; color: #FFFFFF; font-size: 11px; font-weight: 600; display: flex; align-items: center; justify-content: center">JO</span>
+          <span style="width: 28px; height: 28px; border-radius: 50%; background: #0E7A5F; color: #FFFFFF; font-size: 11px; font-weight: 600; display: flex; align-items: center; justify-content: center">+2</span>
+          <span style="font-size: 12px; color: #4B4B57">Presence colours</span>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; font-size: 12px; color: #4B4B57; border-top: 1px solid #F0F0F3; padding-top: 18px">
+          <span><strong style="color: #17171C">Radius</strong><br>8 controls · 12 cards · 18 panels</span>
+          <span><strong style="color: #17171C">Spacing</strong><br>4-pt grid; 16/24/32 rhythm</span>
+          <span><strong style="color: #17171C">Motion</strong><br>150 ms ease-out; 250 ms panels</span>
+        </div>
+      </section>
+
+      <!-- Lesson layer / theme editor -->
+      <section style="flex: 1 1 520px; min-width: 0; background: #FFFFFF; border: 1px solid #E6E6EB; border-radius: 18px; padding: 28px; display: flex; flex-direction: column; gap: 20px">
+        <div style="display: flex; align-items: baseline; gap: 10px"><h2 style="margin: 0; font-size: 20px">Lesson layer</h2><span style="font-size: 13px; color: #4B4B57">Workspace theme · editable</span></div>
+
+        <div style="display: flex; flex-wrap: wrap; gap: 20px">
+          <div style="flex: 1 1 200px; display: flex; flex-direction: column; gap: 14px">
+            <div style="display: flex; flex-direction: column; gap: 6px">
+              <span style="font-size: 12px; font-weight: 600; color: #4B4B57">Preset</span>
+              <div style="display: flex; gap: 8px">
+                <sc-for list="{{presets}}" as="p" hint-placeholder-count="4">
+                  <button type="button" aria-label="{{p.name}}" onClick="{{p.pick}}" style="{{p.style}}"></button>
+                </sc-for>
+              </div>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 6px; font-size: 13px">
+              <span style="font-size: 12px; font-weight: 600; color: #4B4B57">Fonts</span>
+              <span style="display: flex; justify-content: space-between; padding: 8px 10px; border: 1px solid #E6E6EB; border-radius: 10px">Headings <strong>Plus Jakarta Sans</strong></span>
+              <span style="display: flex; justify-content: space-between; padding: 8px 10px; border: 1px solid #E6E6EB; border-radius: 10px">Body <strong>Plus Jakarta Sans</strong></span>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 6px">
+              <span style="font-size: 12px; font-weight: 600; color: #4B4B57">Corners · lesson header</span>
+              <div style="display: flex; gap: 4px; background: #F3F3F6; padding: 3px; border-radius: 10px">
+                <span style="flex: 1 1 0; height: 30px; border-radius: 8px; font-size: 12px; color: #4B4B57; display: flex; align-items: center; justify-content: center">Sharp</span>
+                <span style="flex: 1 1 0; height: 30px; border-radius: 8px; background: #FFFFFF; font-size: 12px; font-weight: 600; display: flex; align-items: center; justify-content: center; box-shadow: 0 1px 2px rgba(0,0,0,0.08)">Soft</span>
+                <span style="flex: 1 1 0; height: 30px; border-radius: 8px; font-size: 12px; color: #4B4B57; display: flex; align-items: center; justify-content: center">Round</span>
+              </div>
+            </div>
+            <span style="font-size: 12px; color: #6E6E7A; line-height: 1.5">Tints, text colours and contrast-safe pairings are derived from Primary + Accent automatically.</span>
+          </div>
+
+          <div style="flex: 1 1 240px; border-radius: 14px; overflow: hidden; border: 1px solid #E6E6EB; font-family: 'Plus Jakarta Sans', sans-serif">
+            <div style="{{hdr}}">
+              <span style="font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.85">Lesson 1</span>
+              <span style="font-size: 22px; font-weight: 800; line-height: 1.2">Why privacy matters</span>
+            </div>
+            <div style="padding: 18px 20px; display: flex; flex-direction: column; gap: 12px; background: #FFFFFF">
+              <span style="{{h}}">A promise we make</span>
+              <span style="font-size: 14px; line-height: 1.6; color: #4A3F58">Customers trust us with details about their lives.</span>
+              <div style="{{tint}}">
+                <span style="{{chip}}"></span>
+                <span style="font-size: 13px; color: #4A3F58">Callout in the accent tint</span>
+              </div>
+              <span style="{{btn}}">Continue</span>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1500}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { preset: 0 }; }
+  renderVals() {
+    const chrome = [
+      ['Ink', '#17171C'], ['Ink 2', '#4B4B57'], ['Ink 3', '#6E6E7A'], ['Line', '#E6E6EB'],
+      ['Ground', '#F6F6F8'], ['Surface', '#FFFFFF'], ['Prism', '#8C43D0'], ['Prism soft', '#F3EAFB']
+    ].map(([name, hex]) => ({ name, hex, sw: 'height: 48px; border-radius: 10px; background: ' + hex + '; border: 1px solid #E6E6EB;' }));
+    const P = [
+      { name: 'Prism Purple', p: '#7B35C1', a: '#E8A33D', tint: '#FDF4E6', ink: '#26143D' },
+      { name: 'Harbour Blue', p: '#1F4E8C', a: '#F28C6B', tint: '#FDEDE7', ink: '#122138' },
+      { name: 'Plum', p: '#5E2A6E', a: '#E2B33C', tint: '#FBF3DE', ink: '#2A1531' },
+      { name: 'Graphite', p: '#26313B', a: '#3FA37A', tint: '#E7F4EE', ink: '#151B21' }
+    ];
+    const cur = P[this.state.preset];
+    const presets = P.map((p, i) => ({
+      name: p.name, pick: () => this.setState({ preset: i }),
+      style: 'width: 40px; height: 40px; border-radius: 12px; cursor: pointer; background: linear-gradient(135deg, ' + p.p + ' 0 60%, ' + p.a + ' 60% 100%);' + (this.state.preset === i ? ' border: 3px solid #FFFFFF; box-shadow: 0 0 0 2px #8C43D0;' : ' border: 0;')
+    }));
+    return {
+      chrome, presets,
+      hdr: 'background: ' + cur.p + '; color: #FFFFFF; padding: 22px 20px; display: flex; flex-direction: column; gap: 6px;',
+      h: 'font-size: 17px; font-weight: 700; color: ' + cur.ink + ';',
+      tint: 'display: flex; gap: 10px; align-items: center; padding: 10px 12px; border-radius: 10px; background: ' + cur.tint + ';',
+      chip: 'width: 22px; height: 22px; border-radius: 6px; background: ' + cur.a + ';',
+      btn: 'align-self: flex-start; height: 38px; padding: 0 16px; border-radius: 10px; background: ' + cur.p + '; color: #FFFFFF; font-weight: 700; font-size: 14px; display: flex; align-items: center;'
+    };
+  }
+}
+</script>
+</body>
+</html>

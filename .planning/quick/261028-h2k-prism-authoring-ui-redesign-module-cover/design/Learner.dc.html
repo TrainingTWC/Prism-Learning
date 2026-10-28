@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Learner preview</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap">
+<style>
+body{margin:0;background:#26262E}
+button{font:inherit;cursor:pointer}
+a{color:#C9B6F5;text-decoration:none}a:hover{color:#E2D7FA}
+</style>
+</helmet>
+<div style="font-family: Geist, system-ui, sans-serif; background: #26262E; min-height: 1000px; display: flex; flex-direction: column">
+
+  <!-- Preview chrome -->
+  <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 10px 16px; color: #FFFFFF">
+    <a href="Main.dc.html" style="height: 34px; padding: 0 12px; border-radius: 10px; display: flex; align-items: center; gap: 6px; font-size: 14px; background: #34343E; color: #FFFFFF">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"></path></svg>Back to editor
+    </a>
+    <span style="font-size: 13px; color: #BDBDC7">Previewing as a learner · progress isn’t saved</span>
+    <div style="flex: 1 1 0"></div>
+    <div role="tablist" aria-label="Device" style="display: flex; gap: 4px; background: #34343E; padding: 3px; border-radius: 10px">
+      <sc-for list="{{devices}}" as="d" hint-placeholder-count="3">
+        <button type="button" role="tab" aria-label="{{d.label}}" onClick="{{d.pick}}" style="{{d.style}}">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="{{d.icon}}"></path></svg>{{d.label}}
+        </button>
+      </sc-for>
+    </div>
+    <button type="button" style="height: 34px; padding: 0 12px; border: 0; border-radius: 10px; background: #34343E; color: #FFFFFF; font-size: 13px">Reset progress</button>
+  </div>
+
+  <!-- Device frame -->
+  <div style="flex: 1 1 auto; display: flex; justify-content: center; padding: 8px 16px 40px">
+    <div style="{{frame}}">
+
+      <sc-if value="{{showSide}}" hint-placeholder-val="{{true}}">
+        <aside style="flex: 0 0 280px; background: #FFFFFF; border-right: 1px solid #EDE5F5; padding: 24px 18px; box-sizing: border-box; display: flex; flex-direction: column; gap: 18px; font-family: 'Plus Jakarta Sans', sans-serif">
+          <div style="font-size: 18px; font-weight: 800; color: #26143D; line-height: 1.25">Customer Data Privacy Essentials</div>
+          <div>
+            <div style="display: flex; justify-content: space-between; font-size: 12px; color: #4A3F58; margin-bottom: 6px"><span>Your progress</span><span style="font-weight: 700">40%</span></div>
+            <div style="height: 6px; border-radius: 3px; background: #EDE5F5"><div style="width: 40%; height: 6px; border-radius: 3px; background: #7B35C1"></div></div>
+          </div>
+          <nav aria-label="Lessons" style="display: flex; flex-direction: column; gap: 2px">
+            <sc-for list="{{lessons}}" as="l" hint-placeholder-count="6">
+              <div style="{{l.row}}">
+                <span style="{{l.mark}}">
+                  <sc-if value="{{l.done}}" hint-placeholder-val="{{false}}">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3.5" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg>
+                  </sc-if>
+                </span>
+                <span>{{l.title}}</span>
+              </div>
+            </sc-for>
+          </nav>
+        </aside>
+      </sc-if>
+
+      <div style="flex: 999 1 300px; min-width: 0; background: #FFFFFF; font-family: 'Plus Jakarta Sans', sans-serif; display: flex; flex-direction: column">
+        <sc-if value="{{isPhone}}" hint-placeholder-val="{{false}}">
+          <div style="display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid #EDE5F5">
+            <button type="button" aria-label="Open lessons" style="width: 36px; height: 36px; border: 1px solid #EDE5F5; border-radius: 10px; background: #FFFFFF; display: flex; align-items: center; justify-content: center">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#26143D" stroke-width="2" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"></path></svg>
+            </button>
+            <div style="flex: 1 1 auto; height: 6px; border-radius: 3px; background: #EDE5F5"><div style="width: 40%; height: 6px; border-radius: 3px; background: #7B35C1"></div></div>
+            <span style="font-size: 12px; font-weight: 700; color: #4A3F58">3 / 6</span>
+          </div>
+        </sc-if>
+        <section style="{{hero}}">
+          <div style="font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.85">Lesson 3 of 6</div>
+          <h1 style="{{h1}}">Handling customer requests</h1>
+          <div style="font-size: 14px; opacity: 0.9">5 min</div>
+        </section>
+        <div style="{{body}}">
+          <h2 style="margin: 0; font-size: 24px; font-weight: 700; color: #26143D">The 30-day rule</h2>
+          <p style="margin: 0; font-size: 17px; line-height: 1.7; color: #4A3F58">Every request must receive a complete response within <strong>30 calendar days</strong> of receipt. The clock starts the moment the request reaches <em>any</em> employee.</p>
+          <div style="border: 1px solid #E7DCF3; border-radius: 14px; overflow: hidden">
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: 16px 18px; background: #F8F3FC; font-weight: 700; color: #26143D; font-size: 15px">Access request<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7B35C1" stroke-width="2.5" aria-hidden="true"><path d="M5 12h14"></path></svg></div>
+            <div style="padding: 0 18px 16px; background: #F8F3FC; font-size: 15px; line-height: 1.65; color: #4A3F58">Send a copy of every record we hold, in a commonly used format.</div>
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: 16px 18px; border-top: 1px solid #E7DCF3; font-weight: 700; color: #26143D; font-size: 15px">Correction request<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7B35C1" stroke-width="2.5" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg></div>
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: 16px 18px; border-top: 1px solid #E7DCF3; font-weight: 700; color: #26143D; font-size: 15px">Deletion request<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7B35C1" stroke-width="2.5" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg></div>
+          </div>
+          <div style="margin-top: 8px; border-top: 1px solid #EDE5F5; padding-top: 24px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center">
+            <span style="font-size: 14px; color: #4A3F58; flex: 1 1 160px">Up next: <strong style="color: #26143D">Spotting a data breach</strong></span>
+            <span style="height: 48px; padding: 0 22px; border-radius: 12px; background: #7B35C1; color: #FFFFFF; font-weight: 700; font-size: 15px; display: flex; align-items: center; gap: 8px">Continue
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1000}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { device: 'desktop' }; }
+  renderVals() {
+    const dev = this.state.device;
+    const widths = { desktop: '1180px', tablet: '820px', phone: '390px' };
+    const icons = { desktop: 'M2 3h20v14H2zM8 21h8M12 17v4', tablet: 'M4 2h16v20H4zM12 18h.01', phone: 'M7 2h10v20H7zM12 18h.01' };
+    const dBase = 'height: 30px; padding: 0 12px; border: 0; border-radius: 8px; font-size: 13px; display: flex; align-items: center; gap: 6px;';
+    const devices = ['desktop', 'tablet', 'phone'].map((id) => ({
+      label: id[0].toUpperCase() + id.slice(1), icon: icons[id], pick: () => this.setState({ device: id }),
+      style: dBase + (dev === id ? ' background: #FFFFFF; color: #17171C; font-weight: 600;' : ' background: transparent; color: #D4D4DC;')
+    }));
+    const isPhone = dev === 'phone';
+    const L = (title, state) => ({
+      title, done: state === 'done',
+      row: 'display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 10px; font-size: 14px; color: #26143D;' + (state === 'now' ? ' background: #F1E8FA; font-weight: 700;' : ''),
+      mark: 'flex: 0 0 auto; width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center;' + (state === 'done' ? ' background: #7B35C1;' : state === 'now' ? ' border: 2px solid #7B35C1; box-sizing: border-box;' : ' border: 2px solid #D7C8E8; box-sizing: border-box;')
+    });
+    return {
+      devices, isPhone, showSide: dev === 'desktop',
+      frame: 'width: 100%; max-width: ' + widths[dev] + '; min-height: 860px; border-radius: ' + (isPhone ? '28px' : '14px') + '; overflow: hidden; display: flex; background: #FFFFFF; box-shadow: 0 20px 50px rgba(0,0,0,0.35);' + (isPhone ? ' border: 8px solid #0E0E12;' : ''),
+      hero: 'background: #7B35C1; color: #FFFFFF; padding: ' + (isPhone ? '28px 20px' : '56px 64px 48px') + '; display: flex; flex-direction: column; gap: 10px;',
+      h1: 'margin: 0; font-weight: 800; line-height: 1.15; font-size: ' + (isPhone ? '28px' : '40px') + ';',
+      body: 'padding: ' + (isPhone ? '24px 20px 32px' : '40px 64px 48px') + '; display: flex; flex-direction: column; gap: 20px; max-width: 760px; box-sizing: border-box;',
+      lessons: [L('Why privacy matters', 'done'), L('What counts as personal data', 'done'), L('Handling customer requests', 'now'), L('Spotting a data breach', ''), L('Working with vendors', ''), L('Final assessment', '')]
+    };
+  }
+}
+</script>
+</body>
+</html>

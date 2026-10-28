@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Interactive blocks</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap">
+<style>
+body{margin:0;background:#F6F6F8}
+button{font:inherit;cursor:pointer}
+a{color:#7A36BD}
+</style>
+</helmet>
+<div style="font-family: Geist, system-ui, sans-serif; color: #17171C; background: #F6F6F8; min-height: 2300px; padding: 48px 40px 80px; box-sizing: border-box">
+  <div style="max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; gap: 28px">
+
+    <header style="display: flex; flex-direction: column; gap: 8px; max-width: 760px">
+      <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #8C43D0">Block system</span>
+      <h1 style="margin: 0; font-size: 34px; letter-spacing: -0.02em">Interactive &amp; knowledge-check blocks</h1>
+      <p style="margin: 0; font-size: 16px; line-height: 1.6; color: #4B4B57">Interactions work in the editor too — click a tab or flip a card while authoring. Author-only cues (correct answers, branch targets) are shown in violet and never reach the learner.</p>
+    </header>
+
+    <!-- Tabs + accordion -->
+    <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start">
+      <div style="flex: 1 1 240px; max-width: 280px; display: flex; flex-direction: column; gap: 6px; padding-top: 8px">
+        <span style="font-weight: 600; font-size: 16px">Tabs &amp; accordion</span>
+        <span style="font-size: 13px; color: #4B4B57; line-height: 1.55">Same data, two presentations — switch between them in Layout without retyping. Each panel can hold text, an image or audio.</span>
+        <span style="font-size: 12px; color: #6E6E7A">Try it: click the tabs.</span>
+      </div>
+      <div style="flex: 999 1 560px; min-width: 0; background: #FFFFFF; border-radius: 18px; box-shadow: 0 1px 2px rgba(23,23,28,0.05); padding: 40px 56px; font-family: 'Plus Jakarta Sans', sans-serif">
+        <div role="tablist" style="display: flex; flex-wrap: wrap; gap: 6px; border-bottom: 2px solid #EDE5F5">
+          <sc-for list="{{tabs}}" as="t" hint-placeholder-count="3">
+            <button type="button" role="tab" onClick="{{t.pick}}" style="{{t.style}}">{{t.label}}</button>
+          </sc-for>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; gap: 28px; padding-top: 24px; align-items: center">
+          <div role="img" aria-label="Panel image placeholder" style="flex: 0 0 180px; aspect-ratio: 1; border-radius: 14px; background: #F1E8FA"></div>
+          <div style="flex: 1 1 260px; display: flex; flex-direction: column; gap: 8px">
+            <span style="font-size: 20px; font-weight: 700; color: #26143D">{{tab.title}}</span>
+            <span style="font-size: 16px; line-height: 1.7; color: #4A3F58">{{tab.body}}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Flashcards + process -->
+    <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start">
+      <div style="flex: 1 1 240px; max-width: 280px; display: flex; flex-direction: column; gap: 6px; padding-top: 8px">
+        <span style="font-weight: 600; font-size: 16px">Flashcards &amp; process</span>
+        <span style="font-size: 13px; color: #4B4B57; line-height: 1.55">Flashcards: grid or stack, text/image/audio on either face. Process: numbered steps with a progress rail, one step at a time.</span>
+        <span style="font-size: 12px; color: #6E6E7A">Try it: click the first card.</span>
+      </div>
+      <div style="flex: 999 1 560px; min-width: 0; background: #FFFFFF; border-radius: 18px; box-shadow: 0 1px 2px rgba(23,23,28,0.05); padding: 40px 56px; font-family: 'Plus Jakarta Sans', sans-serif; display: flex; flex-direction: column; gap: 36px">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px">
+          <button type="button" onClick="{{flip}}" style="{{cardStyle}}">
+            <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.8">{{cardSide}}</span>
+            <span style="font-size: 18px; font-weight: 700; line-height: 1.35">{{cardText}}</span>
+            <span style="font-size: 12px; opacity: 0.8; display: flex; align-items: center; gap: 6px">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5"></path></svg>Tap to flip</span>
+          </button>
+          <div style="min-height: 180px; border-radius: 16px; background: #F8F3FC; border: 1px solid #E7DCF3; padding: 20px; display: flex; flex-direction: column; justify-content: space-between; color: #26143D">
+            <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #7B35C1">Term</span>
+            <span style="font-size: 18px; font-weight: 700">Data controller</span>
+            <span style="font-size: 12px; color: #4A3F58">Tap to flip</span>
+          </div>
+          <div style="min-height: 180px; border-radius: 16px; background: #F8F3FC; border: 1px solid #E7DCF3; padding: 20px; display: flex; flex-direction: column; justify-content: space-between; color: #26143D">
+            <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #7B35C1">Term</span>
+            <span style="font-size: 18px; font-weight: 700">Data processor</span>
+            <span style="font-size: 12px; color: #4A3F58">Tap to flip</span>
+          </div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 0">
+          <div style="display: flex; gap: 16px">
+            <div style="display: flex; flex-direction: column; align-items: center"><span style="width: 32px; height: 32px; border-radius: 50%; background: #7B35C1; color: #FFFFFF; font-weight: 700; display: flex; align-items: center; justify-content: center; font-size: 14px">1</span><span style="flex: 1 1 auto; width: 2px; background: #7B35C1; min-height: 24px"></span></div>
+            <div style="padding-bottom: 20px"><div style="font-weight: 700; color: #26143D; font-size: 16px">Receive &amp; log</div><div style="font-size: 15px; color: #4A3F58; line-height: 1.6">Open a DSAR ticket the same day.</div></div>
+          </div>
+          <div style="display: flex; gap: 16px">
+            <div style="display: flex; flex-direction: column; align-items: center"><span style="width: 32px; height: 32px; border-radius: 50%; background: #FFFFFF; border: 2px solid #7B35C1; box-sizing: border-box; color: #7B35C1; font-weight: 700; display: flex; align-items: center; justify-content: center; font-size: 14px">2</span><span style="flex: 1 1 auto; width: 2px; background: #E7DCF3; min-height: 24px"></span></div>
+            <div style="padding-bottom: 20px"><div style="font-weight: 700; color: #26143D; font-size: 16px">Verify identity</div><div style="font-size: 15px; color: #4A3F58; line-height: 1.6">Two data points we already hold.</div></div>
+          </div>
+          <div style="display: flex; gap: 16px">
+            <div style="display: flex; flex-direction: column; align-items: center"><span style="width: 32px; height: 32px; border-radius: 50%; background: #FFFFFF; border: 2px solid #E7DCF3; box-sizing: border-box; color: #67597A; font-weight: 700; display: flex; align-items: center; justify-content: center; font-size: 14px">3</span></div>
+            <div><div style="font-weight: 700; color: #67597A; font-size: 16px">Respond in full</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Hotspots -->
+    <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start">
+      <div style="flex: 1 1 240px; max-width: 280px; display: flex; flex-direction: column; gap: 6px; padding-top: 8px">
+        <span style="font-weight: 600; font-size: 16px">Hotspots &amp; labeled graphic</span>
+        <span style="font-size: 13px; color: #4B4B57; line-height: 1.55">Authors click on the image to drop a marker and type its popover in place — no coordinate fields.</span>
+      </div>
+      <div style="flex: 999 1 560px; min-width: 0; background: #FFFFFF; border-radius: 18px; box-shadow: 0 1px 2px rgba(23,23,28,0.05); padding: 40px 56px; font-family: 'Plus Jakarta Sans', sans-serif">
+        <div style="position: relative; aspect-ratio: 16 / 8; border-radius: 14px; background: #E8ECEB">
+          <span style="position: absolute; top: 14px; left: 16px; font-family: Geist, sans-serif; font-size: 13px; color: #4A3F58">[Screenshot: suspicious email]</span>
+          <span style="position: absolute; left: 22%; top: 38%; width: 34px; height: 34px; border-radius: 50%; background: #7B35C1; border: 3px solid #FFFFFF; box-shadow: 0 0 0 6px rgba(123,53,193,0.25); color: #FFFFFF; font-weight: 700; font-size: 14px; display: flex; align-items: center; justify-content: center">1</span>
+          <span style="position: absolute; left: 58%; top: 26%; width: 34px; height: 34px; border-radius: 50%; background: #7B35C1; border: 3px solid #FFFFFF; color: #FFFFFF; font-weight: 700; font-size: 14px; display: flex; align-items: center; justify-content: center">2</span>
+          <span style="position: absolute; left: 70%; top: 66%; width: 34px; height: 34px; border-radius: 50%; background: #7B35C1; border: 3px solid #FFFFFF; color: #FFFFFF; font-weight: 700; font-size: 14px; display: flex; align-items: center; justify-content: center">3</span>
+          <div style="position: absolute; left: calc(22% + 44px); top: 30%; width: 240px; background: #FFFFFF; border-radius: 12px; padding: 14px 16px; box-shadow: 0 10px 28px rgba(38,20,61,0.18)">
+            <div style="font-weight: 700; color: #26143D; font-size: 15px; margin-bottom: 4px">Mismatched sender</div>
+            <div style="font-size: 14px; color: #4A3F58; line-height: 1.55">The display name says IT, but the address is external.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Knowledge checks -->
+    <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start">
+      <div style="flex: 1 1 240px; max-width: 280px; display: flex; flex-direction: column; gap: 6px; padding-top: 8px">
+        <span style="font-weight: 600; font-size: 16px">Multiple choice — author view</span>
+        <span style="font-size: 13px; color: #4B4B57; line-height: 1.55">Edit the question as it will appear. Click the circle to mark correct; type below the last option to add one. Feedback per option opens inline.</span>
+        <span style="font-size: 12px; color: #6E6E7A">Try it: pick a different correct answer.</span>
+      </div>
+      <div style="flex: 999 1 560px; min-width: 0; background: #FFFFFF; border-radius: 18px; box-shadow: 0 1px 2px rgba(23,23,28,0.05); padding: 40px 56px; font-family: 'Plus Jakarta Sans', sans-serif">
+        <div style="background: #F8F3FC; border-radius: 16px; padding: 28px 32px; display: flex; flex-direction: column; gap: 12px">
+          <div style="display: flex; align-items: center; gap: 10px">
+            <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.08em; color: #7B35C1; text-transform: uppercase">Question 2 of 8</span>
+            <span style="margin-left: auto; font-family: Geist, sans-serif; font-size: 11px; font-weight: 600; color: #6D2BAB; background: #F3EAFB; padding: 3px 8px; border-radius: 999px">Scored · 1 point</span>
+          </div>
+          <div style="font-size: 20px; font-weight: 700; color: #26143D; line-height: 1.4; margin-bottom: 8px">Which of these is NOT personal data on its own?</div>
+          <sc-for list="{{opts}}" as="o" hint-placeholder-count="4">
+            <div style="{{o.row}}">
+              <button type="button" aria-label="Mark as correct" onClick="{{o.pick}}" style="{{o.dot}}">
+                <sc-if value="{{o.on}}" hint-placeholder-val="{{false}}">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3.5" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg>
+                </sc-if>
+              </button>
+              <span style="flex: 1 1 auto">{{o.text}}</span>
+              <sc-if value="{{o.on}}" hint-placeholder-val="{{false}}">
+                <span style="font-family: Geist, sans-serif; font-size: 11px; font-weight: 600; color: #6D2BAB; background: #F3EAFB; padding: 3px 8px; border-radius: 999px">Correct</span>
+              </sc-if>
+            </div>
+          </sc-for>
+          <div style="display: flex; align-items: center; gap: 14px; padding: 12px 16px; border-radius: 12px; border: 1.5px dashed #D7C8E8; color: #67597A; font-size: 15px">
+            <span style="width: 18px; height: 18px; border-radius: 50%; border: 2px dashed #C3B1DA; box-sizing: border-box"></span>Add an option…
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Matching / sorting / fill blanks -->
+    <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start">
+      <div style="flex: 1 1 240px; max-width: 280px; display: flex; flex-direction: column; gap: 6px; padding-top: 8px">
+        <span style="font-weight: 600; font-size: 16px">Matching, sort order, fill in the blanks</span>
+        <span style="font-size: 13px; color: #4B4B57; line-height: 1.55">Drag-based checks use large, keyboard-reachable targets. Fill-in-the-blanks: wrap a word in [brackets] to turn it into a blank.</span>
+      </div>
+      <div style="flex: 999 1 560px; min-width: 0; background: #FFFFFF; border-radius: 18px; box-shadow: 0 1px 2px rgba(23,23,28,0.05); padding: 40px 56px; font-family: 'Plus Jakarta Sans', sans-serif; display: flex; flex-direction: column; gap: 36px">
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 40px">
+          <div style="padding: 14px 16px; border-radius: 12px; background: #F8F3FC; border: 1px solid #E7DCF3; font-weight: 700; color: #26143D; font-size: 15px">Access request</div>
+          <div style="padding: 14px 16px; border-radius: 12px; background: #F1E8FA; border: 2px solid #7B35C1; color: #26143D; font-size: 15px">Send a copy of their data</div>
+          <div style="padding: 14px 16px; border-radius: 12px; background: #F8F3FC; border: 1px solid #E7DCF3; font-weight: 700; color: #26143D; font-size: 15px">Erasure request</div>
+          <div style="padding: 14px 16px; border-radius: 12px; border: 2px dashed #C3B1DA; color: #67597A; font-size: 15px">Drop the matching answer</div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 8px">
+          <div style="display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; background: #FFFFFF; border: 1px solid #E7DCF3; font-size: 15px; color: #26143D"><svg width="16" height="16" viewBox="0 0 24 24" fill="#C3B1DA" aria-hidden="true"><circle cx="9" cy="6" r="1.6"></circle><circle cx="15" cy="6" r="1.6"></circle><circle cx="9" cy="12" r="1.6"></circle><circle cx="15" cy="12" r="1.6"></circle><circle cx="9" cy="18" r="1.6"></circle><circle cx="15" cy="18" r="1.6"></circle></svg>Verify identity</div>
+          <div style="display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; background: #FFFFFF; border: 1px solid #E7DCF3; font-size: 15px; color: #26143D; box-shadow: 0 10px 24px rgba(38,20,61,0.14); transform: translateX(10px)"><svg width="16" height="16" viewBox="0 0 24 24" fill="#C3B1DA" aria-hidden="true"><circle cx="9" cy="6" r="1.6"></circle><circle cx="15" cy="6" r="1.6"></circle><circle cx="9" cy="12" r="1.6"></circle><circle cx="15" cy="12" r="1.6"></circle><circle cx="9" cy="18" r="1.6"></circle><circle cx="15" cy="18" r="1.6"></circle></svg>Log the request</div>
+          <div style="display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; background: #FFFFFF; border: 1px solid #E7DCF3; font-size: 15px; color: #26143D"><svg width="16" height="16" viewBox="0 0 24 24" fill="#C3B1DA" aria-hidden="true"><circle cx="9" cy="6" r="1.6"></circle><circle cx="15" cy="6" r="1.6"></circle><circle cx="9" cy="12" r="1.6"></circle><circle cx="15" cy="12" r="1.6"></circle><circle cx="9" cy="18" r="1.6"></circle><circle cx="15" cy="18" r="1.6"></circle></svg>Respond in full</div>
+        </div>
+        <p style="margin: 0; font-size: 17px; line-height: 2.2; color: #4A3F58">You have <span style="display: inline-block; min-width: 56px; border-bottom: 2px solid #7B35C1; color: #26143D; font-weight: 700; text-align: center; line-height: 1.4">30</span> calendar days to respond, starting when <span style="display: inline-block; min-width: 120px; border-bottom: 2px solid #C3B1DA; line-height: 1.4">&#160;</span> receives the request.</p>
+      </div>
+    </div>
+
+    <!-- Scenario -->
+    <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start">
+      <div style="flex: 1 1 240px; max-width: 280px; display: flex; flex-direction: column; gap: 6px; padding-top: 8px">
+        <span style="font-weight: 600; font-size: 16px">Branching scenario</span>
+        <span style="font-size: 13px; color: #4B4B57; line-height: 1.55">Learner sees one moment at a time. Authors get a map view of all branches (violet chips show where each choice leads).</span>
+      </div>
+      <div style="flex: 999 1 560px; min-width: 0; background: #FFFFFF; border-radius: 18px; box-shadow: 0 1px 2px rgba(23,23,28,0.05); padding: 40px 56px; font-family: 'Plus Jakarta Sans', sans-serif">
+        <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start">
+          <div style="flex: 0 0 auto; width: 72px; height: 72px; border-radius: 50%; background: #FDF4E6; color: #7A4B1E; font-weight: 800; display: flex; align-items: center; justify-content: center">[C]</div>
+          <div style="flex: 1 1 320px; display: flex; flex-direction: column; gap: 14px">
+            <div style="background: #F8F3FC; border-radius: 4px 16px 16px 16px; padding: 16px 18px; font-size: 16px; line-height: 1.6; color: #26143D">“Hi — I want everything you have on me, and I need it by Friday.”</div>
+            <div style="display: flex; flex-direction: column; gap: 8px">
+              <div style="display: flex; align-items: center; gap: 12px; padding: 13px 16px; border-radius: 12px; border: 1px solid #E7DCF3; font-size: 15px; color: #26143D"><span style="flex: 1 1 auto">“Sure, I’ll email it over now.”</span><span style="font-family: Geist, sans-serif; font-size: 11px; font-weight: 600; color: #6D2BAB; background: #F3EAFB; padding: 3px 8px; border-radius: 999px">→ Outcome: data leak</span></div>
+              <div style="display: flex; align-items: center; gap: 12px; padding: 13px 16px; border-radius: 12px; border: 2px solid #7B35C1; font-size: 15px; color: #26143D"><span style="flex: 1 1 auto">“Happy to help. First, can I confirm two details?”</span><span style="font-family: Geist, sans-serif; font-size: 11px; font-weight: 600; color: #6D2BAB; background: #F3EAFB; padding: 3px 8px; border-radius: 999px">→ Step 2</span></div>
+              <div style="display: flex; align-items: center; gap: 12px; padding: 13px 16px; border-radius: 12px; border: 1px solid #E7DCF3; font-size: 15px; color: #26143D"><span style="flex: 1 1 auto">“You’ll need to contact Legal.”</span><span style="font-family: Geist, sans-serif; font-size: 11px; font-weight: 600; color: #6D2BAB; background: #F3EAFB; padding: 3px 8px; border-radius: 999px">→ Step 3</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":2300}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { tab: 0, flipped: false, correct: 2 }; }
+  renderVals() {
+    const T = [
+      { label: 'Access', title: 'Right of access', body: 'People can ask for a copy of everything we hold about them, plus where it came from and who we shared it with.' },
+      { label: 'Correction', title: 'Right to correction', body: 'If something we hold is wrong or incomplete, the person can ask us to fix it — and we must tell anyone we shared it with.' },
+      { label: 'Erasure', title: 'Right to erasure', body: 'People can ask us to delete their data when we no longer need it, unless the law requires us to keep it.' }
+    ];
+    const tBase = 'height: 44px; padding: 0 16px; border: 0; background: transparent; font-size: 15px; margin-bottom: -2px;';
+    const tabs = T.map((t, i) => ({ label: t.label, pick: () => this.setState({ tab: i }), style: tBase + (this.state.tab === i ? ' border-bottom: 3px solid #7B35C1; color: #7B35C1; font-weight: 700;' : ' border-bottom: 3px solid transparent; color: #4A3F58;') }));
+    const f = this.state.flipped;
+    const opts = ['A customer’s full name', 'An account number', 'The city a customer lives in', 'A personal email address'].map((text, i) => {
+      const on = this.state.correct === i;
+      return {
+        text, on, pick: () => this.setState({ correct: i }),
+        row: 'display: flex; align-items: center; gap: 14px; padding: 13px 16px; border-radius: 12px; background: #FFFFFF; font-size: 15px; color: #26143D;' + (on ? ' border: 2px solid #8C43D0;' : ' border: 1px solid #E7DCF3;'),
+        dot: 'flex: 0 0 auto; width: 22px; height: 22px; padding: 0; border-radius: 50%; display: flex; align-items: center; justify-content: center;' + (on ? ' background: #8C43D0; border: 0;' : ' background: #FFFFFF; border: 2px solid #C3B1DA;')
+      };
+    });
+    return {
+      tabs, tab: T[this.state.tab], opts,
+      flip: () => this.setState({ flipped: !f }),
+      cardSide: f ? 'Definition' : 'Term',
+      cardText: f ? 'Any information that relates to an identifiable living person.' : 'Personal data',
+      cardStyle: 'min-height: 180px; border: 0; border-radius: 16px; padding: 20px; display: flex; flex-direction: column; justify-content: space-between; align-items: flex-start; text-align: left; font-family: inherit;' + (f ? ' background: #26143D; color: #FFFFFF;' : ' background: #7B35C1; color: #FFFFFF;')
+    };
+  }
+}
+</script>
+</body>
+</html>
