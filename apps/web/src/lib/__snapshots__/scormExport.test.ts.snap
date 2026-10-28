@@ -1,0 +1,7 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`block style parity (unstyled output must never change) > lesson_0.html and styles.css hashes are stable 1`] = `"2e78358258a8e3ee8aab45100663dc47e2fc3e08a1d1a8256688229b6f7475e7"`;
+
+exports[`block style parity (unstyled output must never change) > lesson_0.html and styles.css hashes are stable 2`] = `"57ff108d086c06ba843dfc925a8875f381c6ed78339be5d7dfc07153c77a12a5"`;
+
+exports[`block style parity (unstyled output must never change) > preview HTML hash is stable 1`] = `"ff747cbea5a812317bc393287f033240195b997131756fd1148da53fb6412186"`;

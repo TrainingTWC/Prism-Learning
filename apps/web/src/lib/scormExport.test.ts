@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import JSZip from 'jszip';
+import { createHash } from 'node:crypto';
 import { buildPreviewHtml, buildScormPackage, type ExportModule, type ExportTheme } from './scormExport';
 
 const theme: ExportTheme = {
@@ -310,5 +311,54 @@ describe('scormExport completion screen pass/fail copy', () => {
     const zip = await JSZip.loadAsync(result.blob);
     const lesson0 = await zip.file('lesson_0.html')!.async('string');
     expect(lesson0).toContain("crit==='completed'?'completed':");
+  });
+});
+
+function sha256(s: string): string {
+  return createHash('sha256').update(s).digest('hex');
+}
+
+function makeParityFixture(): ExportModule {
+  const rt = (id: string, html: string) => ({ id, type: 'richText', content: html });
+  return {
+    id: 'parity',
+    title: 'Parity Module',
+    lessons: [
+      {
+        id: 'p0',
+        title: 'Lesson One',
+        blocks: [
+          rt('r1', '<h2>Hello</h2><p>Some <strong>text</strong>.</p>'),
+          mcqBlock('q1'),
+          trueFalseBlock('q2'),
+          { id: 'c1', type: 'callout', content: JSON.stringify({ variant: 'info', title: 'Note', body: 'Body' }) },
+          {
+            id: 'a1',
+            type: 'accordion',
+            content: JSON.stringify({ items: [{ id: 'i1', title: 'T', body: '<p>B</p>' }] }),
+          },
+          { id: 'qt1', type: 'quote', content: JSON.stringify({ text: 'Quote', author: 'Me' }) },
+          { id: 'd1', type: 'divider', content: JSON.stringify({ style: 'line' }) },
+          { id: 'bt1', type: 'button', content: JSON.stringify({ label: 'Go', url: 'https://example.com' }) },
+          { id: 'im1', type: 'image', content: JSON.stringify({ storageId: 'missing', altText: 'alt' }) },
+        ],
+      },
+      { id: 'p1', title: 'Lesson Two', blocks: [rt('r2', '<p>Second</p>'), mcqBlock('q3')] },
+    ],
+  };
+}
+
+describe('block style parity (unstyled output must never change)', () => {
+  const opts = { passingScore: 80, completionCriteria: 'completed' as const };
+
+  it('preview HTML hash is stable', () => {
+    expect(sha256(buildPreviewHtml(makeParityFixture(), 0, {}, theme, opts))).toMatchSnapshot();
+  });
+
+  it('lesson_0.html and styles.css hashes are stable', async () => {
+    const result = await buildScormPackage(makeParityFixture(), theme, opts, async () => '');
+    const zip = await JSZip.loadAsync(result.blob);
+    expect(sha256(await zip.file('lesson_0.html')!.async('string'))).toMatchSnapshot();
+    expect(sha256(await zip.file('styles.css')!.async('string'))).toMatchSnapshot();
   });
 });
