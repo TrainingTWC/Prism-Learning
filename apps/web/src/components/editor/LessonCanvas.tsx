@@ -14,7 +14,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { Pencil, Plus } from 'lucide-react';
-import { tokensToCss, type Theme } from '@prism/renderer';
+import { BLOCK_STYLE_BASE_CSS, tokensToCss, type Theme } from '@prism/renderer';
 import type { Id } from '~convex/_generated/dataModel';
 import { collectStorageIds } from '../../lib/rendererBlocks';
 import { useAssetUrls } from '../../lib/useAssetUrls';
@@ -47,6 +47,8 @@ interface LessonCanvasProps {
   onInsert: (type: EditorBlockType, target: InsertTarget) => void;
   onOpenLibrary: (target: InsertTarget) => void;
   onAddLesson: () => Promise<void>;
+  onUpdateContent: (blockId: Id<'blocks'>, content: string) => Promise<void>;
+  track: <T>(p: Promise<T>) => Promise<T>;
 }
 
 export function LessonCanvas({
@@ -73,6 +75,8 @@ export function LessonCanvas({
   onInsert,
   onOpenLibrary,
   onAddLesson,
+  onUpdateContent,
+  track,
 }: LessonCanvasProps) {
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -130,6 +134,7 @@ export function LessonCanvas({
         className="prism-module mx-auto w-full max-w-[860px] rounded-[18px] bg-white px-14 pb-12 pt-12 shadow-[0_1px_2px_rgba(23,23,28,0.06),0_8px_24px_rgba(23,23,28,0.05)]"
         style={paperStyle}
       >
+        <style>{BLOCK_STYLE_BASE_CSS}</style>
         <header className="mb-6" data-keep-selection>
           <p
             className="text-[13px] font-semibold uppercase tracking-[0.06em]"
@@ -210,6 +215,8 @@ export function LessonCanvas({
                       onDelete={() => onDelete(block._id)}
                       onMoveToLesson={(target) => onMoveToLesson(block._id, target)}
                       onSlashCommand={() => onOpenLibrary({ afterBlockId: block._id })}
+                      onUpdateContent={onUpdateContent}
+                      track={track}
                     />
                     <BlockInserter
                       onPick={(t) => onInsert(t, { afterBlockId: block._id })}

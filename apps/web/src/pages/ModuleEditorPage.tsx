@@ -11,7 +11,7 @@ import { ImportQuizDialog } from '../components/ImportQuizDialog';
 import { EditorTopBar } from '../components/editor/EditorTopBar';
 import { OutlineRail } from '../components/editor/OutlineRail';
 import { LessonCanvas } from '../components/editor/LessonCanvas';
-import { Inspector } from '../components/editor/Inspector';
+import { BlockPalette } from '../components/editor/BlockPalette';
 import { BlockLibraryModal } from '../components/editor/BlockLibraryModal';
 import { catalogEntry, insertionAfterOrder, type InsertTarget } from '../components/editor/blockCatalog';
 import type { EditorBlock, EditorBlockType, EditorLesson } from '../components/editor/types';
@@ -230,7 +230,9 @@ export function ModuleEditorPage() {
 
   const mod = content.module;
   const selectedBlock = blocksForLesson.find((b) => b._id === selectedBlockId) ?? null;
-  const questionCount = blocksForLesson.filter((b) => b.type === 'mcq' || b.type === 'trueFalse').length;
+  const insertionLabel = selectedBlock
+    ? `Adds after: ${catalogEntry(selectedBlock.type)?.label ?? selectedBlock.type}`
+    : 'Adds at end of lesson';
 
   let libraryLocation = '';
   if (libraryTarget) {
@@ -337,16 +339,17 @@ export function ModuleEditorPage() {
           onInsert={(type, target) => void handleAddBlock(type, target)}
           onOpenLibrary={openLibrary}
           onAddLesson={handleAddLesson}
-        />
-
-        <Inspector
-          block={selectedBlock}
-          lessonTitle={activeLesson?.title ?? null}
-          blockCount={blocksForLesson.length}
-          questionCount={questionCount}
-          theme={theme}
           onUpdateContent={handleLayoutContent}
           track={track}
+        />
+
+        <BlockPalette
+          insertionLabel={insertionLabel}
+          disabled={!activeLessonId}
+          onInsert={(type) =>
+            void handleAddBlock(type, selectedBlockId ? { afterBlockId: selectedBlockId } : 'end')
+          }
+          onImportQuestions={() => setImportQuizOpen(true)}
         />
       </div>
 
