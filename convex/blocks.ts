@@ -3,6 +3,7 @@ import { mutation, query } from './_generated/server';
 import { getAuthUserId } from '@convex-dev/auth/server';
 import type { GenericQueryCtx, GenericMutationCtx } from 'convex/server';
 import type { DataModel, Id } from './_generated/dataModel';
+import { blockStyleValidator } from './schema';
 
 type AnyCtx = GenericQueryCtx<DataModel> | GenericMutationCtx<DataModel>;
 
@@ -196,6 +197,23 @@ export const updateContent = mutation({
   },
 });
 
+/** Set a block's presentation style (width / background / spacing). */
+export const updateStyle = mutation({
+  args: { blockId: v.id('blocks'), style: blockStyleValidator },
+  handler: async (ctx, { blockId, style }) => {
+    const block = await ctx.db.get(blockId);
+    if (!block) throw new Error('Not found');
+
+    const { userId } = await requireLessonMember(ctx, block.lessonId);
+
+    await ctx.db.patch(blockId, {
+      style,
+      updatedAt: Date.now(),
+      lastEditedBy: userId,
+    });
+  },
+});
+
 /** Reorder blocks by providing ordered array of block IDs. */
 export const reorder = mutation({
   args: { blockIds: v.array(v.id('blocks')) },
@@ -250,6 +268,7 @@ export const duplicate = mutation({
       type: block.type,
       order,
       content: block.content,
+      style: block.style,
       updatedAt: now,
       lastEditedBy: userId,
     });

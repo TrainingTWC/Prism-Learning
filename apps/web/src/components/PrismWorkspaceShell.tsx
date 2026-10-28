@@ -1,5 +1,5 @@
 import { Link, useNavigate } from '@tanstack/react-router';
-import { BarChart2, Bell, BookOpen, Brain, CheckCheck, ChevronsLeft, ChevronsRight, KeyRound, Layers, LogOut, Moon, Palette, Search, Sun, Trash2, Users } from 'lucide-react';
+import { BarChart2, Bell, BookOpen, Brain, CheckCheck, ChevronsLeft, ChevronsRight, KeyRound, Layers, LogOut, Palette, Search, Trash2, Users } from 'lucide-react';
 import { SetPasswordModal } from './SetPasswordModal';
 import { useAuthActions } from '@convex-dev/auth/react';
 import { useMutation, useQuery } from 'convex/react';
@@ -57,7 +57,6 @@ export function PrismWorkspaceShell({
   children,
 }: PrismWorkspaceShellProps) {
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem('prism-sidebar-collapsed') === 'true');
-  const [theme, setTheme] = useState<'dark' | 'light'>(() => localStorage.getItem('prism-theme') === 'light' ? 'light' : 'dark');
   const [passwordModalOpen, setPasswordModalOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const resolvedWorkspaceName = workspaceName ?? 'Prism Authoring';
@@ -77,11 +76,6 @@ export function PrismWorkspaceShell({
     await signOut();
     void navigate({ to: '/sign-in', replace: true });
   }
-
-  useEffect(() => {
-    document.documentElement.classList.toggle('light', theme === 'light');
-    localStorage.setItem('prism-theme', theme);
-  }, [theme]);
 
   useEffect(() => {
     localStorage.setItem('prism-sidebar-collapsed', String(collapsed));
@@ -223,14 +217,6 @@ export function PrismWorkspaceShell({
                 <span className="mx-1 h-4 w-px bg-[var(--border-subtle)]" />
               </>
             )}
-            <button
-              type="button"
-              onClick={() => setTheme((value) => value === 'light' ? 'dark' : 'light')}
-              className="rounded-lg p-2 text-[var(--text-tertiary)] transition hover:bg-[var(--card-bg-hover)] hover:text-[var(--text-primary)]"
-              aria-label={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
-            >
-              {theme === 'light' ? <Moon className="size-4" /> : <Sun className="size-4" />}
-            </button>
             <div className="relative" ref={notificationRef}>
               <button
                 type="button"

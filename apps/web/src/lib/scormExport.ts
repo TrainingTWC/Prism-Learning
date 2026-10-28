@@ -10,6 +10,7 @@
 import JSZip from 'jszip';
 import DOMPurify from 'dompurify';
 import lottieMinJs from 'lottie-web/build/player/lottie.min.js?raw';
+import { blockStyleToCssString, type BlockStyle } from '@prism/renderer/block-style';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -24,6 +25,8 @@ export interface ExportBlock {
   id: string;
   type: string;
   content?: string;
+  /** Optional per-block presentation style (width / background / spacing). */
+  style?: BlockStyle;
 }
 
 export interface ExportLesson {
@@ -36,6 +39,9 @@ export interface ExportModule {
   id: string;
   title: string;
   lessons: ExportLesson[];
+  /** Preview-only: module cover shown at the top of the lessons drawer.
+   *  Deliberately NOT bundled into the SCORM package. */
+  coverUrl?: string;
 }
 
 /** Author-editable completion-screen title/body copy. Blank/undefined falls
@@ -256,6 +262,36 @@ function countQuizBlocks(mod: ExportModule): number {
   }
   return total;
 }
+
+/**
+ * Per-block style support. The wrapper keeps its original markup when a block
+ * has no style, so modules without styled blocks export byte-identical HTML.
+ * All CSS comes from the renderer's fixed literal tables (never author text).
+ */
+function renderBlockWrapper(b: ExportBlock, i: number, assetMap: Record<string, string>): string {
+  const css = blockStyleToCssString(b.style);
+  if (css === '') {
+    return `<div class="prism-block" style="--i:${i}">${renderBlock(b, assetMap)}</div>`;
+  }
+  return `<div class="prism-block" style="--i:${i};${css}" data-prism-style>${renderBlock(b, assetMap)}</div>`;
+}
+
+function moduleHasBlockStyles(mod: ExportModule): boolean {
+  return mod.lessons.some((l) => l.blocks.some((b) => blockStyleToCssString(b.style) !== ''));
+}
+
+/** Appended to the stylesheet only when at least one block is styled.
+ *  --prism-block-bleed mirrors the .prism-lesson horizontal padding so
+ *  'wide' / 'full' blocks can break out of the reading column. */
+const BLOCK_STYLE_CSS =
+  '.prism-lesson{--prism-block-bleed:64px}' +
+  '@media (max-width:900px){.prism-lesson{--prism-block-bleed:28px}}' +
+  '@media (max-width:560px){.prism-lesson{--prism-block-bleed:18px}}' +
+  '.prism-block[data-prism-style]{box-sizing:border-box}';
+
+/** Preview-only: emitted only when the module has a cover. */
+const DRAWER_COVER_CSS =
+  '.prism-drawer-cover{display:block;width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:12px;margin-bottom:12px}';
 
 /**
  * Shared completion-card markup for both `buildLessonPage` (export) and
@@ -1544,7 +1580,7 @@ function buildLessonPage(
   const quizTotal = countQuizBlocks(mod);
 
   const blocksHtml = lesson.blocks
-    .map((b, i) => `<div class="prism-block" style="--i:${i}">${renderBlock(b, assetMap)}</div>`)
+    .map((b, i) => renderBlockWrapper(b, i, assetMap))
     .join('\n');
 
   // Lesson dots — clickable chips representing every lesson
@@ -1808,7 +1844,7 @@ export function buildPreviewHtml(
   const quizTotal = countQuizBlocks(mod);
 
   const blocksHtml = lesson.blocks
-    .map((b, i) => `<div class="prism-block" style="--i:${i}">${renderBlock(b, assetMap)}</div>`)
+    .map((b, i) => renderBlockWrapper(b, i, assetMap))
     .join('\n');
 
   const dotsHtml = mod.lessons
@@ -1817,6 +1853,10 @@ export function buildPreviewHtml(
       return `<button type="button" class="${cls}" data-lesson="${i}" aria-label="Go to lesson ${i + 1}"></button>`;
     })
     .join('');
+
+  const coverHtml = mod.coverUrl
+    ? `<img class="prism-drawer-cover" src="${escapeHtml(mod.coverUrl)}" alt="">`
+    : '';
 
   const drawerItems = mod.lessons
     .map((l, i) => {
@@ -1839,7 +1879,7 @@ export function buildPreviewHtml(
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
 <title>${escapeHtml(lesson.title)}</title>
-<style>${buildCss(theme)}</style>
+<style>${buildCss(theme)}${moduleHasBlockStyles(mod) ? '\n' + BLOCK_STYLE_CSS : ''}${mod.coverUrl ? '\n' + DRAWER_COVER_CSS : ''}</style>
 <script>${lottieMinJs}</script>
 </head>
 <body data-criteria="${options.completionCriteria}" data-passing="${options.passingScore}" data-quiz-total="${quizTotal}">
@@ -1875,7 +1915,7 @@ export function buildPreviewHtml(
 </div>
 
 <aside class="prism-drawer" data-prism-drawer aria-hidden="true">
-  <div class="prism-drawer-panel" role="dialog" aria-label="Lessons">
+  <div class="prism-drawer-panel" role="dialog" aria-label="Lessons">${coverHtml}
     <div class="prism-drawer-head">
       <span class="prism-drawer-title">${escapeHtml(mod.title)}</span>
       <button class="prism-drawer-close" type="button" data-prism-drawer-close aria-label="Close">×</button>
@@ -2152,7 +2192,7 @@ export async function buildScormPackage(
   assetsFolder.file('interaction.js', buildInteractionJs());
 
   // Shared CSS
-  zip.file('styles.css', buildCss(theme));
+  zip.file('styles.css', buildCss(theme) + (moduleHasBlockStyles(mod) ? '\n' + BLOCK_STYLE_CSS : ''));
 
   // imsmanifest.xml
   zip.file('imsmanifest.xml', buildManifest(mod));

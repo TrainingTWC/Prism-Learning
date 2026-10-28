@@ -27,8 +27,8 @@ interface FullTheme {
 }
 
 const DEFAULTS: FullTheme = {
-  primary: '#4f46e5',
-  accent: '#aa75dd',
+  primary: '#7B35C1',
+  accent: '#E8A33D',
   correct: '#16a34a',
   incorrect: '#dc2626',
   headingTextColor: '#1e293b',
@@ -44,6 +44,7 @@ const DEFAULTS: FullTheme = {
 };
 
 const PRESET_PALETTES = [
+  { name: 'Prism Purple',     primary: '#7B35C1', accent: '#E8A33D' },
   { name: 'Indigo & Orchid', primary: '#4f46e5', accent: '#aa75dd' },
   { name: 'Blue & Amber',     primary: '#2563eb', accent: '#f59e0b' },
   { name: 'Rose & Violet',    primary: '#e11d48', accent: '#7c3aed' },

@@ -25,6 +25,9 @@ export { MatchingBlockRenderer } from './MatchingBlockRenderer';
 export { SortingBlockRenderer } from './SortingBlockRenderer';
 export { ScenarioBlockRenderer } from './ScenarioBlockRenderer';
 export { tokensToCss } from './tokensToCss';
+export { BlockRenderer } from './BlockRenderer';
+export { blockStyleToCss, blockStyleToCssString, hasBlockStyle } from './blockStyle';
+export type { BlockStyle, BlockWidth, BlockBackground, BlockSpacing } from './blockStyle';
 export type {
   Block,
   RichTextBlock as RichTextBlockType,

@@ -362,3 +362,71 @@ describe('block style parity (unstyled output must never change)', () => {
     expect(sha256(await zip.file('styles.css')!.async('string'))).toMatchSnapshot();
   });
 });
+
+describe('block style export', () => {
+  const opts = { passingScore: 80, completionCriteria: 'completed' as const };
+  const STYLE_CSS_MARK = '--prism-block-bleed:64px';
+
+  function styledFixture(): ExportModule {
+    const mod = makeParityFixture();
+    mod.lessons[0]!.blocks[0] = {
+      ...mod.lessons[0]!.blocks[0]!,
+      style: { background: 'tint', width: 'narrow' },
+    };
+    return mod;
+  }
+
+  const wrapper =
+    '<div class="prism-block" style="--i:0;max-width:36rem;margin-left:auto;margin-right:auto;' +
+    'background:color-mix(in srgb, var(--prism-primary) 8%, #ffffff);padding-top:1.5rem;padding-bottom:1.5rem;' +
+    'padding-left:1.5rem;padding-right:1.5rem;border-radius:var(--prism-radius, 0.5rem);" data-prism-style>';
+
+  it('emits the styled wrapper and CSS in preview', () => {
+    const html = buildPreviewHtml(styledFixture(), 0, {}, theme, opts);
+    expect(html).toContain(wrapper);
+    expect(html).toContain(STYLE_CSS_MARK);
+  });
+
+  it('emits the styled wrapper in lesson_0.html and the CSS in styles.css', async () => {
+    const result = await buildScormPackage(styledFixture(), theme, opts, async () => '');
+    const zip = await JSZip.loadAsync(result.blob);
+    expect(await zip.file('lesson_0.html')!.async('string')).toContain(wrapper);
+    expect(await zip.file('styles.css')!.async('string')).toContain(STYLE_CSS_MARK);
+  });
+
+  it('does not emit block-style CSS or attributes for unstyled modules', async () => {
+    const html = buildPreviewHtml(makeParityFixture(), 0, {}, theme, opts);
+    expect(html).not.toContain(STYLE_CSS_MARK);
+    expect(html).not.toContain('data-prism-style');
+    const result = await buildScormPackage(makeParityFixture(), theme, opts, async () => '');
+    const zip = await JSZip.loadAsync(result.blob);
+    expect(await zip.file('styles.css')!.async('string')).not.toContain(STYLE_CSS_MARK);
+  });
+
+  it('default-valued styles count as unstyled', () => {
+    const mod = makeParityFixture();
+    mod.lessons[0]!.blocks[0]!.style = { width: 'standard', background: 'none', spacing: 'none' };
+    expect(buildPreviewHtml(mod, 0, {}, theme, opts)).toBe(
+      buildPreviewHtml(makeParityFixture(), 0, {}, theme, opts),
+    );
+  });
+
+  it('renders the cover in the lessons drawer only when coverUrl is set, escaped', () => {
+    const none = buildPreviewHtml(makeParityFixture(), 0, {}, theme, opts);
+    expect(none).not.toContain('prism-drawer-cover');
+    const mod = makeParityFixture();
+    mod.coverUrl = 'https://x.test/a.png?x="y"&z=1';
+    const html = buildPreviewHtml(mod, 0, {}, theme, opts);
+    expect(html).toContain('<img class="prism-drawer-cover" src="https://x.test/a.png?x=&quot;y&quot;&amp;z=1" alt="">');
+    expect(html).toContain('.prism-drawer-cover{');
+  });
+
+  it('SCORM package ignores coverUrl', async () => {
+    const mod = makeParityFixture();
+    mod.coverUrl = 'https://x.test/a.png';
+    const result = await buildScormPackage(mod, theme, opts, async () => '');
+    const zip = await JSZip.loadAsync(result.blob);
+    expect(await zip.file('lesson_0.html')!.async('string')).not.toContain('prism-drawer-cover');
+    expect(await zip.file('styles.css')!.async('string')).not.toContain('prism-drawer-cover');
+  });
+});

@@ -53,8 +53,6 @@ import {
   MousePointerClick,
   Code2,
   X,
-  Sun,
-  Moon,
   Target,
   Images,
   ArrowLeftRight,
@@ -228,15 +226,6 @@ export function ModuleEditorPage() {
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [exportWarnings, setExportWarnings] = useState<string[]>([]);
   const [exportOptions, setExportOptions] = useState<ExportOptions>({ passingScore: 80, completionCriteria: 'completed' });
-  const [theme, setTheme] = useState<'dark' | 'light'>(
-    () => localStorage.getItem('prism-theme') === 'light' ? 'light' : 'dark'
-  );
-
-  useEffect(() => {
-    document.documentElement.classList.toggle('light', theme === 'light');
-    localStorage.setItem('prism-theme', theme);
-  }, [theme]);
-
   const handleExportScorm = useCallback(async (opts: ExportOptions) => {
     if (!content) return;
     setExporting(true);
@@ -591,15 +580,6 @@ export function ModuleEditorPage() {
               </div>
             )}
           </div>
-          {/* Theme toggle */}
-          <button
-            type="button"
-            onClick={() => setTheme((t) => t === 'light' ? 'dark' : 'light')}
-            className="rounded-lg p-2 text-[var(--text-tertiary)] hover:bg-[var(--card-bg-hover)] hover:text-[var(--text-primary)] transition-colors"
-            aria-label={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
-          >
-            {theme === 'light' ? <Moon className="size-4" /> : <Sun className="size-4" />}
-          </button>
           <button
             type="button"
             onClick={openExportDialog}

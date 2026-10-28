@@ -1,3 +1,10 @@
+import type { BlockStyle } from './blockStyle';
+
+export interface BlockBase {
+  id: string;
+  style?: BlockStyle;
+}
+
 export type ResolveAsset = (assetId: string) => string;
 
 export interface Theme {
@@ -49,153 +56,128 @@ export type Block =
   | RevealCardsBlock
   | ScenarioBlock;
 
-export interface RichTextBlock {
-  id: string;
+export interface RichTextBlock extends BlockBase {
   type: 'rich-text';
   /** Trusted HTML — produced server-side from Tiptap JSON. */
   content: string;
 }
 
-export interface ImageBlock {
-  id: string;
+export interface ImageBlock extends BlockBase {
   type: 'image';
   content: string; // JSON: { storageId, altText, caption }
 }
 
-export interface VideoBlock {
-  id: string;
+export interface VideoBlock extends BlockBase {
   type: 'video';
   content: string; // JSON: { srcType: 'embed'|'storage', src, caption }
 }
 
-export interface LottieBlock {
-  id: string;
+export interface LottieBlock extends BlockBase {
   type: 'lottie';
   content: string; // JSON: { storageId, loop, autoplay }
 }
 
-export interface MCQBlock {
-  id: string;
+export interface MCQBlock extends BlockBase {
   type: 'mcq';
   content: string; // JSON: { question, options, multiSelect, showFeedback }
 }
 
-export interface TrueFalseBlock {
-  id: string;
+export interface TrueFalseBlock extends BlockBase {
   type: 'true-false';
   content: string; // JSON: { statement, correctAnswer, trueFeedback, falseFeedback }
 }
 
-export interface AccordionBlock {
-  id: string;
+export interface AccordionBlock extends BlockBase {
   type: 'accordion';
   content: string; // JSON: { sections: [{ id, title, content }] }
 }
 
-export interface QuoteBlock {
-  id: string;
+export interface QuoteBlock extends BlockBase {
   type: 'quote';
   content: string; // JSON: { text: string; attribution?: string }
 }
 
-export interface CalloutBlock {
-  id: string;
+export interface CalloutBlock extends BlockBase {
   type: 'callout';
   content: string; // JSON: { variant: 'info'|'warning'|'success'|'tip'; title?: string; body: string }
 }
 
-export interface DividerBlock {
-  id: string;
+export interface DividerBlock extends BlockBase {
   type: 'divider';
   content: string; // JSON: { style: 'line'|'space'|'dots'; label?: string; padding?: number }
 }
 
-export interface FlashcardBlock {
-  id: string;
+export interface FlashcardBlock extends BlockBase {
   type: 'flashcard';
   content: string; // JSON: { cards: { id: string; front: string; back: string; frontImageStorageId?: string; frontAudioStorageId?: string; backImageStorageId?: string; backAudioStorageId?: string }[] }
 }
 
-export interface ProcessBlock {
-  id: string;
+export interface ProcessBlock extends BlockBase {
   type: 'process';
   content: string; // JSON: { steps: { id: string; title: string; body: string }[] }
 }
 
-export interface TabsBlock {
-  id: string;
+export interface TabsBlock extends BlockBase {
   type: 'tabs';
   content: string; // JSON: { tabs: { id: string; title: string; content: string; imageStorageId?: string; audioStorageId?: string }[] }
 }
 
-export interface ButtonBlock {
-  id: string;
+export interface ButtonBlock extends BlockBase {
   type: 'button';
   content: string; // JSON: { label: string; url?: string; style: 'primary'|'outline'|'ghost'; align: 'left'|'center'|'right' }
 }
 
-export interface CustomHtmlBlock {
-  id: string;
+export interface CustomHtmlBlock extends BlockBase {
   type: 'custom-html';
   content: string; // JSON: { html: string; notes?: string }
 }
 
-export interface HotspotsBlock {
-  id: string;
+export interface HotspotsBlock extends BlockBase {
   type: 'hotspots';
   content: string; // JSON: { storageId, altText, hotspots: [{ id, xPct, yPct, title, body }] }
 }
 
-export interface GalleryBlock {
-  id: string;
+export interface GalleryBlock extends BlockBase {
   type: 'gallery';
   content: string; // JSON: { layout: 'carousel'|'grid', items: [{ storageId, altText, caption }] }
 }
 
-export interface CompareBlock {
-  id: string;
+export interface CompareBlock extends BlockBase {
   type: 'compare';
   content: string; // JSON: { beforeStorageId, afterStorageId, beforeLabel, afterLabel }
 }
 
-export interface AudioBlock {
-  id: string;
+export interface AudioBlock extends BlockBase {
   type: 'audio';
   content: string; // JSON: { storageId, title, transcript }
 }
 
-export interface LabeledGraphicBlock {
-  id: string;
+export interface LabeledGraphicBlock extends BlockBase {
   type: 'labeled-graphic';
   content: string; // JSON: { storageId, altText, labels: [{ id, xPct, yPct, text }] }
 }
 
-export interface MatchingBlock {
-  id: string;
+export interface MatchingBlock extends BlockBase {
   type: 'matching';
   content: string; // JSON: { instructions, pairs: [{ id, term, definition }] }
 }
 
-export interface SortingBlock {
-  id: string;
+export interface SortingBlock extends BlockBase {
   type: 'sorting';
   content: string; // JSON: { instructions, items: [{ id, text }] }  // order in array = correct order
 }
 
-export interface FillBlanksBlock {
-  id: string;
+export interface FillBlanksBlock extends BlockBase {
   type: 'fill-blanks';
   content: string; // JSON: { template, blanks: [{ key, answer, alternates }] }
 }
 
-export interface RevealCardsBlock {
-  id: string;
+export interface RevealCardsBlock extends BlockBase {
   type: 'reveal-cards';
   content: string; // JSON: { columns: 2|3|4, cards: [{ id, front, back }] }
 }
 
-export interface ScenarioBlock {
-  id: string;
+export interface ScenarioBlock extends BlockBase {
   type: 'scenario';
   content: string; // JSON: { startNodeId, nodes: [{ id, prompt, choices: [{ label, nextId, feedback }], outcome }] }
 }
