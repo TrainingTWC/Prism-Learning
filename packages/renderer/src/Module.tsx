@@ -1,7 +1,12 @@
 import type { ModuleProps } from './types';
 import { tokensToCss } from './tokensToCss';
 import { BlockRenderer } from './BlockRenderer';
-import { blockStyleToCss, hasBlockStyle } from './blockStyle';
+import {
+  BLOCK_STYLE_BASE_CSS,
+  blockStyleAttrs,
+  blockStyleToCss,
+  hasBlockStyle,
+} from './blockStyle';
 
 /**
  * Pure module renderer. Same component drives:
@@ -12,8 +17,10 @@ import { blockStyleToCss, hasBlockStyle } from './blockStyle';
  * Zero I/O. All side-effectful concerns are injected via props.
  */
 export function Module({ blocks, theme, resolveAsset }: ModuleProps) {
+  const anyStyled = blocks.some((b) => hasBlockStyle(b.style));
   return (
     <div className="prism-module" style={tokensToCss(theme)}>
+      {anyStyled ? <style>{BLOCK_STYLE_BASE_CSS}</style> : null}
       {blocks.map((block, index) => {
         const style = {
           ['--prism-stagger-index' as string]: index,
@@ -24,7 +31,7 @@ export function Module({ blocks, theme, resolveAsset }: ModuleProps) {
             key={block.id}
             className="prism-block-reveal"
             style={style}
-            data-prism-style={hasBlockStyle(block.style) ? '' : undefined}
+            {...blockStyleAttrs(block.style)}
           >
             <BlockRenderer block={block} theme={theme} resolveAsset={resolveAsset} />
           </div>

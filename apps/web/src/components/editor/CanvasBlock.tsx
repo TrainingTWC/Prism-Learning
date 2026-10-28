@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Copy, GripVertical, Layers, Trash2 } from 'lucide-react';
-import { BlockRenderer, blockStyleToCss, hasBlockStyle, type Theme } from '@prism/renderer';
+import { Copy, GripVertical, Layers, SlidersHorizontal, Trash2 } from 'lucide-react';
+import { BlockRenderer, blockStyleAttrs, blockStyleToCss, type Theme } from '@prism/renderer';
 import type { Id } from '~convex/_generated/dataModel';
 import { isBlockEmpty, toRendererBlock } from '../../lib/rendererBlocks';
 import { BlockEditor } from './BlockEditor';
+import { BlockSettings } from './BlockSettings';
 import { catalogEntry } from './blockCatalog';
 import type { EditorBlock, EditorLesson } from './types';
 
@@ -23,6 +24,10 @@ interface CanvasBlockProps {
   onDelete: () => Promise<void>;
   onMoveToLesson: (targetLessonId: Id<'lessons'>) => Promise<void>;
   onSlashCommand: () => void;
+  /** Persist new block content (layout options) and re-mount the uncontrolled editor. */
+  onUpdateContent: (blockId: Id<'blocks'>, content: string) => Promise<void>;
+  /** Wraps a save promise so the top bar can show "Saving...". */
+  track: <T>(p: Promise<T>) => Promise<T>;
 }
 
 export function CanvasBlock({
@@ -38,18 +43,45 @@ export function CanvasBlock({
   onDelete,
   onMoveToLesson,
   onSlashCommand,
+  onUpdateContent,
+  track,
 }: CanvasBlockProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: block._id,
   });
   const [moveOpen, setMoveOpen] = useState(false);
   const moveRef = useRef<HTMLDivElement>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const settingsRef = useRef<HTMLDivElement>(null);
   const entry = catalogEntry(block.type);
   const label = entry?.label ?? block.type;
 
   useEffect(() => {
-    if (!selected) setMoveOpen(false);
+    if (!selected) {
+      setMoveOpen(false);
+      setSettingsOpen(false);
+    }
   }, [selected]);
+
+  useEffect(() => {
+    if (!settingsOpen) return;
+    const onDown = (e: MouseEvent) => {
+      if (settingsRef.current && !settingsRef.current.contains(e.target as Node)) setSettingsOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        // Close only the popover; do not let the page-level handler deselect.
+        e.stopPropagation();
+        setSettingsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', onDown);
+    window.addEventListener('keydown', onKey, true);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      window.removeEventListener('keydown', onKey, true);
+    };
+  }, [settingsOpen]);
 
   useEffect(() => {
     if (!moveOpen) return;
@@ -96,7 +128,7 @@ export function CanvasBlock({
           <div
             className="pointer-events-none select-none"
             style={blockStyleToCss(block.style)}
-            data-prism-style={hasBlockStyle(block.style) ? '' : undefined}
+            {...blockStyleAttrs(block.style)}
           >
             <BlockRenderer block={rendererBlock} theme={theme} resolveAsset={resolveAsset} />
           </div>
@@ -108,9 +140,10 @@ export function CanvasBlock({
   return (
     <div
       ref={setNodeRef}
-      style={wrapperStyle}
       data-canvas-block={block._id}
-      className="relative my-3 rounded-[12px] bg-white outline outline-2 outline-brand"
+      style={{ ...wrapperStyle, ...blockStyleToCss(block.style) }}
+      {...blockStyleAttrs(block.style)}
+      className="relative my-3 rounded-[12px] outline outline-2 outline-brand"
     >
       <span className="absolute -top-3 left-4 z-20 rounded-md bg-brand px-2 py-[3px] font-sans text-[11px] font-semibold text-white">
         {label}
@@ -126,6 +159,38 @@ export function CanvasBlock({
         >
           <GripVertical className="size-4" />
         </button>
+        <div className="relative" ref={settingsRef}>
+          <button
+            type="button"
+            onClick={() => {
+              setMoveOpen(false);
+              setSettingsOpen((o) => !o);
+            }}
+            title="Block layout and style"
+            aria-haspopup="dialog"
+            aria-expanded={settingsOpen}
+            className={`flex h-[30px] items-center gap-1.5 rounded-[7px] px-2 text-xs font-medium ${
+              settingsOpen ? 'bg-brand-soft text-brand-ink' : 'text-ink-2 hover:bg-hover'
+            }`}
+          >
+            <SlidersHorizontal className="size-4" />
+            Style
+          </button>
+          {settingsOpen && (
+            <div
+              role="dialog"
+              aria-label="Block settings"
+              className="absolute right-0 top-full z-30 mt-1 max-h-[70vh] w-[300px] overflow-y-auto rounded-[14px] border border-line bg-white shadow-xl"
+            >
+              <BlockSettings
+                block={block}
+                theme={theme}
+                onUpdateContent={onUpdateContent}
+                track={track}
+              />
+            </div>
+          )}
+        </div>
         <button
           type="button"
           onClick={() => void onDuplicate()}
@@ -138,7 +203,10 @@ export function CanvasBlock({
         <div className="relative" ref={moveRef}>
           <button
             type="button"
-            onClick={() => setMoveOpen((o) => !o)}
+            onClick={() => {
+              setSettingsOpen(false);
+              setMoveOpen((o) => !o);
+            }}
             aria-label="Move to another lesson"
             title="Move to another lesson"
             aria-haspopup="menu"
@@ -188,15 +256,16 @@ export function CanvasBlock({
           <Trash2 className="size-4" />
         </button>
       </div>
-      {/* Editors are designed for white backgrounds, so block style is not applied here. */}
-      <div className="prism-editor-block p-2 font-sans text-slate-800">
-        <BlockEditor
-          key={`${block._id}:${editorEpoch}`}
-          block={block}
-          onSave={onSave}
-          autoFocus
-          onSlashCommand={onSlashCommand}
-        />
+      <div className="rounded-[10px] bg-white">
+        <div className="prism-editor-block p-2 font-sans text-slate-800">
+          <BlockEditor
+            key={`${block._id}:${editorEpoch}`}
+            block={block}
+            onSave={onSave}
+            autoFocus
+            onSlashCommand={onSlashCommand}
+          />
+        </div>
       </div>
     </div>
   );

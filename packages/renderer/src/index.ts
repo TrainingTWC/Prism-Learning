@@ -26,7 +26,15 @@ export { SortingBlockRenderer } from './SortingBlockRenderer';
 export { ScenarioBlockRenderer } from './ScenarioBlockRenderer';
 export { tokensToCss } from './tokensToCss';
 export { BlockRenderer } from './BlockRenderer';
-export { blockStyleToCss, blockStyleToCssString, hasBlockStyle } from './blockStyle';
+export {
+  blockStyleToCss,
+  blockStyleToCssString,
+  hasBlockStyle,
+  hasBlockSpacing,
+  blockStyleAttrs,
+  blockStyleAttrString,
+  BLOCK_STYLE_BASE_CSS,
+} from './blockStyle';
 export type { BlockStyle, BlockWidth, BlockBackground, BlockSpacing } from './blockStyle';
 export type {
   Block,

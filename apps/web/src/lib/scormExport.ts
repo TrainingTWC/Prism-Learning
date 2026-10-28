@@ -10,7 +10,12 @@
 import JSZip from 'jszip';
 import DOMPurify from 'dompurify';
 import lottieMinJs from 'lottie-web/build/player/lottie.min.js?raw';
-import { blockStyleToCssString, type BlockStyle } from '@prism/renderer/block-style';
+import {
+  BLOCK_STYLE_BASE_CSS,
+  blockStyleAttrString,
+  blockStyleToCssString,
+  type BlockStyle,
+} from '@prism/renderer/block-style';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -273,7 +278,7 @@ function renderBlockWrapper(b: ExportBlock, i: number, assetMap: Record<string, 
   if (css === '') {
     return `<div class="prism-block" style="--i:${i}">${renderBlock(b, assetMap)}</div>`;
   }
-  return `<div class="prism-block" style="--i:${i};${css}" data-prism-style>${renderBlock(b, assetMap)}</div>`;
+  return `<div class="prism-block" style="--i:${i};${css}"${blockStyleAttrString(b.style)}>${renderBlock(b, assetMap)}</div>`;
 }
 
 function moduleHasBlockStyles(mod: ExportModule): boolean {
@@ -287,7 +292,7 @@ const BLOCK_STYLE_CSS =
   '.prism-lesson{--prism-block-bleed:64px}' +
   '@media (max-width:900px){.prism-lesson{--prism-block-bleed:28px}}' +
   '@media (max-width:560px){.prism-lesson{--prism-block-bleed:18px}}' +
-  '.prism-block[data-prism-style]{box-sizing:border-box}';
+  BLOCK_STYLE_BASE_CSS;
 
 /** Preview-only: emitted only when the module has a cover. */
 const DRAWER_COVER_CSS =

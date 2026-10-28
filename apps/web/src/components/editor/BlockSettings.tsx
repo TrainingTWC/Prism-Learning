@@ -1,23 +1,18 @@
-import { useState, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { useMutation } from 'convex/react';
 import type { BlockBackground, BlockSpacing, BlockStyle, BlockWidth, Theme } from '@prism/renderer';
 import { api } from '~convex/_generated/api';
 import { catalogEntry } from './blockCatalog';
 import type { EditorBlock } from './types';
 
-interface InspectorProps {
-  block: EditorBlock | null;
-  lessonTitle: string | null;
-  blockCount: number;
-  questionCount: number;
+interface BlockSettingsProps {
+  block: EditorBlock;
   theme: Theme;
   /** Persist new block content (layout options) and re-mount the uncontrolled editor. */
   onUpdateContent: (blockId: EditorBlock['_id'], content: string) => Promise<void>;
   /** Wraps a save promise so the top bar can show "Saving…". */
   track: <T>(p: Promise<T>) => Promise<T>;
 }
-
-type Tab = 'layout' | 'style';
 
 function Segmented<T extends string>({
   label,
@@ -78,70 +73,44 @@ const WIDTHS: { value: BlockWidth; label: string }[] = [
   { value: 'wide', label: 'Wide' },
   { value: 'full', label: 'Full' },
 ];
-const SPACINGS: { value: BlockSpacing; label: string }[] = [
+const SPACINGS: { value: BlockSpacing | 'auto'; label: string }[] = [
+  { value: 'auto', label: 'Auto' },
   { value: 'none', label: 'None' },
   { value: 's', label: 'S' },
   { value: 'm', label: 'M' },
   { value: 'l', label: 'L' },
 ];
 
-export function Inspector({
-  block,
-  lessonTitle,
-  blockCount,
-  questionCount,
-  theme,
-  onUpdateContent,
-  track,
-}: InspectorProps) {
-  const [tab, setTab] = useState<Tab>('layout');
+export function BlockSettings({ block, theme, onUpdateContent, track }: BlockSettingsProps) {
   const updateStyle = useMutation(api.blocks.updateStyle);
-
-  if (!block) {
-    return (
-      <aside aria-label="Inspector" className="w-[280px] shrink-0 overflow-y-auto border-l border-line bg-white p-5">
-        <p className="text-xs font-semibold uppercase tracking-[0.04em] text-ink-3">Lesson</p>
-        <h3 className="mt-2 text-base font-semibold text-ink">{lessonTitle ?? 'No lesson selected'}</h3>
-        <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
-          <div className="rounded-[10px] bg-ground p-3">
-            <dt className="text-xs text-ink-3">Blocks</dt>
-            <dd className="mt-1 text-lg font-semibold text-ink">{blockCount}</dd>
-          </div>
-          <div className="rounded-[10px] bg-ground p-3">
-            <dt className="text-xs text-ink-3">Quiz questions</dt>
-            <dd className="mt-1 text-lg font-semibold text-ink">{questionCount}</dd>
-          </div>
-        </dl>
-        <p className="mt-6 text-xs font-semibold uppercase tracking-[0.04em] text-ink-3">Tips</p>
-        <ul className="mt-2 space-y-2 text-[13px] text-ink-2">
-          <li>
-            Press <kbd className="rounded border border-line px-1.5 text-xs">/</kbd> to insert a block.
-          </li>
-          <li>
-            Press <kbd className="rounded border border-line px-1.5 text-xs">Esc</kbd> to deselect.
-          </li>
-          <li>Drag the handle on a selected block to reorder it.</li>
-        </ul>
-      </aside>
-    );
-  }
 
   const entry = catalogEntry(block.type);
   const Icon = entry?.icon;
   const style: BlockStyle = block.style ?? {};
   const width = style.width ?? 'standard';
   const background = style.background ?? 'none';
-  const spacing = style.spacing ?? 'none';
+  const spacing: BlockSpacing | 'auto' = style.spacing ?? 'auto';
 
   function setStyle<K extends keyof BlockStyle>(field: K, value: BlockStyle[K]) {
-    void track(updateStyle({ blockId: block!._id, style: { ...block!.style, [field]: value } }));
+    void track(updateStyle({ blockId: block._id, style: { ...block.style, [field]: value } }));
+  }
+
+  function setSpacing(value: BlockSpacing | 'auto') {
+    if (value === 'auto') {
+      // Rebuild the style without the spacing key (do not send undefined).
+      const { spacing: _omit, ...rest } = block.style ?? {};
+      void _omit;
+      void track(updateStyle({ blockId: block._id, style: rest }));
+    } else {
+      setStyle('spacing', value);
+    }
   }
 
   const layoutDefaults = LAYOUT_DEFAULTS[block.type];
   const payload = layoutDefaults ? { ...layoutDefaults, ...parseObject(block.content) } : {};
 
   function setLayout(field: string, value: string) {
-    void track(onUpdateContent(block!._id, JSON.stringify({ ...payload, [field]: value })));
+    void track(onUpdateContent(block._id, JSON.stringify({ ...payload, [field]: value })));
   }
 
   function str(field: string): string {
@@ -158,39 +127,21 @@ export function Inspector({
   ];
 
   return (
-    <aside aria-label="Inspector" className="w-[280px] shrink-0 overflow-y-auto border-l border-line bg-white">
-      <div className="border-b border-line p-5">
-        <div className="flex items-center gap-2.5">
-          {Icon && (
-            <span className="flex size-8 items-center justify-center rounded-lg bg-brand-soft text-brand-ink">
-              <Icon className="size-4" />
-            </span>
-          )}
-          <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-ink">{entry?.label ?? block.type}</p>
-            <p className="truncate text-xs text-ink-3">{entry?.description}</p>
-          </div>
-        </div>
-        <div role="tablist" className="mt-4 flex gap-1 rounded-[10px] bg-ground p-1">
-          {(['layout', 'style'] as const).map((t) => (
-            <button
-              key={t}
-              type="button"
-              role="tab"
-              aria-selected={tab === t}
-              onClick={() => setTab(t)}
-              className={`h-8 flex-1 rounded-lg text-[13px] capitalize ${
-                tab === t ? 'bg-white font-semibold text-brand-ink shadow-sm' : 'text-ink-2 hover:bg-hover'
-              }`}
-            >
-              {t}
-            </button>
-          ))}
+    <div className="font-sans text-ink">
+      <div className="flex items-center gap-2.5 border-b border-line p-4">
+        {Icon && (
+          <span className="flex size-8 items-center justify-center rounded-lg bg-brand-soft text-brand-ink">
+            <Icon className="size-4" />
+          </span>
+        )}
+        <div className="min-w-0">
+          <p className="truncate text-sm font-semibold text-ink">{entry?.label ?? block.type}</p>
+          <p className="truncate text-xs text-ink-3">{entry?.description}</p>
         </div>
       </div>
 
-      <div className="p-5">
-        {tab === 'layout' && (
+      <div className="p-4">
+        {layoutDefaults && (
           <>
             {block.type === 'callout' && (
               <Segmented
@@ -252,26 +203,20 @@ export function Inspector({
                 onChange={(v) => setLayout('layout', v)}
               />
             )}
-            {!layoutDefaults && (
-              <p className="text-[13px] text-ink-3">
-                This block&apos;s options are edited directly on the canvas.
-              </p>
-            )}
           </>
         )}
 
-        {tab === 'style' && (
-          <>
-            <Segmented label="Content width" value={width} options={WIDTHS} onChange={(v) => setStyle('width', v)} />
-            <Segmented label="Background" value={background} options={bgOptions} onChange={(v) => setStyle('background', v)} />
-            <Segmented label="Spacing" value={spacing} options={SPACINGS} onChange={(v) => setStyle('spacing', v)} />
-            <p className="text-xs text-ink-3">
-              Styles come from your workspace theme. The block shows its style when deselected.
-            </p>
-          </>
+        {layoutDefaults && (
+          <p className="mb-2 border-t border-line pt-4 text-xs font-semibold uppercase tracking-[0.04em] text-ink-3">
+            Style
+          </p>
         )}
+        <Segmented label="Content width" value={width} options={WIDTHS} onChange={(v) => setStyle('width', v)} />
+        <Segmented label="Background" value={background} options={bgOptions} onChange={(v) => setStyle('background', v)} />
+        <Segmented label="Spacing" value={spacing} options={SPACINGS} onChange={setSpacing} />
+        <p className="text-xs text-ink-3">Styles come from your workspace theme.</p>
       </div>
-    </aside>
+    </div>
   );
 }
 
