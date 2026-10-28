@@ -2,6 +2,28 @@ import { authTables } from '@convex-dev/auth/server';
 import { defineSchema, defineTable } from 'convex/server';
 import { v } from 'convex/values';
 
+/**
+ * Per-block presentation style. Mirrors BlockStyle in @prism/renderer
+ * (packages/renderer/src/blockStyle.ts). All fields optional; absent = default.
+ */
+export const blockStyleValidator = v.object({
+  width: v.optional(
+    v.union(v.literal('narrow'), v.literal('standard'), v.literal('wide'), v.literal('full')),
+  ),
+  background: v.optional(
+    v.union(
+      v.literal('none'),
+      v.literal('tint'),
+      v.literal('primary'),
+      v.literal('accent'),
+      v.literal('dark'),
+    ),
+  ),
+  spacing: v.optional(
+    v.union(v.literal('none'), v.literal('s'), v.literal('m'), v.literal('l')),
+  ),
+});
+
 export default defineSchema({
   ...authTables,
 
@@ -88,6 +110,10 @@ export default defineSchema({
     deletedAt: v.optional(v.number()),
     /** Convex storage id of the per-module AI image style reference, if set */
     styleReferenceStorageId: v.optional(v.string()),
+    /** Module cover image (Convex storage). Optional — absent shows a brand tile. */
+    coverStorageId: v.optional(v.id('_storage')),
+    /** Short description learners see first. */
+    description: v.optional(v.string()),
     /**
      * Persisted completion-screen settings (pass score, criteria, and
      * author-editable title/body copy for default/pass/fail states).
@@ -161,6 +187,8 @@ export default defineSchema({
      *  lottie    → { storageId, loop: boolean, autoplay: boolean }
      */
     content: v.optional(v.string()),
+    /** Per-block width / background / spacing. Absent = defaults. */
+    style: v.optional(blockStyleValidator),
     updatedAt: v.number(),
     lastEditedBy: v.optional(v.id('users')),
   })

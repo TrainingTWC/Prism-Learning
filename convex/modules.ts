@@ -39,9 +39,20 @@ export const list = query({
       .withIndex('by_workspace', (q) => q.eq('workspaceId', workspaceId))
       .collect();
 
-    return modules
+    const live = modules
       .filter((m) => !m.deletedAt)
       .sort((a, b) => b.updatedAt - a.updatedAt);
+
+    return await Promise.all(
+      live.map(async (m) => {
+        const coverUrl = m.coverStorageId ? await ctx.storage.getUrl(m.coverStorageId) : null;
+        const lessons = await ctx.db
+          .query('lessons')
+          .withIndex('by_module', (q) => q.eq('moduleId', m._id))
+          .collect();
+        return { ...m, coverUrl, lessonCount: lessons.length };
+      }),
+    );
   },
 });
 
@@ -74,7 +85,9 @@ export const getWithContent = query({
       .collect();
     lessons.sort((a, b) => a.order - b.order);
 
-    return { module: mod, lessons };
+    const coverUrl = mod.coverStorageId ? await ctx.storage.getUrl(mod.coverStorageId) : null;
+
+    return { module: mod, lessons, coverUrl };
   },
 });
 
@@ -123,6 +136,52 @@ export const move = mutation({
     await requireMember(ctx, destinationWorkspaceId);
     await ctx.db.patch(moduleId, {
       workspaceId: destinationWorkspaceId,
+      updatedAt: Date.now(),
+      lastEditedBy: userId,
+    });
+  },
+});
+
+/** Set the module cover image (already uploaded to Convex storage). */
+export const setCover = mutation({
+  args: { moduleId: v.id('modules'), storageId: v.id('_storage') },
+  handler: async (ctx, { moduleId, storageId }) => {
+    const mod = await ctx.db.get(moduleId);
+    if (!mod || mod.deletedAt) throw new Error('Not found');
+    const userId = await requireMember(ctx, mod.workspaceId);
+    await ctx.db.patch(moduleId, {
+      coverStorageId: storageId,
+      updatedAt: Date.now(),
+      lastEditedBy: userId,
+    });
+  },
+});
+
+/** Remove the module cover. The file is kept: duplicated modules may share it. */
+export const clearCover = mutation({
+  args: { moduleId: v.id('modules') },
+  handler: async (ctx, { moduleId }) => {
+    const mod = await ctx.db.get(moduleId);
+    if (!mod || mod.deletedAt) throw new Error('Not found');
+    const userId = await requireMember(ctx, mod.workspaceId);
+    await ctx.db.patch(moduleId, {
+      coverStorageId: undefined,
+      updatedAt: Date.now(),
+      lastEditedBy: userId,
+    });
+  },
+});
+
+/** Set the module description (trimmed, capped at 1000 chars; empty clears it). */
+export const setDescription = mutation({
+  args: { moduleId: v.id('modules'), description: v.string() },
+  handler: async (ctx, { moduleId, description }) => {
+    const mod = await ctx.db.get(moduleId);
+    if (!mod || mod.deletedAt) throw new Error('Not found');
+    const userId = await requireMember(ctx, mod.workspaceId);
+    const trimmed = description.trim().slice(0, 1000);
+    await ctx.db.patch(moduleId, {
+      description: trimmed.length > 0 ? trimmed : undefined,
       updatedAt: Date.now(),
       lastEditedBy: userId,
     });
@@ -202,6 +261,8 @@ export const duplicate = mutation({
     const newModId = await ctx.db.insert('modules', {
       workspaceId: mod.workspaceId,
       title: `${mod.title} (copy)`,
+      description: mod.description,
+      coverStorageId: mod.coverStorageId,
       status: 'draft',
       createdAt: now,
       updatedAt: now,
@@ -233,6 +294,7 @@ export const duplicate = mutation({
           type: block.type,
           order: block.order,
           content: block.content,
+          style: block.style,
           updatedAt: now,
           lastEditedBy: userId,
         });

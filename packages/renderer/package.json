@@ -9,6 +9,10 @@
     ".": {
       "types": "./src/index.ts",
       "default": "./src/index.ts"
+    },
+    "./block-style": {
+      "types": "./src/blockStyle.ts",
+      "default": "./src/blockStyle.ts"
     }
   },
   "scripts": {
