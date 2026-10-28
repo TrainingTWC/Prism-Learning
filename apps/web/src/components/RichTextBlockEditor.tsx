@@ -87,6 +87,8 @@ interface RichTextBlockEditorProps {
   initialContent: string;
   onSave: (html: string) => void;
   autoFocus?: boolean;
+  /** Called when the author types "/" in an empty paragraph (opens the block library). */
+  onSlashCommand?: () => void;
 }
 
 export function RichTextBlockEditor({
@@ -94,8 +96,13 @@ export function RichTextBlockEditor({
   initialContent,
   onSave,
   autoFocus,
+  onSlashCommand,
 }: RichTextBlockEditorProps) {
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const slashRef = useRef(onSlashCommand);
+  useEffect(() => {
+    slashRef.current = onSlashCommand;
+  }, [onSlashCommand]);
 
   const editor = useEditor({
     extensions: [
@@ -114,6 +121,23 @@ export function RichTextBlockEditor({
     content: initialContent,
     autofocus: autoFocus ? 'end' : false,
     editorProps: {
+      handleKeyDown: (view, event) => {
+        if (
+          event.key === '/' &&
+          !event.ctrlKey &&
+          !event.metaKey &&
+          !event.altKey &&
+          slashRef.current
+        ) {
+          const parent = view.state.selection.$from.parent;
+          if (parent.type.name === 'paragraph' && parent.content.size === 0) {
+            event.preventDefault();
+            slashRef.current();
+            return true;
+          }
+        }
+        return false;
+      },
       attributes: {
         class:
           'prose prose-sm max-w-none min-h-[3rem] focus:outline-none px-4 py-3 text-slate-800',
